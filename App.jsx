@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   BookOpen, Book, MessageCircle, Sparkles, Ear, MapPin, Mic, Gamepad2,
-  LayoutDashboard, Flame, Check, X, Search, Send, Plus, Trash2, Loader2, ChevronLeft, ChevronRight, ExternalLink, Repeat
+  LayoutDashboard, Check, X, Search, Send, Plus, Trash2, Loader2, ChevronLeft, ChevronRight, ExternalLink, Repeat
 } from "lucide-react";
 
 /* ============================================================
@@ -459,10 +459,10 @@ const PACK_WARMUPS = {
     { type: "spot_mistake", instruction: "Find the learner's error.", prompt: "What is the mistake in this small-talk question?", text: "“How has your weekend be?”", options: ["'be' should be 'been'", "'has' should be 'have'", "'your' should be 'you'", "'weekend' should be plural"], answer: "'be' should be 'been'", note: "The present perfect needs the past participle: 'How has your weekend BEEN?'" },
   ],
   "Going to the beach": [
-    { type: "context_discussion", instruction: "Just chat \u2014 there are no wrong answers here.", prompt: "Have you ever been to an Australian beach? What was it like?" },
-    { type: "mcq", instruction: "Choose the correct answer.", prompt: "What do the red and yellow flags on an Australian beach mean?", options: ["They show the safest area to swim", "They mean the beach is closed", "They show where you can have a barbecue", "They mark the car park"], answer: "They show the safest area to swim", note: "The flags mark the area watched by lifeguards \u2014 always swim between them." },
-    { type: "complete_dialogue", instruction: "Choose the missing line.", prompt: "Complete the exchange:", text: "You: \"Is it safe to swim here?\"\nLifeguard: ______", options: ["\"Yes, swim between the red and yellow flags.\"", "\"No, go home.\"", "\"I don\u2019t know.\"", "\"The water is cold.\""], answer: "\"Yes, swim between the red and yellow flags.\"", note: "Lifeguards direct you to the flagged area \u2014 that\u2019s where they\u2019re watching." },
-    { type: "spot_mistake", instruction: "Find the learner\u2019s error.", prompt: "What is the mistake in this sentence?", text: "\u201cYou should to wear sunscreen at the beach.\u201d", options: ["\u2018to\u2019 should be removed", "\u2018should\u2019 should be \u2018must\u2019", "\u2018wear\u2019 should be \u2018wearing\u2019", "\u2018at\u2019 should be \u2018in\u2019"], answer: "\u2018to\u2019 should be removed", note: "After a modal verb (should, must, can) we use the base verb directly \u2014 no \u2018to\u2019." },
+    { type: "context_discussion", instruction: "Just chat — there are no wrong answers here.", prompt: "Have you ever been to an Australian beach? What was it like?" },
+    { type: "mcq", instruction: "Choose the correct answer.", prompt: "What do the red and yellow flags on an Australian beach mean?", options: ["They show the safest area to swim", "They mean the beach is closed", "They show where you can have a barbecue", "They mark the car park"], answer: "They show the safest area to swim", note: "The flags mark the area watched by lifeguards — always swim between them." },
+    { type: "complete_dialogue", instruction: "Choose the missing line.", prompt: "Complete the exchange:", text: "You: \"Is it safe to swim here?\"\nLifeguard: ______", options: ["\"Yes, swim between the red and yellow flags.\"", "\"No, go home.\"", "\"I don't know.\"", "\"The water is cold.\""], answer: "\"Yes, swim between the red and yellow flags.\"", note: "Lifeguards direct you to the flagged area — that's where they're watching." },
+    { type: "spot_mistake", instruction: "Find the learner's error.", prompt: "What is the mistake in this sentence?", text: "\u201cYou should to wear sunscreen at the beach.\u201d", options: ["\u2018to' should be removed", "\u2018should' should be \u2018must'", "\u2018wear' should be \u2018wearing'", "\u2018at' should be \u2018in'"], answer: "\u2018to' should be removed", note: "After a modal verb (should, must, can) we use the base verb directly — no \u2018to'." },
   ],
 };
 
@@ -541,11 +541,11 @@ const PACK_GRAMMAR_PRACTICE = {
     { stem: "Which sentence is grammatically correct?", options: ["How have you been, mate?", "How you have been, mate?", "How has you been, mate?", "How you been has, mate?"], answer: "How have you been, mate?", note: "Have + subject + been. The auxiliary goes before the subject in a question." },
   ],
   "Going to the beach": [
-    { stem: "Complete: \"You ___ swim between the red and yellow flags.\"", options: ["should", "should to", "shoulding", "to should"], answer: "should", note: "Modal + base verb: \u2018should swim\u2019 \u2014 no \u2018to\u2019, no -ing." },
-    { stem: "Complete: \"You ___ swim outside the flags because it is dangerous.\"", options: ["mustn\u2019t", "mustn\u2019t to", "don\u2019t must", "not must"], answer: "mustn\u2019t", note: "Prohibition: mustn\u2019t + base verb. \u2018Mustn\u2019t swim\u2019 means it is not allowed." },
-    { stem: "Find the mistake: \"You should to wear sunscreen every day.\"", options: ["\u2018to\u2019 should be removed", "\u2018should\u2019 should be \u2018must\u2019", "\u2018wear\u2019 should be \u2018wearing\u2019", "\u2018every\u2019 should be \u2018all\u2019"], answer: "\u2018to\u2019 should be removed", note: "After a modal verb we never add \u2018to\u2019: should + base verb." },
-    { stem: "Complete: \"People ___ enter the water if there is a shark warning.\"", options: ["mustn\u2019t", "should", "must to", "can to"], answer: "mustn\u2019t", note: "Prohibition: mustn\u2019t + base verb \u2014 it means you are not allowed." },
-    { stem: "Which sentence is grammatically correct?", options: ["I think visitors should learn about beach safety.", "I think visitors should to learn about beach safety.", "I think visitors should learning about beach safety.", "I think visitors must to learn about beach safety."], answer: "I think visitors should learn about beach safety.", note: "Opinion: think + should + base verb. No \u2018to\u2019, no -ing after the modal." },
+    { stem: "Complete: \"You ___ swim between the red and yellow flags.\"", options: ["should", "should to", "shoulding", "to should"], answer: "should", note: "Modal + base verb: \u2018should swim' — no \u2018to', no -ing." },
+    { stem: "Complete: \"You ___ swim outside the flags because it is dangerous.\"", options: ["mustn't", "mustn't to", "don't must", "not must"], answer: "mustn't", note: "Prohibition: mustn't + base verb. \u2018Mustn't swim' means it is not allowed." },
+    { stem: "Find the mistake: \"You should to wear sunscreen every day.\"", options: ["\u2018to' should be removed", "\u2018should' should be \u2018must'", "\u2018wear' should be \u2018wearing'", "\u2018every' should be \u2018all'"], answer: "\u2018to' should be removed", note: "After a modal verb we never add \u2018to': should + base verb." },
+    { stem: "Complete: \"People ___ enter the water if there is a shark warning.\"", options: ["mustn't", "should", "must to", "can to"], answer: "mustn't", note: "Prohibition: mustn't + base verb — it means you are not allowed." },
+    { stem: "Which sentence is grammatically correct?", options: ["I think visitors should learn about beach safety.", "I think visitors should to learn about beach safety.", "I think visitors should learning about beach safety.", "I think visitors must to learn about beach safety."], answer: "I think visitors should learn about beach safety.", note: "Opinion: think + should + base verb. No \u2018to', no -ing after the modal." },
   ],
 };
 
@@ -602,13 +602,13 @@ const AUTHORED_LESSONS = [
       lastUpdated: "2026-07-14",
     },
 
-    // Core lesson identity \u2014 the "what and why"
+    // Core lesson identity — the "what and why"
     context: "Going to the beach",
     communicativeObjective: "Understand beach safety rules and give safety advice using modal verbs",
-    explanation: "Today we\u2019re learning about going to the beach in Australia. Beaches here are beautiful, but they can also be dangerous if you don\u2019t know the safety rules. By the end of this lesson, you\u2019ll be able to give beach safety advice confidently using modal verbs.",
+    explanation: "Today we're learning about going to the beach in Australia. Beaches here are beautiful, but they can also be dangerous if you don't know the safety rules. By the end of this lesson, you'll be able to give beach safety advice confidently using modal verbs.",
     mainSkill: "both",
-    mission: "Next time you visit a beach, find the red and yellow flags and tell someone what they mean \u2014 in English.",
-    learningOutcome: "You can understand Australian beach safety rules and give advice using modal verbs (must, should, mustn\u2019t, can\u2019t).",
+    mission: "Next time you visit a beach, find the red and yellow flags and tell someone what they mean — in English.",
+    learningOutcome: "You can understand Australian beach safety rules and give advice using modal verbs (must, should, mustn't, can't).",
     learningOutcomes: [
       "Understand the main ideas of an authentic reading about beach safety",
       "Use twelve key beach safety vocabulary items appropriately",
@@ -625,13 +625,13 @@ const AUTHORED_LESSONS = [
           "Do you like going to the beach?",
           "What do you do when you are at the beach?",
           "What must you bring to the beach?",
-          "Is there anything you shouldn\u2019t do when at the beach?",
+          "Is there anything you shouldn't do when at the beach?",
         ],
         activities: [
-          { type: "context_discussion", instruction: "Just chat \u2014 there are no wrong answers here.", prompt: "Have you ever been to an Australian beach? What was it like?" },
-          { type: "mcq", instruction: "Choose the correct answer.", prompt: "What do the red and yellow flags on an Australian beach mean?", options: ["They show the safest area to swim", "They mean the beach is closed", "They show where you can have a barbecue", "They mark the car park"], answer: "They show the safest area to swim", note: "The flags mark the area watched by lifeguards \u2014 always swim between them." },
-          { type: "complete_dialogue", instruction: "Choose the missing line.", prompt: "Complete the exchange:", text: "You: \"Is it safe to swim here?\"\nLifeguard: ______", options: ["\"Yes, swim between the red and yellow flags.\"", "\"No, go home.\"", "\"I don\u2019t know.\"", "\"The water is cold.\""], answer: "\"Yes, swim between the red and yellow flags.\"", note: "Lifeguards direct you to the flagged area \u2014 that\u2019s where they\u2019re watching." },
-          { type: "spot_mistake", instruction: "Find the learner\u2019s error.", prompt: "What is the mistake in this sentence?", text: "\u201cYou should to wear sunscreen at the beach.\u201d", options: ["\u2018to\u2019 should be removed", "\u2018should\u2019 should be \u2018must\u2019", "\u2018wear\u2019 should be \u2018wearing\u2019", "\u2018at\u2019 should be \u2018in\u2019"], answer: "\u2018to\u2019 should be removed", note: "After a modal verb (should, must, can) we use the base verb directly \u2014 no \u2018to\u2019." },
+          { type: "context_discussion", instruction: "Just chat — there are no wrong answers here.", prompt: "Have you ever been to an Australian beach? What was it like?" },
+          { type: "mcq", instruction: "Choose the correct answer.", prompt: "What do the red and yellow flags on an Australian beach mean?", options: ["They show the safest area to swim", "They mean the beach is closed", "They show where you can have a barbecue", "They mark the car park"], answer: "They show the safest area to swim", note: "The flags mark the area watched by lifeguards — always swim between them." },
+          { type: "complete_dialogue", instruction: "Choose the missing line.", prompt: "Complete the exchange:", text: "You: \"Is it safe to swim here?\"\nLifeguard: ______", options: ["\"Yes, swim between the red and yellow flags.\"", "\"No, go home.\"", "\"I don't know.\"", "\"The water is cold.\""], answer: "\"Yes, swim between the red and yellow flags.\"", note: "Lifeguards direct you to the flagged area — that's where they're watching." },
+          { type: "spot_mistake", instruction: "Find the learner's error.", prompt: "What is the mistake in this sentence?", text: "\u201cYou should to wear sunscreen at the beach.\u201d", options: ["\u2018to' should be removed", "\u2018should' should be \u2018must'", "\u2018wear' should be \u2018wearing'", "\u2018at' should be \u2018in'"], answer: "\u2018to' should be removed", note: "After a modal verb (should, must, can) we use the base verb directly — no \u2018to'." },
         ],
       },
 
@@ -639,14 +639,14 @@ const AUTHORED_LESSONS = [
         items: [
           { word: "flags", pos: "noun", meaning: "Pieces of coloured material on a pole that show information or warnings. At Australian beaches, red and yellow flags show the safe area to swim.", ipa: "/fl\u00e6\u0261z/", stress: "O", syllables: "flags", example: "The red and yellow flags show the safe swimming area.", examples: ["Look for the flags before you swim.", "The flags were up, so we knew it was safe."], related: ["warning", "signal", "sign"], collocations: ["red and yellow flags", "between the flags", "look for the flags"] },
           { word: "swim", pos: "verb", meaning: "To move through water using your arms and legs.", ipa: "/sw\u026am/", stress: "O", syllables: "swim", example: "You should swim between the flags.", examples: ["I learned to swim when I was five.", "We went swimming at Bondi Beach."], related: ["swimmer", "swimming", "stroke"], collocations: ["swim between", "go swimming", "learn to swim"] },
-          { word: "shade", pos: "noun", meaning: "A cool, darker area protected from direct sunlight.", ipa: "/\u0283\u00e6\u026ad/", stress: "O", syllables: "shade", example: "Sit in the shade when the sun is strong.", examples: ["We found some shade under a tree.", "There isn\u2019t much shade on this beach."], related: ["shadow", "shelter", "cover"], collocations: ["sit in the shade", "find shade", "in the shade"] },
-          { word: "sunbathe", pos: "verb", meaning: "To sit or lie in the sun to relax or get a tan.", ipa: "/\u02c8s\u028cnbe\u026a\u00f0/", stress: "O o", syllables: "sun\u00b7bathe", example: "Some people like to sunbathe at the beach.", examples: ["She was sunbathing on a towel.", "Be careful when you sunbathe \u2014 use sunscreen."], related: ["sunbather", "tan", "sunlight"], collocations: ["like to sunbathe", "sunbathe on the beach", "sunbathe safely"] },
-          { word: "sunscreen", pos: "noun", meaning: "A cream or lotion you put on your skin to protect it from the sun.", ipa: "/\u02c8s\u028cnski\u02d0n/", stress: "O o", syllables: "sun\u00b7screen", example: "You should wear sunscreen every day.", examples: ["Don\u2019t forget to put on sunscreen.", "I need to buy more sunscreen before the weekend."], related: ["SPF", "sun protection", "lotion"], collocations: ["wear sunscreen", "put on sunscreen", "apply sunscreen"] },
+          { word: "shade", pos: "noun", meaning: "A cool, darker area protected from direct sunlight.", ipa: "/\u0283\u00e6\u026ad/", stress: "O", syllables: "shade", example: "Sit in the shade when the sun is strong.", examples: ["We found some shade under a tree.", "There isn't much shade on this beach."], related: ["shadow", "shelter", "cover"], collocations: ["sit in the shade", "find shade", "in the shade"] },
+          { word: "sunbathe", pos: "verb", meaning: "To sit or lie in the sun to relax or get a tan.", ipa: "/\u02c8s\u028cnbe\u026a\u00f0/", stress: "O o", syllables: "sun\u00b7bathe", example: "Some people like to sunbathe at the beach.", examples: ["She was sunbathing on a towel.", "Be careful when you sunbathe — use sunscreen."], related: ["sunbather", "tan", "sunlight"], collocations: ["like to sunbathe", "sunbathe on the beach", "sunbathe safely"] },
+          { word: "sunscreen", pos: "noun", meaning: "A cream or lotion you put on your skin to protect it from the sun.", ipa: "/\u02c8s\u028cnski\u02d0n/", stress: "O o", syllables: "sun\u00b7screen", example: "You should wear sunscreen every day.", examples: ["Don't forget to put on sunscreen.", "I need to buy more sunscreen before the weekend."], related: ["SPF", "sun protection", "lotion"], collocations: ["wear sunscreen", "put on sunscreen", "apply sunscreen"] },
           { word: "shark", pos: "noun", meaning: "A large sea animal with sharp teeth that lives in the ocean.", ipa: "/\u0283\u0251\u02d0k/", stress: "O", syllables: "shark", example: "A shark warning can close a beach.", examples: ["They spotted a shark near the shore.", "Shark attacks are rare but serious."], related: ["ocean", "predator", "marine life"], collocations: ["shark warning", "shark attack", "great white shark"] },
-          { word: "drown", pos: "verb", meaning: "To die because you cannot breathe while underwater.", ipa: "/dra\u0275n/", stress: "O", syllables: "drown", example: "People can drown if they ignore safety rules.", examples: ["Never swim alone \u2014 you could drown.", "The lifeguard saved the child from drowning."], related: ["drowning", "underwater", "rescue"], collocations: ["risk of drowning", "almost drowned", "prevent drowning"] },
+          { word: "drown", pos: "verb", meaning: "To die because you cannot breathe while underwater.", ipa: "/dra\u0275n/", stress: "O", syllables: "drown", example: "People can drown if they ignore safety rules.", examples: ["Never swim alone — you could drown.", "The lifeguard saved the child from drowning."], related: ["drowning", "underwater", "rescue"], collocations: ["risk of drowning", "almost drowned", "prevent drowning"] },
           { word: "towel", pos: "noun", meaning: "A piece of cloth used to dry your body after swimming or being in water.", ipa: "/\u02c8ta\u028a\u0259l/", stress: "O o", syllables: "tow\u00b7el", example: "Bring a towel after swimming.", examples: ["I forgot my towel at home.", "She dried herself with a beach towel."], related: ["beach towel", "dry", "cloth"], collocations: ["bring a towel", "beach towel", "dry off with a towel"] },
           { word: "sunburn", pos: "noun", meaning: "Red and painful skin caused by spending too much time in the sun.", ipa: "/\u02c8s\u028cnb\u025c\u02d0n/", stress: "O o", syllables: "sun\u00b7burn", example: "Too much sun can cause sunburn.", examples: ["I got terrible sunburn on my first day.", "Sunburn can be very painful."], related: ["burn", "UV", "skin damage"], collocations: ["get sunburn", "cause sunburn", "painful sunburn"] },
-          { word: "thongs", pos: "noun", meaning: "A type of open shoe worn in warm weather. In other countries, they are called flip-flops.", ipa: "/\u03b8\u0252\u014bz/", stress: "O", syllables: "thongs", example: "Australians often wear thongs at the beach.", examples: ["I bought a new pair of thongs for summer.", "Don\u2019t forget your thongs \u2014 the sand gets hot!"], related: ["flip-flops", "sandals", "footwear"], collocations: ["wear thongs", "a pair of thongs", "thongs and boardshorts"] },
+          { word: "thongs", pos: "noun", meaning: "A type of open shoe worn in warm weather. In other countries, they are called flip-flops.", ipa: "/\u03b8\u0252\u014bz/", stress: "O", syllables: "thongs", example: "Australians often wear thongs at the beach.", examples: ["I bought a new pair of thongs for summer.", "Don't forget your thongs — the sand gets hot!"], related: ["flip-flops", "sandals", "footwear"], collocations: ["wear thongs", "a pair of thongs", "thongs and boardshorts"] },
           { word: "rip current", pos: "noun", meaning: "A strong flow of water that moves away from the beach and can pull swimmers out to sea.", ipa: "/\u02c8r\u026ap \u02cck\u028cr\u0259nt/", stress: "O o", syllables: "rip cur\u00b7rent", example: "A rip current can pull swimmers away from the beach.", examples: ["If you are caught in a rip current, stay calm.", "Rip currents are one of the biggest dangers at Australian beaches."], related: ["current", "undertow", "tide"], collocations: ["caught in a rip current", "dangerous rip current", "spot a rip current"] },
           { word: "lifeguard", pos: "noun", meaning: "A trained person who watches swimmers and helps people who are in danger in the water.", ipa: "/\u02c8la\u026af\u0261\u0251\u02d0d/", stress: "O o", syllables: "life\u00b7guard", example: "The lifeguard watches swimmers.", examples: ["Always swim where the lifeguard can see you.", "The lifeguard rescued a swimmer yesterday."], related: ["rescue", "patrol", "safety"], collocations: ["listen to the lifeguard", "lifeguard station", "on-duty lifeguard"] },
         ],
@@ -657,7 +657,7 @@ const AUTHORED_LESSONS = [
         focus: "The /\u03b8/ sound, the /\u00e6/ sound, and word stress in two-syllable beach words",
         tips: [
           "Put your tongue lightly between your teeth for /\u03b8/. Push air out gently. Do not use /t/ or /s/.",
-          "For /\u00e6/, keep your mouth open and relaxed \u2014 like the vowel in cat, map, bad.",
+          "For /\u00e6/, keep your mouth open and relaxed — like the vowel in cat, map, bad.",
           "Stress the first syllable in two-syllable beach words: SUNscreen, SUNburn, LIFEguard, TOWel.",
         ],
         focusSections: [
@@ -668,13 +668,13 @@ const AUTHORED_LESSONS = [
       },
 
       reading: {
-        passage: "Australia is famous for its beautiful beaches. Every year, many people visit the beach to swim, relax, and enjoy the sunshine. However, it is important to understand beach safety rules before entering the water.\n\nWhen you visit an Australian beach, you should always look for the flags. Red and yellow flags show the safest area to swim. You should swim between these flags because a lifeguard is watching this area and can help if there is a problem.\n\nYou should be careful of a rip current. A rip current is a strong flow of water that moves away from the beach and can pull swimmers out to sea. If you are caught in a rip current, you should stay calm and follow the lifeguard\u2019s advice.\n\nThe Australian sun can also be dangerous. You should use sunscreen to protect your skin and sit in the shade when the sun is very strong. Spending too much time in the sun can cause sunburn, which makes your skin red and painful. Some people like to sunbathe, but they should be careful and protect their skin.\n\nAt the beach, you can enjoy many activities. You can swim in the ocean, relax on a towel, or walk along the sand wearing thongs. However, you should always check the safety signs because sometimes there may be dangers, such as a shark in the water.\n\nSwimming can be fun, but it can also be dangerous. If people do not follow safety rules, they can drown. Always listen to the lifeguard, follow the signs, and make safe choices when you visit an Australian beach.",
+        passage: "Australia is famous for its beautiful beaches. Every year, many people visit the beach to swim, relax, and enjoy the sunshine. However, it is important to understand beach safety rules before entering the water.\n\nWhen you visit an Australian beach, you should always look for the flags. Red and yellow flags show the safest area to swim. You should swim between these flags because a lifeguard is watching this area and can help if there is a problem.\n\nYou should be careful of a rip current. A rip current is a strong flow of water that moves away from the beach and can pull swimmers out to sea. If you are caught in a rip current, you should stay calm and follow the lifeguard's advice.\n\nThe Australian sun can also be dangerous. You should use sunscreen to protect your skin and sit in the shade when the sun is very strong. Spending too much time in the sun can cause sunburn, which makes your skin red and painful. Some people like to sunbathe, but they should be careful and protect their skin.\n\nAt the beach, you can enjoy many activities. You can swim in the ocean, relax on a towel, or walk along the sand wearing thongs. However, you should always check the safety signs because sometimes there may be dangers, such as a shark in the water.\n\nSwimming can be fun, but it can also be dangerous. If people do not follow safety rules, they can drown. Always listen to the lifeguard, follow the signs, and make safe choices when you visit an Australian beach.",
         questions: [
-          { stem: "What is the main purpose of the reading?", options: ["To explain how to build a beach house in Australia.", "To teach people how to stay safe at Australian beaches.", "To describe the most beautiful beaches in Australia."], answer: "To teach people how to stay safe at Australian beaches.", note: "Good \u2014 the whole text is about safety rules and advice." },
-          { stem: "Why should people swim between the red and yellow flags?", options: ["It is the area where the water is warmest.", "It is the area watched by lifeguards and considered safer.", "It is the only place where people can use towels."], answer: "It is the area watched by lifeguards and considered safer.", note: "Exactly \u2014 the flags mark where the lifeguards are watching." },
-          { stem: "Based on the information in the reading, what is likely true about people who visit Australian beaches?", options: ["They should learn about beach safety before swimming.", "They do not need to follow safety rules.", "They should avoid swimming in the ocean."], answer: "They should learn about beach safety before swimming.", note: "Right \u2014 the text says it is important to understand safety rules before entering the water." },
-          { stem: "What can happen if someone is caught in a rip current?", options: ["They can be pulled away from the beach.", "They can get sunburn from the water.", "They can find a safer place to swim."], answer: "They can be pulled away from the beach.", note: "Yes \u2014 a rip current pulls swimmers out to sea, which is why you should stay calm." },
-          { stem: "What message does the author want readers to think about after reading this article?", options: ["Beaches are only dangerous for tourists.", "People can enjoy Australian beaches by making safe choices.", "Swimming is the most important beach activity."], answer: "People can enjoy Australian beaches by making safe choices.", note: "That\u2019s the main message \u2014 enjoy the beach, but be safe." },
+          { stem: "What is the main purpose of the reading?", options: ["To explain how to build a beach house in Australia.", "To teach people how to stay safe at Australian beaches.", "To describe the most beautiful beaches in Australia."], answer: "To teach people how to stay safe at Australian beaches.", note: "Good — the whole text is about safety rules and advice." },
+          { stem: "Why should people swim between the red and yellow flags?", options: ["It is the area where the water is warmest.", "It is the area watched by lifeguards and considered safer.", "It is the only place where people can use towels."], answer: "It is the area watched by lifeguards and considered safer.", note: "Exactly — the flags mark where the lifeguards are watching." },
+          { stem: "Based on the information in the reading, what is likely true about people who visit Australian beaches?", options: ["They should learn about beach safety before swimming.", "They do not need to follow safety rules.", "They should avoid swimming in the ocean."], answer: "They should learn about beach safety before swimming.", note: "Right — the text says it is important to understand safety rules before entering the water." },
+          { stem: "What can happen if someone is caught in a rip current?", options: ["They can be pulled away from the beach.", "They can get sunburn from the water.", "They can find a safer place to swim."], answer: "They can be pulled away from the beach.", note: "Yes — a rip current pulls swimmers out to sea, which is why you should stay calm." },
+          { stem: "What message does the author want readers to think about after reading this article?", options: ["Beaches are only dangerous for tourists.", "People can enjoy Australian beaches by making safe choices.", "Swimming is the most important beach activity."], answer: "People can enjoy Australian beaches by making safe choices.", note: "That's the main message — enjoy the beach, but be safe." },
         ],
       },
 
@@ -695,30 +695,30 @@ const AUTHORED_LESSONS = [
 
       grammar: {
         point: "Modal verbs of obligation, prohibition and advice",
-        meaning: "Modal verbs like must, should, mustn\u2019t and can\u2019t express rules, advice and things that are not allowed.",
-        form: "modal (must / should / mustn\u2019t / can\u2019t) + base verb",
-        usage: "Giving safety advice, explaining rules, expressing what you think is a good idea \u2014 essential for everyday Australian life.",
+        meaning: "Modal verbs like must, should, mustn't and can't express rules, advice and things that are not allowed.",
+        form: "modal (must / should / mustn't / can't) + base verb",
+        usage: "Giving safety advice, explaining rules, expressing what you think is a good idea — essential for everyday Australian life.",
         examples: [
           "You must wear sunscreen at the beach.",
-          "You mustn\u2019t swim outside the flags.",
+          "You mustn't swim outside the flags.",
           "You should check the weather before swimming.",
           "I think people should learn about beach safety.",
         ],
         reference: [
           { function: "Obligation", form: "must / have to + base verb", example: "You must wear sunscreen at the beach." },
-          { function: "Prohibition", form: "mustn\u2019t / can\u2019t + base verb", example: "You mustn\u2019t swim outside the flags." },
-          { function: "Advice", form: "should / shouldn\u2019t + base verb", example: "You should check the weather before swimming." },
-          { function: "Opinion", form: "think/believe + should/shouldn\u2019t + base verb", example: "I think people should learn about beach safety." },
+          { function: "Prohibition", form: "mustn't / can't + base verb", example: "You mustn't swim outside the flags." },
+          { function: "Advice", form: "should / shouldn't + base verb", example: "You should check the weather before swimming." },
+          { function: "Opinion", form: "think/believe + should/shouldn't + base verb", example: "I think people should learn about beach safety." },
         ],
         practice: [
-          { stem: "You __________ wear sunscreen when you spend time in the Australian sun.", options: ["should", "should to", "shoulding", "to should"], answer: "should", note: "Advice: should + base verb. No \u2018to\u2019, no -ing." },
-          { stem: "You __________ swim outside the red and yellow flags because it is dangerous.", options: ["mustn\u2019t", "mustn\u2019t to", "don\u2019t must", "not must"], answer: "mustn\u2019t", note: "Prohibition: mustn\u2019t + base verb. It means you are not allowed." },
-          { stem: "Visitors __________ listen to the lifeguard\u2019s instructions at the beach.", options: ["should", "should to", "to should", "shoulding"], answer: "should", note: "Advice: should + base verb \u2014 the same pattern every time." },
-          { stem: "You __________ check the weather before going swimming.", options: ["should", "should to", "must to", "to must"], answer: "should", note: "Advice: should + base verb. No \u2018to\u2019 after a modal." },
-          { stem: "People __________ enter the water if there is a shark warning.", options: ["mustn\u2019t", "should", "must to", "can to"], answer: "mustn\u2019t", note: "Prohibition: mustn\u2019t + base verb \u2014 it means you are not allowed." },
+          { stem: "You __________ wear sunscreen when you spend time in the Australian sun.", options: ["should", "should to", "shoulding", "to should"], answer: "should", note: "Advice: should + base verb. No \u2018to', no -ing." },
+          { stem: "You __________ swim outside the red and yellow flags because it is dangerous.", options: ["mustn't", "mustn't to", "don't must", "not must"], answer: "mustn't", note: "Prohibition: mustn't + base verb. It means you are not allowed." },
+          { stem: "Visitors __________ listen to the lifeguard's instructions at the beach.", options: ["should", "should to", "to should", "shoulding"], answer: "should", note: "Advice: should + base verb — the same pattern every time." },
+          { stem: "You __________ check the weather before going swimming.", options: ["should", "should to", "must to", "to must"], answer: "should", note: "Advice: should + base verb. No \u2018to' after a modal." },
+          { stem: "People __________ enter the water if there is a shark warning.", options: ["mustn't", "should", "must to", "can to"], answer: "mustn't", note: "Prohibition: mustn't + base verb — it means you are not allowed." },
           { stem: "You __________ bring a towel, water, and sunscreen when you visit the beach.", options: ["should", "should to", "shoulding", "to should"], answer: "should", note: "Advice: should + base verb." },
-          { stem: "I think international students __________ learn about Australian beach safety.", options: ["should", "should to", "must to", "can to"], answer: "should", note: "Opinion: think + should + base verb. No \u2018to\u2019, no -ing after the modal." },
-          { stem: "People __________ ignore warning signs at the beach because they are there to keep people safe.", options: ["mustn\u2019t", "should", "must to", "to must"], answer: "mustn\u2019t", note: "Prohibition: mustn\u2019t + base verb. The signs exist for safety." },
+          { stem: "I think international students __________ learn about Australian beach safety.", options: ["should", "should to", "must to", "can to"], answer: "should", note: "Opinion: think + should + base verb. No \u2018to', no -ing after the modal." },
+          { stem: "People __________ ignore warning signs at the beach because they are there to keep people safe.", options: ["mustn't", "should", "must to", "to must"], answer: "mustn't", note: "Prohibition: mustn't + base verb. The signs exist for safety." },
         ],
       },
 
@@ -743,22 +743,22 @@ const AUTHORED_LESSONS = [
         questions: [
           "What should tourists do when they visit an Australian beach?",
           "What rules must people follow to stay safe at the beach?",
-          "What things shouldn\u2019t people do when swimming in the ocean?",
+          "What things shouldn't people do when swimming in the ocean?",
           "Do you think people should learn about beach safety before visiting Australia? Why?",
           "Should beaches have more safety rules, or do people already have enough responsibility?",
         ],
         sentenceFrames: [
-          { frame: "When visiting an Australian beach, people should \u2026 because \u2026", example: "When visiting an Australian beach, people should swim between the flags because it is safer." },
-          { frame: "One important beach rule is that people must \u2026", example: "One important beach rule is that people must listen to lifeguards." },
-          { frame: "People shouldn\u2019t \u2026 because \u2026", example: "People shouldn\u2019t swim alone because it can be dangerous." },
-          { frame: "I think international students should \u2026 because \u2026", example: "I think international students should learn Australian beach safety because beaches can be different from their home countries." },
-          { frame: "I believe beaches should / shouldn\u2019t have more rules because \u2026", example: "I believe beaches should have more rules because safety is important." },
+          { frame: "When visiting an Australian beach, people should … because …", example: "When visiting an Australian beach, people should swim between the flags because it is safer." },
+          { frame: "One important beach rule is that people must …", example: "One important beach rule is that people must listen to lifeguards." },
+          { frame: "People shouldn't … because …", example: "People shouldn't swim alone because it can be dangerous." },
+          { frame: "I think international students should … because …", example: "I think international students should learn Australian beach safety because beaches can be different from their home countries." },
+          { frame: "I believe beaches should / shouldn't have more rules because …", example: "I believe beaches should have more rules because safety is important." },
         ],
       },
 
       speaking: {
         sentenceFrames: [
-          { frame: "You should wear sunscreen because \u2026", example: "You should wear sunscreen because the Australian sun is strong." },
+          { frame: "You should wear sunscreen because …", example: "You should wear sunscreen because the Australian sun is strong." },
         ],
       },
 
@@ -772,23 +772,23 @@ const AUTHORED_LESSONS = [
           "What challenges might visitors face at the beach, and how could they be solved?",
         ],
         sentenceFrames: [
-          { frame: "Visitors should \u2026 because \u2026", example: "Visitors should swim between the flags because it is safer." },
-          { frame: "People must \u2026 to stay safe at the beach.", example: "People must listen to lifeguards to stay safe at the beach." },
-          { frame: "Our beach should include \u2026 so that \u2026", example: "Our beach should include more shaded areas so that people can avoid strong sunlight." },
-          { frame: "One rule we would have is \u2026 . This would help because \u2026", example: "One rule we would have is no swimming alone. This would help because people can get help quickly if there is a problem." },
-          { frame: "One challenge might be \u2026 , and we could solve it by \u2026", example: "One challenge might be dangerous swimming conditions, and we could solve it by adding more warning signs." },
+          { frame: "Visitors should … because …", example: "Visitors should swim between the flags because it is safer." },
+          { frame: "People must … to stay safe at the beach.", example: "People must listen to lifeguards to stay safe at the beach." },
+          { frame: "Our beach should include … so that …", example: "Our beach should include more shaded areas so that people can avoid strong sunlight." },
+          { frame: "One rule we would have is … . This would help because …", example: "One rule we would have is no swimming alone. This would help because people can get help quickly if there is a problem." },
+          { frame: "One challenge might be … , and we could solve it by …", example: "One challenge might be dangerous swimming conditions, and we could solve it by adding more warning signs." },
         ],
       },
     },
 
     teacherNotes: {
       anticipatedProblems: [
-        { problem: "Students may only give short answers in the warm-up.", solution: "Provide prompts and sentence frames: \u201cI usually\u2026\u201d, \u201cPeople should\u2026\u201d, \u201cPeople shouldn\u2019t\u2026\u201d" },
+        { problem: "Students may only give short answers in the warm-up.", solution: "Provide prompts and sentence frames: \u201cI usually…\u201d, \u201cPeople should…\u201d, \u201cPeople shouldn't…\u201d" },
         { problem: "Some vocabulary is culturally specific (rip current, thongs).", solution: "Use images/examples and compare Australian meanings." },
         { problem: "Students may pronounce thongs as /t\u0252\u014bz/ or /s\u0252\u014bz/.", solution: "Use mouth position demonstration and back-chaining." },
         { problem: "Students read every word slowly.", solution: "Set a short time limit and emphasise reading for general meaning." },
-        { problem: "Students confuse must/mustn\u2019t and should/shouldn\u2019t.", solution: "Use timelines/examples and compare meanings." },
-        { problem: "Students use \u2018to\u2019 after modal verbs (should to wear).", solution: "Highlight structure: modal + verb (no \u2018to\u2019)." },
+        { problem: "Students confuse must/mustn't and should/shouldn't.", solution: "Use timelines/examples and compare meanings." },
+        { problem: "Students use \u2018to' after modal verbs (should to wear).", solution: "Highlight structure: modal + verb (no \u2018to')." },
         { problem: "Students lack confidence speaking.", solution: "Allow planning time and provide useful language." },
         { problem: "Students miss words during first listening.", solution: "Play twice: first for meaning, second for detail." },
       ],
@@ -801,7 +801,7 @@ const AUTHORED_LESSONS = [
         { word: "lifeguard", question: "Does a lifeguard help people or sell tickets?", answer: "Help people" },
         { word: "shade", question: "Is it usually cooler or hotter?", answer: "Cooler" },
       ],
-      homework: "Write 8 beach safety rules for international visitors using modal verbs. Example: \u201cVisitors should\u2026\u201d",
+      homework: "Write 8 beach safety rules for international visitors using modal verbs. Example: \u201cVisitors should…\u201d",
     },
 
     answerKey: {
@@ -809,7 +809,7 @@ const AUTHORED_LESSONS = [
       comprehension: ["b", "b", "a", "a", "b"],
       oddOneOut: ["shark", "drown", "shade", "holiday", "towel"],
       completeSentences: ["sunscreen", "rip current", "lifeguard", "sunburn", "flags"],
-      grammarPractice: ["should", "mustn\u2019t", "should", "should", "mustn\u2019t", "should", "should", "mustn\u2019t"],
+      grammarPractice: ["should", "mustn't", "should", "should", "mustn't", "should", "should", "mustn't"],
       listeningGapFill: ["flags", "lifeguards", "rip currents", "sunscreen", "shade", "sunburn", "shark", "drown", "water"],
     },
   },
@@ -821,7 +821,7 @@ const AUTHORED_LESSONS = [
    pre-filled sections so ensureSection() skips AI generation.
 
    This function is the ONLY bridge between storage format and runtime
-   format. Components never access lesson.content directly \u2014 they
+   format. Components never access lesson.content directly — they
    receive the flattened blueprint, which is identical in shape to an
    AI-generated blueprint. The rendering layer cannot tell the difference.
    ------------------------------------------------------------------- */
@@ -829,7 +829,7 @@ function prepareAuthoredBlueprint(lesson) {
   const m = lesson.metadata;
   const c = lesson.content;
 
-  // Flat blueprint \u2014 same shape as AI-generated blueprints
+  // Flat blueprint — same shape as AI-generated blueprints
   const blueprint = {
     // Metadata (carried through for logging, memory, display)
     lessonType: m.lessonType,
@@ -853,7 +853,7 @@ function prepareAuthoredBlueprint(lesson) {
     warmUpQuestions: c.warmUp.questions,
     warmUpActivities: c.warmUp.activities,
 
-    // Vocabulary \u2014 full set + matching subset
+    // Vocabulary — full set + matching subset
     vocabulary: c.vocabulary.items,
     matchVocab: c.vocabulary.matchSet,
 
@@ -863,7 +863,7 @@ function prepareAuthoredBlueprint(lesson) {
     // Pronunciation
     pronunciation: c.pronunciation,
 
-    // Optional content \u2014 components render these when present
+    // Optional content — components render these when present
     readingPassage: c.reading ? c.reading.passage : undefined,
     readingQuestions: c.reading ? c.reading.questions : undefined,
     listeningScript: c.listening ? c.listening.script : undefined,
@@ -881,7 +881,7 @@ function prepareAuthoredBlueprint(lesson) {
     teacherNotes: lesson.teacherNotes,
   };
 
-  // Pre-filled sections \u2014 ensureSection() will find these and skip AI
+  // Pre-filled sections — ensureSection() will find these and skip AI
   const sections = {};
 
   // Skill section: reading passage + comprehension questions
@@ -900,7 +900,7 @@ function prepareAuthoredBlueprint(lesson) {
     };
   }
 
-  // Summary is NOT pre-filled \u2014 it is always personalised by AI to
+  // Summary is NOT pre-filled — it is always personalised by AI to
   // the student's actual performance during this lesson.
 
   return { blueprint, sections };
@@ -920,11 +920,11 @@ function WelcomeLanding({ onSignUp, onSignIn }) {
   if (step === 0) return (
     <div className="onboard" onClick={() => setStep(1)}>
       <div className="intro-page">
-        <span className="splash-title write">Ask Leo</span>
-        <span className="splash-sub">Australia</span>
-        <div className="splash-sand"><ThongTrail /></div>
-        <div className="welcome-leo"><LeoRoo size={64} /></div>
-        <p className="intro-subtitle splash-tagline">Your personal AI English teacher.</p>
+        <div className="logo-stack">
+          <LogoMark width={280} animate detail />
+          <span className="logo-wordmark logo-word-splash logo-fade-in">Ask Leo</span>
+        </div>
+                <p className="intro-subtitle splash-tagline">Your English teacher in Australia.</p>
         <button className="intro-next splash-arrow" onClick={(e) => { e.stopPropagation(); setStep(1); }}><ChevronRight size={28} /></button>
       </div>
     </div>
@@ -932,14 +932,8 @@ function WelcomeLanding({ onSignUp, onSignIn }) {
   if (step === 1) return (
     <div className="onboard">
       <div className="intro-page">
-        <div className="pop-in pop-d1"><LeoRoo size={72} /></div>
-        <h2 className="intro-heading pop-in pop-d2">Ask Leo — your very own personalised English AI teacher.</h2>
-        <p className="intro-body pop-in pop-d3">Learn and practise English, improve your confidence, and learn the skills you need for your life in Australia.</p>
-        <div className="intro-features">
-          <div className="intro-feat pop-in pop-d4"><span className="intro-feat-icon">📚</span><span>Quality English lessons personalised to your level</span></div>
-          <div className="intro-feat pop-in pop-d5"><span className="intro-feat-icon"><svg viewBox="0 0 40 20" width="24" height="12" style={{display:"block",borderRadius:2}}><rect width="40" height="20" fill="#012169"/><g transform="translate(0,0)"><rect width="20" height="10" fill="#012169"/><path d="M0 0L20 10M20 0L0 10" stroke="#fff" strokeWidth="2.4"/><path d="M0 0L20 10M20 0L0 10" stroke="#C8102E" strokeWidth="1"/><path d="M10 0V10M0 5H20" stroke="#fff" strokeWidth="3.5"/><path d="M10 0V10M0 5H20" stroke="#C8102E" strokeWidth="2"/></g><polygon points="10,13 9.1,15.8 6.2,15.8 8.5,17.5 7.7,20 10,18.2 12.3,20 11.5,17.5 13.8,15.8 10.9,15.8" fill="#fff" transform="scale(0.55) translate(3.5,7)"/><circle cx="30.5" cy="5" r="1.1" fill="#fff"/><circle cx="33" cy="8.5" r="1.1" fill="#fff"/><circle cx="30.5" cy="13" r="1.1" fill="#fff"/><circle cx="27" cy="10" r="1.1" fill="#fff"/><circle cx="31" cy="10" r="0.65" fill="#fff"/></svg></span><span>Learn Australian English only</span></div>
-          <div className="intro-feat pop-in pop-d6"><span className="intro-feat-icon">🧠</span><span>A teacher who remembers you</span></div>
-        </div>
+<h2 className="intro-heading pop-in pop-d2">Learn English for your life in Australia.</h2>
+        <p className="intro-body pop-in pop-d3">Leo is an English teacher who adapts to you — your level, your goals, and what you find difficult.</p>
         <button className="primary-btn wide pop-in pop-d7" onClick={() => setStep(2)}>Next</button>
       </div>
     </div>
@@ -947,14 +941,8 @@ function WelcomeLanding({ onSignUp, onSignIn }) {
   if (step === 2) return (
     <div className="onboard" key="page3">
       <div className="intro-page">
-        <div className="pop-in pop-d1"><LeoRoo size={80} /></div>
-        <h2 className="intro-heading pop-in pop-d2">Meet Leo, your English teacher.</h2>
-        <p className="intro-body pop-in pop-d3">Leo remembers what you learn, understands your goals, and helps you build the English you need for life in Australia.</p>
-        <div className="intro-features">
-          <div className="intro-feat pop-in pop-d4"><span className="intro-feat-icon">🎯</span><span>Adapts to your level automatically</span></div>
-          <div className="intro-feat pop-in pop-d5"><span className="intro-feat-icon">💬</span><span>Speaking, reading, grammar, vocabulary</span></div>
-          <div className="intro-feat pop-in pop-d6"><span className="intro-feat-icon">📈</span><span>Tracks your progress and grows with you</span></div>
-        </div>
+<h2 className="intro-heading pop-in pop-d2">Leo remembers what you learn.</h2>
+        <p className="intro-body pop-in pop-d3">Every lesson builds on the last. Leo knows what you find difficult, and plans accordingly.</p>
         <button className="primary-btn wide pop-in pop-d7" onClick={() => setStep(3)}>Next</button>
       </div>
     </div>
@@ -962,9 +950,7 @@ function WelcomeLanding({ onSignUp, onSignIn }) {
   return (
     <div className="onboard" key="page4">
       <div className="intro-page">
-        <div className="pop-in pop-d1"><LeoRoo size={72} /></div>
-        <h2 className="intro-heading pop-in pop-d2">Ready to start learning?</h2>
-        <p className="intro-body pop-in pop-d3">Create an account and Leo will prepare to become your personal AI teacher.</p>
+<h2 className="intro-heading pop-in pop-d2">Ready to begin?</h2>
         <button className="primary-btn wide auth-btn pop-in pop-d7" onClick={onSignUp}>Create Account</button>
         <button className="ghost-btn wide auth-btn pop-in pop-d8" onClick={onSignIn}>I already have an account</button>
       </div>
@@ -1001,9 +987,7 @@ function LeoReveal({ onDone }) {
           </div>
         ) : (
           <div className="leo-reveal-final fade-in" key="final">
-            <span className="leo-reveal-name">LEO</span>
-            <LeoRoo size={52} />
-            <p className="leo-reveal-tagline">Your personal English teacher</p>
+            <span className="leo-reveal-name">LEO</span> <p className="leo-reveal-tagline">Your personal English teacher</p>
           </div>
         )}
       </div>
@@ -1048,7 +1032,10 @@ function SignUpPage({ onBack, onComplete }) {
   return (
     <div className="onboard">
       <div className="ob-card fade-in">
-        <span className="hand ob-brand">Ask Leo Australia</span>
+        <div className="logo-lockup logo-lockup-auth">
+          <LogoMarkSmall size={26} />
+          <span className="logo-wordmark logo-word-auth">Ask Leo</span>
+        </div>
         <h2 className="ob-question">Create your account</h2>
         <div style={{ textAlign: "left" }}>
           <label className="input-label">Email</label>
@@ -1101,7 +1088,10 @@ function SignInPage({ onBack, onComplete }) {
   return (
     <div className="onboard">
       <div className="ob-card fade-in">
-        <span className="hand ob-brand">Ask Leo Australia</span>
+        <div className="logo-lockup logo-lockup-auth">
+          <LogoMarkSmall size={26} />
+          <span className="logo-wordmark logo-word-auth">Ask Leo</span>
+        </div>
         <h2 className="ob-question">Welcome back!</h2>
         <p className="muted small" style={{ textAlign: "center", marginBottom: 14 }}>Sign in to continue learning with Leo.</p>
         <div style={{ textAlign: "left" }}>
@@ -1256,15 +1246,13 @@ const PLACEMENT_FUNCTIONAL = [
   { level: "C1", area: "negotiation", stem: "You're negotiating a salary. The offer is lower than expected. What do you say?", options: ["I really appreciate the offer. Based on my experience and the market rate, I was hoping we could discuss a figure closer to $75,000. Is there any flexibility?", "That's too low. Pay me more.", "I won't accept less than $80,000.", "Whatever you think is fair."], answer: "I really appreciate the offer. Based on my experience and the market rate, I was hoping we could discuss a figure closer to $75,000. Is there any flexibility?", note: "Appreciative, data-informed, specific, and opens negotiation without confrontation." },
 ];
 
+/* PLACEMENT_ENCOURAGEMENT — currently unused after P3.1 simplification.
+   Retained for potential future use. */
 const PLACEMENT_ENCOURAGEMENT = [
-  "You're doing well — keep going!",
-  "Nice work so far.",
-  "Great job — you're making good progress.",
-  "Don't worry if some questions feel tricky — that's completely normal.",
-  "You're nearly there — well done!",
-  "Brilliant — let's keep going.",
-  "That section is done — lovely work.",
-  "You're doing better than you think!",
+  "Let's keep going.",
+  "Nearly there.",
+  "Take your time.",
+  "No rush.",
 ];
 
 const CEFR_ORDER = ["A1", "A2", "B1", "B2", "C1"];
@@ -1433,7 +1421,7 @@ function PlacementTestPage({ profile, onComplete }) {
     return (
       <div>
         <div className="quiz-progress"><span style={{ width: `${(count / maxQ) * 100}%` }} /></div>
-        <p className="muted small">Question {count + 1} of ~{maxQ}</p>
+
         <p className="q-sentence">{q.stem}</p>
         <div className="mcq-opts">
           {opts.map((opt, i) => (
@@ -1451,87 +1439,53 @@ function PlacementTestPage({ profile, onComplete }) {
       {/* Progress bar */}
       <div className="placement-progress">
         <div className="placement-progress-bar"><span style={{ width: `${progress * 100}%` }} /></div>
-        <div className="placement-progress-labels">
-          {PLACEMENT_SECTIONS.map((s, i) => (
-            <span key={s.id} className={"placement-step" + (i <= section ? " placement-step-done" : "")}>{s.emoji}</span>
-          ))}
-        </div>
+
       </div>
 
-      {/* ── WELCOME ── */}
+      {/* ── LEO FRAMING ── */}
       {section === 0 && (
         <Card>
-          <div className="lesson-reco-head"><LeoRoo size={48} /><div><h3 style={{ margin: 0 }}>Welcome to your English check-up!</h3><p className="muted small">This isn't an exam — it's just Leo getting to know your English so I can teach you better. Relax and do your best.</p></div></div>
-          <div style={{ marginTop: 16 }}>
-            <label className="input-label">How confident do you feel about your English? (1 = not confident, 10 = very confident)</label>
-            <div className="confidence-row">
-              <input type="range" min="1" max="10" value={welcome.confidence} onChange={(e) => setWelcome({ ...welcome, confidence: +e.target.value })} className="confidence-slider" />
-              <span className="confidence-val">{welcome.confidence}/10</span>
-            </div>
-            <label className="input-label">How would you describe your English level?</label>
-            <select className="lang-select" value={welcome.selfLevel} onChange={(e) => setWelcome({ ...welcome, selfLevel: e.target.value })}>
-              <option value="" disabled>Choose…</option>
-              {LEVELS.map(([code, label]) => <option key={code} value={code}>{code} — {label}</option>)}
-            </select>
-            <label className="input-label" style={{ marginTop: 14 }}>Why are you learning English? (choose all that apply)</label>
-            <div className="tag-row" style={{ marginBottom: 14 }}>
-              {PLACEMENT_GOALS.map((g) => (
-                <button key={g} className={"chip" + (welcome.goals.includes(g) ? " chip-on" : "")}
-                  onClick={() => setWelcome({ ...welcome, goals: welcome.goals.includes(g) ? welcome.goals.filter((x) => x !== g) : [...welcome.goals, g] })}>{g}</button>
-              ))}
-            </div>
+          <div className="leo-accent" style={{ marginBottom: "var(--space-4)" }}>
+            <p className="text-leo">I just want to get a sense of where your English is right now, so I know how to help.</p>
+            <p className="text-leo" style={{ opacity: 0.7, marginTop: "var(--space-2)" }}>There are no right or wrong levels here — this simply helps me plan your lessons.</p>
           </div>
-          <button className="primary-btn wide" onClick={nextSection}>Let's get started</button>
+          <button className="primary-btn wide" onClick={nextSection}>Let's begin</button>
         </Card>
       )}
 
       {/* ── GRAMMAR ── */}
       {section === 1 && (
         <Card>
-          <div className="stage-head"><h3>🧩 Grammar</h3></div>
-          <p className="muted small">{encourage()}</p>
-          <AdaptiveQuiz q={grammarQ} chosen={grammarChosen} count={grammarCount} maxQ={18}
-            onPick={(opt) => handleAdaptive(grammarQ, opt, PLACEMENT_GRAMMAR, grammarHistory, setGrammarHistory, grammarAnswered, setGrammarAnswered, grammarLevel, setGrammarLevel, setGrammarQ, setGrammarChosen, grammarCount, setGrammarCount, 18, () => nextSection())} />
+          
+          <AdaptiveQuiz q={grammarQ} chosen={grammarChosen} count={grammarCount} maxQ={10}
+            onPick={(opt) => handleAdaptive(grammarQ, opt, PLACEMENT_GRAMMAR, grammarHistory, setGrammarHistory, grammarAnswered, setGrammarAnswered, grammarLevel, setGrammarLevel, setGrammarQ, setGrammarChosen, grammarCount, setGrammarCount, 10, () => nextSection())} />
         </Card>
       )}
 
       {/* ── VOCABULARY ── */}
       {section === 2 && (
         <Card>
-          <div className="stage-head"><h3>📚 Vocabulary</h3></div>
-          <p className="muted small">{encourage()}</p>
-          <AdaptiveQuiz q={vocabQ} chosen={vocabChosen} count={vocabCount} maxQ={12}
-            onPick={(opt) => handleAdaptive(vocabQ, opt, PLACEMENT_VOCAB, vocabHistory, setVocabHistory, vocabAnswered, setVocabAnswered, vocabLevel, setVocabLevel, setVocabQ, setVocabChosen, vocabCount, setVocabCount, 12, () => nextSection())} />
+          
+          <AdaptiveQuiz q={vocabQ} chosen={vocabChosen} count={vocabCount} maxQ={6}
+            onPick={(opt) => handleAdaptive(vocabQ, opt, PLACEMENT_VOCAB, vocabHistory, setVocabHistory, vocabAnswered, setVocabAnswered, vocabLevel, setVocabLevel, setVocabQ, setVocabChosen, vocabCount, setVocabCount, 6, () => nextSection())} />
         </Card>
       )}
 
       {/* ── READING ── */}
       {section === 3 && (
         <Card>
-          <div className="stage-head"><h3>📖 Reading</h3></div>
+          
           {readingPhase === 0 && (
             <div>
               <p className="muted small">Read the text, then answer the questions.</p>
-              <h4 className="diary-label">{PLACEMENT_READING_1.title}</h4>
-              <p className="passage">{PLACEMENT_READING_1.passage}</p>
+              <h4 className="diary-label">{PLACEMENT_READING_2.title}</h4>
+              <p className="passage">{PLACEMENT_READING_2.passage}</p>
               <button className="primary-btn" onClick={() => setReadingPhase(1)}>I've read it — show me the questions</button>
             </div>
           )}
           {readingPhase === 1 && (
-            <McqQuiz questions={PLACEMENT_READING_1.questions} vocab={[]} onVocabTap={() => {}}
-              onDone={(c, t) => { setReadingScore({ correct: c, total: t }); setReadingPhase(2); }} />
-          )}
-          {readingPhase === 2 && (
-            <div>
-              <p className="muted small">{encourage()} Now try a longer text.</p>
-              <h4 className="diary-label">{PLACEMENT_READING_2.title}</h4>
-              <p className="passage">{PLACEMENT_READING_2.passage}</p>
-              <button className="primary-btn" onClick={() => setReadingPhase(3)}>I've read it — show me the questions</button>
-            </div>
-          )}
-          {readingPhase === 3 && (
             <McqQuiz questions={PLACEMENT_READING_2.questions} vocab={[]} onVocabTap={() => {}}
-              onDone={(c, t) => { setReadingScore((s) => ({ correct: s.correct + c, total: s.total + t })); nextSection(); }} />
+              onDone={(c, t) => { setReadingScore({ correct: c, total: t }); nextSection(); }} />
           )}
         </Card>
       )}
@@ -1539,24 +1493,21 @@ function PlacementTestPage({ profile, onComplete }) {
       {/* ── PRONUNCIATION ── */}
       {section === 4 && (
         <Card>
-          <div className="stage-head"><h3>🔊 Pronunciation Awareness</h3></div>
-          <p className="muted small">{encourage()}</p>
-          <AdaptiveQuiz q={pronQ} chosen={pronChosen} count={pronCount} maxQ={8}
-            onPick={(opt) => handleAdaptive(pronQ, opt, PLACEMENT_PRONUNCIATION, pronHistory, setPronHistory, pronAnswered, setPronAnswered, "B1", () => {}, setPronQ, setPronChosen, pronCount, setPronCount, 8, () => nextSection())} />
+          
+          <AdaptiveQuiz q={pronQ} chosen={pronChosen} count={pronCount} maxQ={5}
+            onPick={(opt) => handleAdaptive(pronQ, opt, PLACEMENT_PRONUNCIATION, pronHistory, setPronHistory, pronAnswered, setPronAnswered, "B1", () => {}, setPronQ, setPronChosen, pronCount, setPronCount, 5, () => nextSection())} />
         </Card>
       )}
 
       {/* ── FUNCTIONAL ENGLISH ── */}
       {section === 5 && (
         <Card>
-          <div className="stage-head"><h3>🇦🇺 Real-life English</h3></div>
-          <p className="muted small">{encourage()}</p>
-          <AdaptiveQuiz q={funcQ} chosen={funcChosen} count={funcCount} maxQ={6}
-            onPick={(opt) => handleAdaptive(funcQ, opt, PLACEMENT_FUNCTIONAL, funcHistory, setFuncHistory, funcAnswered, setFuncAnswered, "B1", () => {}, setFuncQ, setFuncChosen, funcCount, setFuncCount, 6, () => {
+          
+          <AdaptiveQuiz q={funcQ} chosen={funcChosen} count={funcCount} maxQ={5}
+            onPick={(opt) => handleAdaptive(funcQ, opt, PLACEMENT_FUNCTIONAL, funcHistory, setFuncHistory, funcAnswered, setFuncAnswered, "B1", () => {}, setFuncQ, setFuncChosen, funcCount, setFuncCount, 5, () => {
               const r = computeResults();
               setResults(r);
               nextSection();
-              if (onComplete) onComplete(r);
             })} />
         </Card>
       )}
@@ -1564,49 +1515,24 @@ function PlacementTestPage({ profile, onComplete }) {
       {/* ── RESULTS ── */}
       {section === 6 && results && (
         <div>
-          <Card>
-            <div className="lesson-reco-head"><LeoRoo size={52} /><div><h3 style={{ margin: 0 }}>Your English Profile</h3><p className="muted small">Here's what Leo learned about your English today.</p></div></div>
-            <div className="placement-overall">
-              <span className="placement-overall-label">Overall Level</span>
-              <span className="placement-overall-level">{results.overall}</span>
-              <span className="placement-overall-desc">{CEFR_LABELS[results.overall]}</span>
-            </div>
-            <p className="muted small" style={{ textAlign: "center" }}>You answered {results.totalCorrect} out of {results.totalQuestions} questions correctly.</p>
-          </Card>
-
-          <Card>
-            <h3>Your Skills</h3>
-            {results.areas.map((a) => (
-              <div key={a.name} className="placement-skill-row">
-                <span className="placement-skill-name">{a.name}</span>
-                <div className="placement-skill-bar-track">
-                  <div className="placement-skill-bar-fill" style={{ width: `${((a.rank + 1) / 5) * 100}%` }} />
-                </div>
-                <span className="placement-skill-level">{a.level}</span>
+          <Card className="leo-card">
+            <div className="leo-accent">
+              <p className="text-leo" style={{ marginBottom: "var(--space-3)" }}>Now I have a sense of where your English is, {profile.name}.</p>
+              <div className="placement-overall">
+                <span className="placement-overall-level">{results.overall}</span>
+                <span className="placement-overall-desc">{CEFR_LABELS[results.overall]}</span>
               </div>
-            ))}
+              <p className="text-leo" style={{ marginTop: "var(--space-3)" }}>You're starting at {results.overall}. This is where we begin — I'll build your lessons from here.</p>
+            </div>
           </Card>
 
-          {results.strengths.length > 0 && (
-            <Card>
-              <h3>💪 Your Strengths</h3>
-              <p>{results.strengths.join(", ")} — these are your strongest areas. Well done!</p>
-            </Card>
-          )}
 
-          {results.improvements.length > 0 && (
-            <Card>
-              <h3>🎯 Areas to Develop</h3>
-              <p>{results.improvements.join(" and ")} — Leo will focus extra attention here in your lessons.</p>
-            </Card>
-          )}
 
-          <Card>
-            <h3>🗺️ What Happens Next</h3>
-            <p>Leo now knows your level and will personalise every lesson to match. Your lessons will focus on <strong>{results.overall}</strong>-level English with extra support in {results.improvements.length > 0 ? results.improvements[0].toLowerCase() : "all areas"}.</p>
-            {welcome.goals.length > 0 && <p className="muted small">Your goals: {welcome.goals.join(", ")}. Leo will keep these in mind when planning your lessons.</p>}
-            <p className="lesson-greeting" style={{ marginTop: 12 }}>I'm really looking forward to working with you, {profile.name}. Let's get started! 🇦🇺</p>
-          </Card>
+          <div className="leo-accent" style={{ marginTop: "var(--space-5)" }}>
+            <p className="text-leo">Now I know where to start. Let me plan your first lesson.</p>
+          </div>
+
+          <button className="primary-btn wide" style={{ marginTop: "var(--space-4)" }} onClick={() => { if (onComplete) onComplete(results); }}>Continue</button>
         </div>
       )}
     </div>
@@ -2051,25 +1977,24 @@ function computeStreak(dates) {
   return streak;
 }
 
-/* ---------------- Leo, the kangaroo teacher (pencil sketch) ---------------- */
+/* ---------------- Loading indicator ---------------- */
+
+const LEO_LOADER_MESSAGES = [
+  "Leo is getting things ready for you …",
+  "Just a moment — planning something good …",
+  "Thinking about what you need today …",
+  "Nearly there — hang on …",
+  "Preparing your next step …",
+];
 
 function LeoLoader({ label }) {
+  const [msgIdx] = useState(() => Math.floor(Math.random() * LEO_LOADER_MESSAGES.length));
+  const display = label || LEO_LOADER_MESSAGES[msgIdx];
   return (
     <div className="leo-loader">
-      <LeoRoo size={68} />
-      <div className="leo-loader-row"><Loader2 className="spin" size={16} /> <span>{label}</span></div>
+      <div className="leo-loader-accent" aria-hidden="true"><span /></div>
+      <p className="leo-loader-text text-leo">{display}</p>
     </div>
-  );
-}
-
-function LeoRoo({ size = 46 }) {
-  return (
-    <svg viewBox="0 0 64 64" width={size} height={size} className="leo-roo" aria-hidden="true">
-      <path d="M16 46 Q12 34 22 28 Q23 14 29 11 Q32 17 29 27 Q31 25 34 24 Q35 12 41 11 Q43 17 39 25 Q48 26 53 33 Q57 39 54 44 Q49 40 44 40 Q32 41 26 46 Q20 49 16 46 Z" />
-      <path d="M26 33 l0.1 0" strokeWidth="3.4" />
-      <path d="M53 36 l2.5 1.5" />
-      <path d="M49 41 q3 1.5 5 -0.5" />
-    </svg>
   );
 }
 
@@ -2153,18 +2078,19 @@ function HomeScreen({ profile, streak, phrase, onOpen, animate, todayInfo }) {
   return (
     <div className="home-screen">
       <div className="home-top">
-        <span className={"splash-title " + (animate ? "write" : "")}>Ask Leo Australia</span>
+        <div className={"logo-lockup logo-lockup-home" + (animate ? " fade-in" : "")}>
+          <LogoMark width={112} detail={false} />
+          <span className="logo-wordmark logo-word-home">Ask Leo</span>
+        </div>
         <p className="home-tag">Your English learning companion</p>
         <SkylineSketch animate={animate} />
 
         <div className="today-panel">
           <div className="today-head">
-            <LeoRoo size={42} />
-            <div className="today-head-text">
+                        <div className="today-head-text">
               <span className="today-title">Today with Leo</span>
               <span className="today-sub">{LANGS[profile.lang].hello}, {profile.name}! {["Great to see you today.", "Let's build your English together.", "Small steps, big progress.", "Lovely to have you back."][new Date().getDate() % 4]}</span>
             </div>
-            <span className="streak-inline"><Flame size={13} /> {streak}</span>
           </div>
           {DAILY_JOURNEY.map((item) => {
             const done = item.isDone(todayInfo);
@@ -2208,7 +2134,6 @@ function ProgressPage({ stats }) {
     <div>
       <div className="stat-grid">
         <Card className="stat">
-          <Flame size={20} className="wattle" />
           <div className="stat-num">{stats.streak}</div>
           <div className="stat-label">day streak</div>
         </Card>
@@ -2342,7 +2267,7 @@ function DiaryPage({ profile, memory, leoMemory, pages, setPages, markActivity, 
         { intent: "diary_resources" }
       );
       await update({ resources: parseJSON(raw).resources }, true);
-    } catch { alert("Couldn't fetch suggestions — please try again."); }
+    } catch { alert("I'm having trouble with that one — let me try again."); }
     setBusy(null);
   };
 
@@ -2357,7 +2282,7 @@ function DiaryPage({ profile, memory, leoMemory, pages, setPages, markActivity, 
       await update({ notes: notesDraft, feedback: fb }, true);
       if (fb.errorTypes && fb.errorTypes.length) await addErrors(fb.errorTypes);
       leoMemory.recordDiaryFeedback({ praise: fb.praise, tip: fb.tip, errorTypes: fb.errorTypes || [] });
-    } catch { alert("Feedback didn't arrive — please try again."); }
+    } catch { alert("I'm having trouble with that one — let me try again."); }
     setBusy(null);
   };
 
@@ -2448,7 +2373,7 @@ function DiaryPage({ profile, memory, leoMemory, pages, setPages, markActivity, 
           )}
           {page.feedback && (
             <div className="feedback">
-              <p className="leo-feedback-head"><LeoRoo size={22} /> <strong>Leo's feedback</strong></p>
+              <p className="leo-feedback-head"><strong>Leo's feedback</strong></p>
               <p><strong>👏 {page.feedback.praise}</strong></p>
               <p className="muted small">A native speaker might say:</p>
               <p className="reform">{page.feedback.reformulation}</p>
@@ -2522,7 +2447,7 @@ const SCENARIOS = [
 // One shared feedback line so all three exercises show Leo's ok/bad
 // response the exact same way, instead of each re-implementing it.
 function LeoFeedback({ ok, children }) {
-  return <p className={ok ? "ok" : "bad"}>{ok ? <Check size={15} /> : <X size={15} />} {children}</p>;
+  return <p className={(ok ? "ok" : "bad") + " text-leo"}>{ok ? <Check size={15} /> : <X size={15} />} {children}</p>;
 }
 
 
@@ -3117,7 +3042,7 @@ function IntroductionSection({ bp, vocab, onVocabTap, onSkip, onDone }) {
 
   if (idx === -1) return (
     <SectionShell title="Today's lesson" onSkip={onSkip}>
-      <div className="lesson-reco-head"><LeoRoo size={44} /><p className="lesson-greeting"><VocabText text={bp.explanation} vocab={vocab} onTap={onVocabTap} /></p></div>
+      <div className="lesson-head leo-accent"><p className="lesson-greeting text-leo"><VocabText text={bp.explanation} vocab={vocab} onTap={onVocabTap} /></p></div>
       <p className="lesson-why"><strong>Today:</strong> {bp.context}</p>
       <p className="lesson-goal">🎯 <VocabText text={bp.communicativeObjective} vocab={vocab} onTap={onVocabTap} /></p>
       <button className="primary-btn wide" style={{ marginTop: 6 }} onClick={() => setIdx(0)}>Let's warm up</button>
@@ -3167,7 +3092,7 @@ function GapFillInput({ stem, answers, note, placeholder, onDone }) {
     <div className="gapfill-item">
       <p className="q-sentence">{displayStem}</p>
       <div className="input-row">
-        <input className="text-input" placeholder={placeholder || "Type the missing word\u2026"} value={input}
+        <input className="text-input" placeholder={placeholder || "Type the missing word…"} value={input}
           disabled={checked !== null} onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && check()} />
         {checked === null && <button className="primary-btn" onClick={check} disabled={!input.trim()}>Check</button>}
@@ -3175,7 +3100,7 @@ function GapFillInput({ stem, answers, note, placeholder, onDone }) {
       {checked !== null && (
         <LeoFeedback ok={checked}>
           {checked
-            ? (note || "That\u2019s right \u2014 well done!")
+            ? (note || "That's right — well done!")
             : `The answer is \u201c${validAnswers[0]}\u201d. ${note || ""}`}
         </LeoFeedback>
       )}
@@ -3204,7 +3129,7 @@ function VocabReviewExercise({ exercises, vocab, onVocabTap, onDone }) {
     stem: "Which word does not belong in this group?",
     options: q.options,
     answer: q.answer,
-    note: q.note || "That\u2019s the odd one out.",
+    note: q.note || "That's the odd one out.",
   })), []);
 
   if (phase === "ooo" && hasOoo) {
@@ -3227,7 +3152,7 @@ function VocabReviewExercise({ exercises, vocab, onVocabTap, onDone }) {
     return (
       <div>
         <h4 className="diary-label">Complete the sentences</h4>
-        <p className="muted small">Use the vocabulary from today\u2019s lesson. Question {gfIdx + 1} of {gapfill.length}.</p>
+        <p className="muted small">Use the vocabulary from today's lesson. Question {gfIdx + 1} of {gapfill.length}.</p>
         <GapFillInput
           key={gfIdx}
           stem={q.stem}
@@ -3255,7 +3180,7 @@ function VocabReviewExercise({ exercises, vocab, onVocabTap, onDone }) {
   const totalQuestions = oooScore.total + gapfill.length;
   return (
     <StageComplete correct={totalCorrect} total={totalQuestions}
-      message={{ title: "Vocabulary reviewed!", sub: `${totalCorrect} out of ${totalQuestions} \u2014 those words are getting stronger.` }}
+      message={{ title: "Vocabulary reviewed!", sub: `${totalCorrect} out of ${totalQuestions} — those words are getting stronger.` }}
       onContinue={() => onDone(totalCorrect, totalQuestions)} />
   );
 }
@@ -3522,11 +3447,11 @@ function PronunciationSection({ bp, onVocabTap, onSkip, onDone }) {
   const [showTable, setShowTable] = useState(!focusSections);
   if (done) return (
     <SectionShell title="Say it like a local" onSkip={onSkip}>
-      <StageComplete message={{ title: "Well done!", sub: "Saying it out loud is how pronunciation actually changes — that\u2019s the hard bit done." }} onContinue={onDone} />
+      <StageComplete message={{ title: "Well done!", sub: "Saying it out loud is how pronunciation actually changes — that's the hard bit done." }} onContinue={onDone} />
     </SectionShell>
   );
   return (
-    <SectionShell title="Say it like a local" blurb={bp.pronunciation && bp.pronunciation.focus ? `Today\u2019s focus: ${bp.pronunciation.focus}.` : undefined} onSkip={onSkip}>
+    <SectionShell title="Say it like a local" blurb={bp.pronunciation && bp.pronunciation.focus ? `Today's focus: ${bp.pronunciation.focus}.` : undefined} onSkip={onSkip}>
       {(bp.pronunciation && bp.pronunciation.tips || []).map((t, i) => <p key={i} className="muted small">\ud83d\udca1 {t}</p>)}
 
       {/* Capability: pronunciation focus sections when available */}
@@ -3575,10 +3500,10 @@ function PronunciationSection({ bp, onVocabTap, onSkip, onDone }) {
       ))}
 
       <div className="pron-try">
-        <p className="muted small">Now you \u2014 say one of the words out loud.</p>
+        <p className="muted small">Now you — say one of the words out loud.</p>
         <MicButton onText={(t) => setHeard(t)} />
-        {heard && <LeoFeedback ok>I heard: \u201c{heard}\u201d \u2014 good on you for having a go out loud. That\u2019s how pronunciation improves.</LeoFeedback>}
-        {!TTS_OK && <p className="muted small">(Audio isn\u2019t available on this device \u2014 practise saying each word slowly, stressing the marked syllable.)</p>}
+        {heard && <LeoFeedback ok>I heard: \u201c{heard}\u201d — good on you for having a go out loud. That's how pronunciation improves.</LeoFeedback>}
+        {!TTS_OK && <p className="muted small">(Audio isn't available on this device — practise saying each word slowly, stressing the marked syllable.)</p>}
       </div>
       <button className="primary-btn" onClick={() => setDone(true)}>Continue</button>
     </SectionShell>
@@ -3608,7 +3533,7 @@ function SentenceFramesPanel({ frames, label }) {
   );
 }
 
-/* ---------- Stage 4: Speaking \u2014 conversation, discussion, critical thinking ---------- */
+/* ---------- Stage 4: Speaking — conversation, discussion, critical thinking ---------- */
 function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
   const notes = bp._teacherNotes ? bp._teacherNotes.slice(0, 200) : "";
   // Capability: use discussion questions as prompts when available
@@ -3620,8 +3545,8 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
   const ctFrames = bp.sentenceFrames && bp.sentenceFrames.criticalThinking;
 
   const opener = hasDiscussion
-    ? `Let\u2019s discuss: ${discussionQs[0]}`
-    : `Let\u2019s practise for real. Imagine we\u2019re in this situation: ${bp.context}. I\u2019ll start \u2014 ${(bp.warmUpQuestions && bp.warmUpQuestions[1]) || "tell me what you would say first."}`;
+    ? `Let's discuss: ${discussionQs[0]}`
+    : `Let's practise for real. Imagine we're in this situation: ${bp.context}. I'll start — ${(bp.warmUpQuestions && bp.warmUpQuestions[1]) || "tell me what you would say first."}`;
   const [turns, setTurns] = useState([{ role: "leo", text: opener }]);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
@@ -3637,19 +3562,19 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
       const convo = next.map((t) => (t.role === "leo" ? "Teacher: " : "") + t.text).join("\n");
       const discussionCtx = hasDiscussion ? `\nDiscussion questions to explore: ${discussionQs.join("; ")}` : "";
       const raw = await askClaude(
-        `You are Leo, one of Australia\u2019s best ELICOS teachers, in a speaking practice about "${bp.context}" with your student (${memory}).\nObjective: ${bp.communicativeObjective}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\nFinal task they are building toward: ${bp.finalTask || bp.communicativeObjective}\nEmotional objective: ${bp.emotionalObjective || "build confidence"}${discussionCtx}\n\nBehave like a real teacher: respond to WHAT they said, sound curious and warm, ask ONE genuine follow-up question. Encourage communication over perfection. If they make a predicted mistake, gently recast it \u2014 but never interrupt the flow. Keep it to 2-3 natural sentences.\n\n${convo}\n\nThe student just said: "${said}"\n\nReply as the teacher in plain text only.`,
+        `You are Leo, one of Australia's best ELICOS teachers, in a speaking practice about "${bp.context}" with your student (${memory}).\nObjective: ${bp.communicativeObjective}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\nFinal task they are building toward: ${bp.finalTask || bp.communicativeObjective}\nEmotional objective: ${bp.emotionalObjective || "build confidence"}${discussionCtx}\n\nBehave like a real teacher: respond to WHAT they said, sound curious and warm, ask ONE genuine follow-up question. Encourage communication over perfection. If they make a predicted mistake, gently recast it — but never interrupt the flow. Keep it to 2-3 natural sentences.\n\n${convo}\n\nThe student just said: "${said}"\n\nReply as the teacher in plain text only.`,
         { intent: "speaking_reply" }
       );
       setTurns((t) => [...t, { role: "leo", text: raw }]);
     } catch {
-      setTurns((t) => [...t, { role: "leo", text: "Good \u2014 keep going! What would you say next?" }]);
+      setTurns((t) => [...t, { role: "leo", text: "Good — keep going! What would you say next?" }]);
     }
     setThinking(false);
   };
 
   if (phase === "done") return (
     <SectionShell title="Speaking practice" onSkip={onSkip}>
-      <StageComplete message={{ title: "Excellent!", sub: `${youTurns} turn${youTurns === 1 ? "" : "s"} of real conversation \u2014 that\u2019s the part most students avoid, and you did it.` }}
+      <StageComplete message={{ title: "Excellent!", sub: `${youTurns} turn${youTurns === 1 ? "" : "s"} of real conversation — that's the part most students avoid, and you did it.` }}
         onContinue={() => onDone(youTurns)} />
     </SectionShell>
   );
@@ -3666,18 +3591,18 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
         <SentenceFramesPanel frames={ctFrames} label="sentence frames" />
         <div style={{ marginTop: 12 }}>
           <div className="input-row">
-            <input className="text-input" placeholder="Share your ideas\u2026" value={input}
+            <input className="text-input" placeholder="Share your ideas…" value={input}
               onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} />
             <MicButton onText={(t) => setInput(t)} />
           </div>
           <div className="speak-thread" style={{ marginTop: 8 }}>
             {turns.filter((_, i) => i > 0 || phase === "critical").map((t, i) => (
               <div key={i} className={"speak-turn " + (t.role === "leo" ? "speak-leo" : "speak-you")}>
-                {t.role === "leo" && <LeoRoo size={26} />}
+                
                 <p><VocabText text={t.text} vocab={vocab} onTap={onVocabTap} /></p>
               </div>
             ))}
-            {thinking && <Spinner label="Leo is thinking\u2026" />}
+            {thinking && <Spinner label="Leo is thinking…" />}
           </div>
           <div className="btn-row">
             <button className="primary-btn" onClick={send} disabled={thinking || !input.trim()}>Reply</button>
@@ -3695,15 +3620,15 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
       <div className="speak-thread">
         {turns.map((t, i) => (
           <div key={i} className={"speak-turn " + (t.role === "leo" ? "speak-leo" : "speak-you")}>
-            {t.role === "leo" && <LeoRoo size={26} />}
+            
             <p><VocabText text={t.text} vocab={vocab} onTap={onVocabTap} /></p>
             {t.role === "leo" && TTS_OK && <button className="link-btn" onClick={() => speakText(t.text)}>\ud83d\udd0a</button>}
           </div>
         ))}
-        {thinking && <Spinner label="Leo is listening\u2026" />}
+        {thinking && <Spinner label="Leo is listening…" />}
       </div>
       <div className="input-row">
-        <input className="text-input" placeholder="Say or type your reply\u2026" value={input}
+        <input className="text-input" placeholder="Say or type your reply…" value={input}
           onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} />
         <MicButton onText={(t) => setInput(t)} />
       </div>
@@ -3733,13 +3658,13 @@ function ListeningGapFillExercise({ gaps, onDone }) {
   const [finished, setFinished] = useState(false);
   if (finished) return (
     <StageComplete correct={correct} total={gaps.length}
-      message={{ title: "Listening complete!", sub: `${correct} out of ${gaps.length} \u2014 your ears are getting sharper.` }}
+      message={{ title: "Listening complete!", sub: `${correct} out of ${gaps.length} — your ears are getting sharper.` }}
       onContinue={() => onDone(correct, gaps.length)} />
   );
   const g = gaps[idx];
   return (
     <div>
-      <p className="muted small">Fill in the blank \u2014 {idx + 1} of {gaps.length}</p>
+      <p className="muted small">Fill in the blank — {idx + 1} of {gaps.length}</p>
       <GapFillInput
         key={idx}
         stem={g.context}
@@ -3778,7 +3703,7 @@ function SkillSection({ bp, section, vocab, onVocabTap, onSkip, onDone }) {
               \ud83d\udd0a {playedOnce ? "Play again" : "Play the recording"}
             </button>
           )}
-          {!TTS_OK && <p className="muted small">(Audio isn\u2019t available \u2014 read the text and fill in the blanks.)</p>}
+          {!TTS_OK && <p className="muted small">(Audio isn't available — read the text and fill in the blanks.)</p>}
         </div>
         {bp.listeningGapFill ? (
           <ListeningGapFillExercise gaps={bp.listeningGapFill}
@@ -3802,7 +3727,7 @@ function SkillSection({ bp, section, vocab, onVocabTap, onSkip, onDone }) {
               \ud83d\udd0a {playedOnce ? "Play again" : "Play the conversation"}
             </button>
           ) : (
-            <p className="muted small">Audio isn\u2019t available on this device, so read the transcript below as a listening substitute.</p>
+            <p className="muted small">Audio isn't available on this device, so read the transcript below as a listening substitute.</p>
           )}
           {(revealed || !TTS_OK) ? (
             <p className="passage"><VocabText text={section.passage} vocab={vocab} onTap={onVocabTap} /></p>
@@ -3876,12 +3801,12 @@ function GrammarSection({ bp, section, vocab, onVocabTap, onSkip, onDone }) {
 function SummarySection({ bp, section, vocab, onVocabTap, onFinish }) {
   const s = section;
   return (
-    <Card>
-      <div className="lesson-reco-head"><LeoRoo size={44} /><h3 style={{ margin: 0 }}>That's today's lesson 🎉</h3></div>
-      <p><VocabText text={s.praise} vocab={vocab} onTap={onVocabTap} /></p>
+    <Card className="leo-card">
+      <div className="lesson-head leo-accent"><h3 style={{ margin: 0 }}>That's today's lesson 🎉</h3></div>
+      <p className="text-leo"><VocabText text={s.praise} vocab={vocab} onTap={onVocabTap} /></p>
       <p className="muted"><VocabText text={s.summary} vocab={vocab} onTap={onVocabTap} /></p>
-      <p><strong>Your strength today:</strong> {s.strength}</p>
-      <p><strong>One thing to work on:</strong> {s.improvement}</p>
+      <p className="text-leo"><strong>Your strength today:</strong> {s.strength}</p>
+      <p className="text-leo"><strong>One thing to work on:</strong> {s.improvement}</p>
       <p className="muted small">{s.connection}</p>
       <div className="mission-box"><span className="mission-icon">🌏</span><p><VocabText text={bp.mission} vocab={vocab} onTap={onVocabTap} /></p></div>
       <p className="lesson-tomorrow"><strong>Next time:</strong> {s.tomorrowPreview}</p>
@@ -4086,6 +4011,16 @@ function validateQuestions(qs) {
 }
 
 /* ---------- The seven-stage plan (data-driven; no switch statements) ---------- */
+const STAGE_BRIDGE_TEXT = {
+  intro: "Let's get started with today's lesson.",
+  vocab: "Let's learn the words you'll need.",
+  pron: "Now let's work on how these sound.",
+  speak: "Time to practise saying it yourself.",
+  skill: "Let's see the language in context.",
+  grammar: "Let's look at the grammar behind this.",
+  summary: "Let's see how you went today.",
+};
+
 const LESSON_STAGES = [
   { id: "intro",   label: "Introduction" },
   { id: "vocab",   label: "Vocabulary" },
@@ -4153,6 +4088,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
   const level = levelFor(profile);
 
   const [phase, setPhase] = useState("loading");   // loading | chooser | planning | lesson | done
+  const [planFailCount, setPlanFailCount] = useState(0);
   const [lesson, setLesson] = useState(null);      // { blueprint, sections:{}, stage, perf:{}, status }
   const [reviewOpen, setReviewOpen] = useState(false);
   const [req, setReq] = useState({ context: "", grammar: "", vocabulary: "", skill: "", pronunciation: "" });
@@ -4317,8 +4253,8 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       await persist({ blueprint, sections: {}, stage: 0, perf: {}, status: { done: false } });
       setPhase("lesson");
     } catch {
-      alert("Leo couldn\u2019t plan the lesson just now \u2014 please try again.");
-      setPhase("chooser");
+      setPlanFailCount((c) => c + 1);
+      setPhase("error");
     }
   };
 
@@ -4338,7 +4274,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       let raw, data;
       if (stageId === "skill") {
         const notes = bp._teacherNotes ? `Leo's teaching notes: ${bp._teacherNotes.slice(0, 300)}` : "";
-        raw = await askClaude(`You are Leo, an experienced ELICOS teacher. ${notes}\nToday's lesson: "${bp.context}" (CEFR ${bp.cefr}).\nCommunicative objective: ${bp.communicativeObjective}\nToday's key vocabulary: ${(bp.vocabulary || []).slice(0,4).map(v=>v.word).join(", ")}\nGrammar focus: ${bp.grammar.point}\n${bp.authenticMaterial ? "Authentic material to base this on: " + bp.authenticMaterial : ""}\nFinal task students are preparing for: ${bp.finalTask || bp.communicativeObjective}\n\nWrite a short ${bp.mainSkill === "listening" ? "listening transcript \u2014 a natural conversation between real Australians with hesitations, natural responses. Do NOT label speakers (no 'Tourist:', 'Barista:' etc.) — just present the lines naturally as they would sound" : "reading text \u2014 something the student would genuinely encounter in Australia (a message, notice, menu, email, form)"} of 80-150 words. It MUST use at least 3 of today's vocabulary items and model the grammar point naturally. It should prepare students for the final communicative task.\nThen write five comprehension questions moving from gist to detail, each with four options.\nRespond ONLY with JSON, no fences: {"passage":"the text","questions":[{"stem":"","options":["four options"],"answer":"exact text of correct option","note":"one warm teaching line"}]}`,
+        raw = await askClaude(`You are Leo, an experienced ELICOS teacher. ${notes}\nToday's lesson: "${bp.context}" (CEFR ${bp.cefr}).\nCommunicative objective: ${bp.communicativeObjective}\nToday's key vocabulary: ${(bp.vocabulary || []).slice(0,4).map(v=>v.word).join(", ")}\nGrammar focus: ${bp.grammar.point}\n${bp.authenticMaterial ? "Authentic material to base this on: " + bp.authenticMaterial : ""}\nFinal task students are preparing for: ${bp.finalTask || bp.communicativeObjective}\n\nWrite a short ${bp.mainSkill === "listening" ? "listening transcript — a natural conversation between real Australians with hesitations, natural responses. Do NOT label speakers (no 'Tourist:', 'Barista:' etc.) — just present the lines naturally as they would sound" : "reading text — something the student would genuinely encounter in Australia (a message, notice, menu, email, form)"} of 80-150 words. It MUST use at least 3 of today's vocabulary items and model the grammar point naturally. It should prepare students for the final communicative task.\nThen write five comprehension questions moving from gist to detail, each with four options.\nRespond ONLY with JSON, no fences: {"passage":"the text","questions":[{"stem":"","options":["four options"],"answer":"exact text of correct option","note":"one warm teaching line"}]}`,
           { intent: "skill_section" });
         data = parseJSON(raw);
         data.questions = validateQuestions(data.questions);
@@ -4450,6 +4386,17 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
   const isSaved = (word) => (words || []).some((w) => w.word.toLowerCase() === word.toLowerCase());
 
   /* ---------------- render ---------------- */
+  if (phase === "error") return (
+    <div>
+      <SectionTitle>Leo's Lesson</SectionTitle>
+      <div className="leo-accent text-leo" style={{ padding: "var(--space-4)", marginTop: "var(--space-5)" }}>
+        {planFailCount < 2
+          ? <><p>I'm having trouble with that one — let me try again.</p>
+              <button className="primary-btn" style={{ marginTop: "var(--space-3)" }} onClick={() => { setPhase("chooser"); }}>Try again</button></>
+          : <p>Something's not working on my end. Your progress is saved — come back in a moment and we'll pick up right where we left off.</p>}
+      </div>
+    </div>
+  );
   if (phase === "loading") return <LeoLoader label="Opening today's lesson…" />;
   if (phase === "planning") return (<div><SectionTitle>Leo's Lesson</SectionTitle><LeoLoader label="I'm planning today's lesson for you…" /></div>);
 
@@ -4460,7 +4407,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
     <div>
       <SectionTitle>Leo's Lesson</SectionTitle>
       <Card>
-        <div className="lesson-reco-head"><LeoRoo size={48} /><p className="lesson-greeting">How would you like to study today?</p></div>
+        <div className="lesson-head leo-accent"><p className="lesson-greeting text-leo">How would you like to study today?</p></div>
         <button className="primary-btn wide" style={{ marginBottom: 10 }} onClick={() => plan({})}>📚 Leo chooses today's lesson</button>
         <button className="ghost-btn wide" onClick={() => setReviewOpen(!reviewOpen)}>🎓 I want to review something from today's class</button>
         {reviewOpen && (
@@ -4505,7 +4452,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
     <div>
       <SectionTitle>Leo's Lesson</SectionTitle>
       <Card>
-        <div className="lesson-reco-head"><LeoRoo size={48} /><h3 style={{ margin: 0 }}>Lesson complete! 🎉</h3></div>
+        <div className="lesson-head leo-accent"><h3 style={{ margin: 0 }}>Lesson complete! 🎉</h3></div>
         <p className="muted">Great work today{bp ? ` on “${bp.context}”` : ""}. Small steps every day add up — Leo's proud of you.</p>
         <button className="primary-btn wide" style={{ marginTop: 14 }} onClick={async () => { setLesson(null); await saveKey("esl-task:" + todayStr(), null); setPhase("chooser"); }}>Do another lesson</button>
       </Card>
@@ -4521,7 +4468,8 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
   return (
     <div>
       <SectionTitle sub={`${bp.context} · ${stage.label} · ${lesson.stage + 1} of ${LESSON_STAGES.length}`}>Leo's Lesson</SectionTitle>
-      <div className="progress-dots">{LESSON_STAGES.map((s, i) => <span key={s.id} className={"dot " + (i <= lesson.stage ? "dot-on" : "")} />)}</div>
+      <div className="progress-bar"><span style={{ width: `${((lesson.stage + 1) / LESSON_STAGES.length) * 100}%` }} /></div>
+      {STAGE_BRIDGE_TEXT[stage.id] && <p className="leo-accent text-leo" style={{ marginTop: "var(--space-5)", marginBottom: "var(--space-3)" }}>{STAGE_BRIDGE_TEXT[stage.id]}</p>}
 
       {needsAI && (!section || sectionLoading || section.skipped) && <LeoLoader label="Leo is preparing this part…" />}
 
@@ -4633,20 +4581,18 @@ STYLE: Reply in clear, simple English suitable for their level. Keep answers foc
 
       <div className="chat-scroll">
         {messages.length === 0 && (
-          <div className="chat-empty">
-            <LeoRoo size={72} />
-            <p className="chat-empty-title">G'day {profile.name}! I'm Leo, your English teacher. What would you like to know?</p>
+          <div className="chat-empty"> <p className="chat-empty-title">G'day {profile.name}! I'm Leo, your English teacher. What would you like to know?</p>
           </div>
         )}
         {messages.map((m, i) => (
           <div key={i} className={"bubble-row " + (m.role === "user" ? "row-user" : "row-bot")}>
-            {m.role === "assistant" && <span className="bot-avatar-leo"><LeoRoo size={26} /></span>}
+            {m.role === "assistant" && <span className="bot-avatar-leo">L</span>}
             <div className={"bubble " + (m.role === "user" ? "bubble-user" : "bubble-bot")}>{m.content}</div>
           </div>
         ))}
         {thinking && (
           <div className="bubble-row row-bot">
-            <span className="bot-avatar-leo"><LeoRoo size={26} /></span>
+            <span className="bot-avatar-leo">L</span>
             <div className="bubble bubble-bot typing"><span className="typ-dot" /><span className="typ-dot" /><span className="typ-dot" /></div>
           </div>
         )}
@@ -4728,9 +4674,7 @@ function DictionaryPage({ profile, words, setWords, markActivity, onAskLeo, leoM
       {loading && <Spinner label="Looking it up…" />}
       {error && <p className="bad">{error}</p>}
       {!loading && !dict && !thes && words.length === 0 && (
-        <Card className="center">
-          <LeoRoo size={60} />
-          <h3>Your personal dictionary</h3>
+        <Card className="center"> <h3>Your personal dictionary</h3>
           <p className="muted">Look up any English word and Leo will explain it simply — with the meaning in your language, an example, and word partners. Every word you check is saved to your Word Bank.</p>
         </Card>
       )}
@@ -4836,7 +4780,7 @@ function HeardPage({ profile, heard, setHeard, markActivity, onAskLeo, leoMemory
       const base = list || heard;
       const nx = base.map((h) => (h.id === item.id ? { ...h, info } : h));
       setHeard(nx); await saveKey("esl-heard", nx);
-    } catch { alert("Couldn't explain that one — tap it to try again."); }
+    } catch { alert("I'm having trouble with that one — tap it to try again."); }
     setBusyId(null);
   };
 
@@ -4945,7 +4889,7 @@ function AustraliaPage({ profile, memory }) {
         { intent: "australia_ask" }
       );
       setAns(text);
-    } catch { setAns("Sorry, that didn't work — please try again."); }
+    } catch { setAns("I'm having trouble with that one — let me try again."); }
     setLoading(false);
   };
 
@@ -4984,7 +4928,7 @@ function PronunciationPage({ profile }) {
         { intent: "pronunciation" }
       );
       setResult(parseJSON(raw));
-    } catch { setResult(null); alert("Couldn't analyse that word — try again."); }
+    } catch { setResult(null); alert("I'm having trouble with that one — let me try again."); }
     setLoading(false);
   };
 
@@ -5019,226 +4963,278 @@ function PronunciationPage({ profile }) {
 
 /* ---------------- Onboarding ---------------- */
 
-/* ---------- Thongs in the sand ----------
-   A pair of thongs walks left-to-right across a strip of sand and Leo arrives at
-   the end of the trail — so the footprints are HIS. He walks up, then asks the
-   student's name. It's the first thing they ever see, and it should feel like a
-   person arriving, not an app loading.
-   Each print is stamped by a staggered CSS animation-delay; the trail is a plain
-   SVG, so it costs nothing and scales to any screen width. */
-const THONG_COUNT = 8;
+/* ---------- The Ask Leo mark: two trails, walking together ----------
+   Two parallel trails of thong (flip-flop) impressions walking left to right,
+   in step. One trail is the student, one is Leo. Neither is larger, neither
+   leads — Leo walks WITH the student. The prints are impressions pressed into
+   sand, not drawn objects: soft filled sole shapes, with the toe-post dot and
+   Y-strap grooves left unpressed at large sizes.
+   Below ~48px the mark simplifies to a single stride-pair (LogoMarkSmall) —
+   two soft asymmetric prints, diagonally offset. At icon sizes the
+   arrangement, not the detail, carries the "two people" story. */
 
-/* A men's black rubber thong. Layers, bottom to top:
-   shadow in the sand -> the sole's side wall (thickness) -> the black footbed ->
-   the moulded rice-grain texture -> the edge rim -> the black Y-strap with a
-   soft sheen -> the toe post. Men's cut, so the sole is broader through the ball
-   and squarer at the heel than a women's last. Deliberately generic black rubber:
-   no logos, no brand marks. */
-const THONG_SOLE = "M 0,-18.5 C 7.8,-18.5 11.5,-13.5 11.5,-7 C 11.5,-2.5 9.6,1 9,5 C 8.4,11.5 5.8,18.5 0,18.5 C -5.8,18.5 -8.4,11.5 -9,5 C -9.6,1 -11.5,-2.5 -11.5,-7 C -11.5,-13.5 -7.8,-18.5 0,-18.5 Z";
+/* Detailed impression, toe up, local coords ~16×26. fillRule="evenodd" cuts
+   the unpressed areas (toe-post dot + Y-strap grooves) out of the sole. */
+const PRINT_DETAIL =
+  "M -0.5,-13 C 4.8,-13 7.6,-9.4 7.7,-5.4 C 7.8,-1.6 6.6,1.8 6,5.2 " +
+  "C 5.4,9.6 3.8,12.8 0.2,12.8 C -3.6,12.8 -5.3,9.8 -5.9,5.4 " +
+  "C -6.6,1.6 -8.2,-1.6 -8,-5.6 C -7.8,-9.8 -5.6,-13 -0.5,-13 Z " +
+  "M 0.4,-8.3 A 1.3,1.3 0 1 0 0.4,-5.7 A 1.3,1.3 0 1 0 0.4,-8.3 Z " +
+  "M -0.4,-6.6 L -5.1,-1.1 L -4.3,-0.4 L 0.3,-5.9 Z " +
+  "M 1.2,-5.9 L 5.4,-0.9 L 4.6,-0.2 L 0.5,-5.2 Z";
 
-function Thong({ flip }) {
+/* Simplified impression for small sizes: one asymmetric filled shape —
+   wider through the ball, narrower at the heel. No Y detail. */
+const PRINT_SIMPLE =
+  "M -0.4,-11 C 4.4,-11 6.8,-7.8 6.8,-4.2 C 6.8,-0.8 5.7,2.4 5.1,5.4 " +
+  "C 4.5,8.9 3.1,11.3 0.2,11.3 C -2.9,11.3 -4.3,9 -4.9,5.6 " +
+  "C -5.5,2.2 -6.8,-1 -6.8,-4.4 C -6.8,-7.9 -4.6,-11 -0.4,-11 Z";
+
+/* One print. flip mirrors the asymmetry for the opposite foot. */
+function LogoPrint({ detail, flip = 1, fill }) {
   return (
-    <g transform={`scale(${flip},1)`}>
-      {/* pressed into the sand */}
-      <ellipse cx="1" cy="2.5" rx="11.5" ry="18.5" fill="var(--sand-shadow)" opacity="0.55" />
-      {/* the side wall: what gives the rubber its thickness */}
-      <path d={THONG_SOLE} transform="translate(0,2)" fill="var(--thong-wall)" />
-      {/* the footbed */}
-      <path d={THONG_SOLE} fill="var(--thong-sole)" />
-      {/* moulded rice-grain texture, clipped to the sole */}
-      <g clipPath="url(#thongSole)" opacity="0.55">
-        {Array.from({ length: 26 }, (_, k) => {
-          const tx = ((k * 37) % 19) - 9, ty = ((k * 53) % 35) - 17;
-          return <ellipse key={k} cx={tx} cy={ty} rx="1.5" ry="0.55" fill="var(--thong-tex)" transform={`rotate(${(k % 2 ? 32 : -32)} ${tx} ${ty})`} />;
-        })}
-      </g>
-      {/* the rim around the edge of the sole */}
-      <path d={THONG_SOLE} fill="none" stroke="var(--thong-rim)" strokeWidth="0.9" opacity="0.55" />
-      {/* the Y-strap */}
-      <path d="M0,-9.8 L-8,-1.8 M0,-9.8 L8,-1.8" fill="none" stroke="var(--thong-strap)"
-        strokeWidth="3.2" strokeLinecap="round" />
-      {/* sheen along the top of the strap, so it reads as rubber and not a line */}
-      <path d="M-0.6,-10.4 L-7.6,-2.7 M0.6,-10.4 L7.6,-2.7" fill="none" stroke="var(--thong-shine)"
-        strokeWidth="0.9" strokeLinecap="round" opacity="0.5" />
-      {/* the toe post */}
-      <circle cx="0" cy="-11.4" r="2.1" fill="var(--thong-strap)" />
-      <circle cx="0" cy="-11.9" r="0.8" fill="var(--thong-shine)" opacity="0.45" />
-    </g>
+    <path
+      d={detail ? PRINT_DETAIL : PRINT_SIMPLE}
+      fill={fill}
+      fillRule="evenodd"
+      transform={flip === -1 ? "scale(-1,1)" : undefined}
+    />
   );
 }
 
-function ThongTrail() {
-  const steps = Array.from({ length: THONG_COUNT }, (_, i) => ({
-    i,
-    x: 36 + i * 38,                     // walking left to right
-    y: i % 2 === 0 ? 54 : 32,           // left foot / right foot
-    rot: i % 2 === 0 ? 9 : -9,          // splayed, the way people actually walk
-    flip: i % 2 === 0 ? 1 : -1,         // mirrored for the opposite foot
-  }));
+/* The full mark: two trails × three stride-pairs, walking left to right.
+   Corresponding prints sit at matching positions — the two walkers are in
+   step. Horizontal, no rise, no container: the prints sit directly on the
+   background. detail=false drops the Y-gap for medium sizes. */
+function LogoMark({ width = 250, animate = false, detail = true }) {
+  const TRAILS = [
+    { cy: 30, fill: "var(--leo-green)" },   // Leo
+    { cy: 74, fill: "var(--leo-neutral)" }, // the student
+  ];
+  const STEPS = 6; // 3 stride-pairs per trail
   return (
-    <div className="sand-strip" aria-hidden="true">
-      <svg viewBox="0 0 340 88" className="sand-svg" preserveAspectRatio="xMidYMid meet">
-        <defs>
-          <clipPath id="thongSole"><path d={THONG_SOLE} /></clipPath>
-        </defs>
-        {/* grain, so it reads as sand rather than a beige bar */}
-        {Array.from({ length: 46 }, (_, k) => {
-          const gx = (k * 73) % 336 + 2, gy = (k * 149) % 84 + 2;
-          return <circle key={"g" + k} cx={gx} cy={gy} r={k % 3 === 0 ? 1.1 : 0.7} fill="var(--sand-grain)" opacity="0.5" />;
-        })}
-        {steps.map((s) => (
-          <g key={s.i} transform={`translate(${s.x},${s.y}) rotate(${s.rot}) scale(0.66)`}>
-            <g className="thong-step" style={{ animationDelay: `${4.8 + s.i * 0.35}s` }}>
-              <Thong flip={s.flip} />
+    <svg
+      viewBox="0 0 250 104"
+      width={width}
+      height={(width * 104) / 250}
+      className="logo-mark-svg"
+      aria-hidden="true"
+    >
+      {TRAILS.map((t, ti) =>
+        Array.from({ length: STEPS }, (_, i) => {
+          const x = 27 + i * 39;
+          const upper = i % 2 === 0;               // alternate left/right foot
+          const y = t.cy + (upper ? -7 : 7);
+          const splay = upper ? -8 : 8;            // natural gait splay
+          const g = (
+            <g
+              key={ti + "-" + i}
+              transform={`translate(${x},${y}) rotate(${90 + splay}) scale(1.05)`}
+            >
+              <LogoPrint detail={detail} flip={upper ? -1 : 1} fill={t.fill} />
             </g>
-          </g>
-        ))}
-      </svg>
-    </div>
+          );
+          // In-step stamping: corresponding prints in both trails land together.
+          return animate ? (
+            <g
+              key={ti + "-" + i}
+              className="logo-print-step"
+              style={{ animationDelay: `${0.5 + i * 0.4}s` }}
+            >
+              {g}
+            </g>
+          ) : (
+            g
+          );
+        })
+      )}
+    </svg>
+  );
+}
+
+/* Small-size mark (below ~48px): a single stride-pair — one print per
+   walker, side by side, diagonally offset with a slight rotation. The
+   arrangement is the recognition payload at icon sizes. */
+function LogoMarkSmall({ size = 28 }) {
+  return (
+    <svg viewBox="0 0 40 40" width={size} height={size} className="logo-mark-svg" aria-hidden="true">
+      <g transform="translate(13.5,16) rotate(96) scale(0.82)">
+        <LogoPrint detail={false} flip={-1} fill="var(--leo-green)" />
+      </g>
+      <g transform="translate(26.5,24) rotate(84) scale(0.82)">
+        <LogoPrint detail={false} flip={1} fill="var(--leo-neutral)" />
+      </g>
+    </svg>
   );
 }
 
 function Onboarding({ onDone }) {
-  // step 0 = splash, then one question per screen
-  const [step, setStep] = useState(0);
-  const [name, setName] = useState("");
+  const [page, setPage] = useState(1); // 1=language, 2=meet leo, 3=get to know, 4=level choice
   const [lang, setLang] = useState(null);
+  const [name, setName] = useState("");
   const [country, setCountry] = useState("");
+  const [interests, setInterests] = useState([]);
   const [level, setLevel] = useState(null);
+  const [showLevelPicker, setShowLevelPicker] = useState(false);
 
-  useEffect(() => {
-    if (step !== 0) return;
-    // Long enough for the thongs to walk the full trail and Leo to arrive.
-    // Tapping anywhere skips straight to the name question.
-    const t = setTimeout(() => setStep(1), 4600);
-    return () => clearTimeout(t);
-  }, [step]);
+  const INTEREST_OPTIONS = [
+    "Sport", "Music", "Movies & TV", "Food & cooking",
+    "Travel", "Gaming", "Study", "Work",
+    "Australian life", "Reading", "Art & design", "Other",
+  ];
 
-  const finish = (lvl, wantsPlacement) => onDone({ name: name.trim(), lang, country: country.trim(), level: lvl ?? level }, wantsPlacement);
-
-  // ---- Splash ----
-  if (step === 0)
-    return (
-      <div className="onboard" onClick={() => setStep(1)}>
-        <div className="welcome-splash">
-          <span className="splash-title write welcome-word">Ask Leo</span>
-          <span className="splash-sub">Australia</span>
-          <ThongTrail />
-          <div className="welcome-leo"><LeoRoo size={64} /></div>
-          <p className="welcome-l1s">Welcome</p>
-        </div>
-      </div>
-    );
-
-  const Progress = () => (
-    <div className="ob-dots">{[1, 2, 3, 4, 5, 6].map((n) => <span key={n} className={"dot " + (n <= step ? "dot-on" : "")} />)}</div>
+  const toggleInterest = (item) => setInterests((prev) =>
+    prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item]
   );
-  const Header = () => <span className="hand ob-brand">Ask Leo Australia</span>;
 
-  return (
+  const finish = (lvl, wantsPlacement) => onDone({
+    name: name.trim(), lang, country: country.trim(),
+    level: lvl || level, interests,
+  }, wantsPlacement);
+
+  /* Hardcoded L1 translations for Leo's greeting.
+     zh/es/pt: reviewed. fr/de/sv/ja/ko: best-effort, flagged for professional review. */
+  const HELLO_L1 = {
+    zh: "你好，我是Leo。",
+    es: "Hola, soy Leo.",
+    pt: "Olá, eu sou o Leo.",
+    fr: "Bonjour, je suis Leo.",
+    de: "Hallo, ich bin Leo.",
+    sv: "Hej, jag är Leo.",
+    ja: "こんにちは、Leoです。",
+    ko: "안녕하세요, 저는 Leo입니다.",
+  };
+
+  // ── PAGE 1: THE LANGUAGE ── (no Back)
+  if (page === 1) return (
     <div className="onboard">
-      <div key={step} className="ob-card fade-in">
-        <Header />
-        <Progress />
-
-        {step === 1 && (
-          <div className="ob-q">
-            <p className="ob-help">G'day! I'm Leo, your English teacher here in Australia. 🇦🇺</p>
-            <h2 className="ob-question">What should we call you?</h2>
-            <input
-              className="big-input ob-input" autoFocus value={name} placeholder="Your name"
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && name.trim()) setStep(2); }}
-            />
-            <div className="ob-nav">
-              <span />
-              <button className="primary-btn" disabled={!name.trim()} onClick={() => setStep(2)}>Next</button>
-            </div>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="ob-q">
-            <h2 className="ob-question">What is your first language?</h2>
-            <select className="lang-select" value={lang || ""} onChange={(e) => setLang(e.target.value || null)}>
-              <option value="" disabled>Choose your language…</option>
-              {Object.entries(LANGS).map(([code, l]) => (
-                <option key={code} value={code}>{l.native} — {l.english}</option>
-              ))}
-            </select>
-            <div className="ob-nav">
-              <button className="ghost-btn" onClick={() => setStep(1)}>Back</button>
-              <button className="primary-btn" disabled={!lang} onClick={() => setStep(3)}>Next</button>
-            </div>
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="ob-q">
-            <h2 className="ob-question">Which country are you from?</h2>
-            <input
-              className="big-input ob-input" autoFocus value={country} placeholder="e.g. Brazil, China, Colombia…"
-              onChange={(e) => setCountry(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && country.trim()) setStep(4); }}
-            />
-            <div className="ob-nav">
-              <button className="ghost-btn" onClick={() => setStep(2)}>Back</button>
-              <button className="primary-btn" disabled={!country.trim()} onClick={() => setStep(4)}>Next</button>
-            </div>
-          </div>
-        )}
-
-        {step === 4 && (
-          <div className="ob-q">
-            <div style={{ textAlign: "center", marginBottom: 12 }}><LeoRoo size={56} /></div>
-            <h2 className="ob-question">Welcome to Ask Leo 👋</h2>
-            <p className="muted" style={{ textAlign: "center", marginBottom: 8 }}>Before we begin, Leo wants to understand your English level so your lessons are always the right difficulty.</p>
-            <p className="muted small" style={{ textAlign: "center" }}>This is not an exam — it's just Leo getting to know you.</p>
-            <div className="ob-nav" style={{ marginTop: 20 }}>
-              <button className="ghost-btn" onClick={() => setStep(3)}>Back</button>
-              <button className="primary-btn" onClick={() => setStep(5)}>Continue</button>
-            </div>
-          </div>
-        )}
-
-        {step === 5 && (
-          <div className="ob-q">
-            <h2 className="ob-question">What is your English level?</h2>
-            <button className="level-choice-card" onClick={() => setStep(6)}>
-              <h3 style={{ margin: "0 0 4px" }}>🎯 I know my English level</h3>
-              <p className="muted small" style={{ margin: 0 }}>Choose your level and start learning straight away.</p>
+      <div className="ob-card fade-in" style={{ textAlign: "left" }}>
+        <p className="text-leo" style={{ marginBottom: "var(--space-4)" }}>What is your first language?</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+          {Object.entries(LANGS).map(([code, l]) => (
+            <button key={code}
+              className={"card" + (lang === code ? " leo-card" : "")}
+              style={{ textAlign: "left", cursor: "pointer", padding: "14px 16px", border: lang === code ? undefined : "1px solid var(--text-tertiary)" }}
+              onClick={() => { setLang(code); setTimeout(() => setPage(2), 300); }}>
+              <span style={{ fontWeight: 600 }}>{l.native}</span>
+              <span className="text-supporting" style={{ marginLeft: 8 }}>{l.english}</span>
             </button>
-            <button className="level-choice-card level-choice-rec" onClick={() => finish(null, true)}>
-              <h3 style={{ margin: "0 0 4px" }}>⭐ I'm not sure — help me find out</h3>
-              <p className="muted small" style={{ margin: 0 }}>Recommended: Take a short level check so Leo can understand your strengths and create lessons personalised for you.</p>
-              <span className="level-choice-badge">Recommended</span>
-            </button>
-            <div className="ob-nav" style={{ marginTop: 14 }}>
-              <button className="ghost-btn" onClick={() => setStep(4)}>Back</button>
-            </div>
-          </div>
-        )}
-
-        {step === 6 && (
-          <div className="ob-q">
-            <h2 className="ob-question">Select your English level</h2>
-            <div className="level-grid">
-              {LEVELS.map(([code, label]) => (
-                <button key={code} className={"level-card " + (level === code ? "level-on" : "")} onClick={() => setLevel(code)}>
-                  <span className="level-code">{code}</span>
-                  <span className="level-label">{label}</span>
-                </button>
-              ))}
-            </div>
-            <div className="ob-nav" style={{ marginTop: 14 }}>
-              <button className="ghost-btn" onClick={() => setStep(5)}>Back</button>
-              <button className="primary-btn" disabled={!level} onClick={() => finish(level, false)}>Start learning</button>
-            </div>
-          </div>
-        )}
+          ))}
+        </div>
       </div>
     </div>
   );
+
+  // ── PAGE 2: MEET LEO ── (Back → Page 1)
+  if (page === 2) return (
+    <div className="onboard">
+      <div className="ob-card fade-in" style={{ textAlign: "left" }}>
+        <div className="leo-accent" style={{ marginBottom: "var(--space-5)" }}>
+          <p className="text-leo" style={{ fontSize: 20, lineHeight: 1.4, marginBottom: "var(--space-2)" }}>
+            Hi. I'm Leo.
+          </p>
+          <p className="text-leo" style={{ marginBottom: "var(--space-3)" }}>
+            I'm here to help you with your English in Australia.
+          </p>
+          {HELLO_L1[lang] && (
+            <p className="text-supporting" style={{ opacity: 0.65, fontStyle: "italic" }}>
+              {HELLO_L1[lang]}
+            </p>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: "var(--space-2)" }}>
+          <button className="ghost-btn" onClick={() => setPage(1)}>Back</button>
+          <button className="primary-btn" onClick={() => setPage(3)}>Continue</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── PAGE 3: GET TO KNOW YOU ── (Back → Page 2)
+  if (page === 3) return (
+    <div className="onboard">
+      <div className="ob-card fade-in" style={{ textAlign: "left" }}>
+        <p className="text-leo" style={{ marginBottom: "var(--space-4)" }}>I'd like to get to know you a little.</p>
+
+        <label className="input-label">What's your name?</label>
+        <input className="big-input" autoFocus value={name} placeholder="Your name"
+          onChange={(e) => setName(e.target.value)} />
+
+        <label className="input-label" style={{ marginTop: "var(--space-3)" }}>Your language</label>
+        <div className="card" style={{ padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span>{LANGS[lang] ? `${LANGS[lang].native} — ${LANGS[lang].english}` : "Not selected"}</span>
+          <button className="ghost-btn" style={{ minHeight: "auto", padding: "4px 10px", fontSize: 13 }} onClick={() => setPage(1)}>Change language</button>
+        </div>
+
+        <label className="input-label" style={{ marginTop: "var(--space-3)" }}>Where are you from?</label>
+        <input className="big-input" value={country} placeholder="e.g. Brazil, China, Colombia…"
+          onChange={(e) => setCountry(e.target.value)} />
+
+        <label className="input-label" style={{ marginTop: "var(--space-4)" }}>What are you interested in?</label>
+        <p className="text-supporting" style={{ margin: "0 0 var(--space-2)", opacity: 0.7 }}>Choose as many as you like. This helps Leo plan lessons around things you enjoy.</p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
+          {INTEREST_OPTIONS.map((item) => (
+            <button key={item}
+              className={"chip" + (interests.includes(item) ? " chip-on" : "")}
+              onClick={() => toggleInterest(item)}>{item}</button>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
+          <button className="ghost-btn" onClick={() => setPage(2)}>Back</button>
+          <button className="primary-btn" disabled={!name.trim()} onClick={() => setPage(4)}>Continue</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── PAGE 4: LEVEL PICKER sub-view ── (Back → Page 4 main)
+  if (page === 4 && showLevelPicker) return (
+    <div className="onboard">
+      <div className="ob-card fade-in" style={{ textAlign: "left" }}>
+        <p className="text-leo" style={{ marginBottom: "var(--space-3)" }}>Select your English level</p>
+        <div className="level-grid">
+          {LEVELS.map(([code, label]) => (
+            <button key={code} className={"level-card " + (level === code ? "level-on" : "")} onClick={() => setLevel(code)}>
+              <span className="level-code">{code}</span>
+              <span className="level-label">{label}</span>
+            </button>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-3)" }}>
+          <button className="ghost-btn" onClick={() => setShowLevelPicker(false)}>Back</button>
+          <button className="primary-btn" disabled={!level} onClick={() => finish(level, false)}>Start learning</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── PAGE 4: CEFR LEVEL CHOICE ── (Back → Page 3)
+  if (page === 4) return (
+    <div className="onboard">
+      <div className="ob-card fade-in" style={{ textAlign: "left" }}>
+        <p className="text-leo" style={{ marginBottom: "var(--space-4)" }}>One last thing, {name.trim() || "there"} — what is your English level?</p>
+
+        <button className="level-choice-card" style={{ textAlign: "left", width: "100%", marginBottom: "var(--space-2)" }}
+          onClick={() => setShowLevelPicker(true)}>
+          <h3 style={{ margin: "0 0 4px" }}>I know my English level</h3>
+          <p className="text-supporting" style={{ margin: 0 }}>Choose your level and start learning straight away.</p>
+        </button>
+        <button className="level-choice-card level-choice-rec" style={{ textAlign: "left", width: "100%", position: "relative" }}
+          onClick={() => finish(null, true)}>
+          <h3 style={{ margin: "0 0 4px" }}>Help me find my level</h3>
+          <p className="text-supporting" style={{ margin: 0 }}>Leo will ask you a few questions to understand your English.</p>
+          <span className="level-choice-badge">Recommended</span>
+        </button>
+
+        <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-3)" }}>
+          <button className="ghost-btn" onClick={() => setPage(3)}>Back</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return null;
 }
 
 /* ---------------- Word review with Leo (personalised) ---------------- */
@@ -5313,23 +5309,19 @@ function ReviewPage({ profile, memory, leoMemory, words, heard, diaryPages, mark
     return (
       <div>
         <SectionTitle sub="Leo reviews the words you have already met.">Word review</SectionTitle>
-        <Card className="center">
-          <LeoRoo size={64} />
-          <h3>Let's gather a few words first</h3>
+        <Card className="center"> <h3>Let's gather a few words first</h3>
           <p className="muted">Look up words in the Dictionary, or save phrases in “English I heard today”. Once you have a few, Leo will build a personal review from your own words.</p>
         </Card>
       </div>
     );
 
-  if (!questions.length) return (<div><SectionTitle>Word review</SectionTitle><Card><p>Leo couldn't build a review just now — please try again in a moment.</p></Card></div>);
+  if (!questions.length) return (<div><SectionTitle>Word review</SectionTitle><Card><p className="text-leo leo-accent">I'm having trouble with that one — come back in a moment and we'll try again.</p></Card></div>);
 
   if (finished)
     return (
       <div>
         <SectionTitle>Word review</SectionTitle>
-        <Card className="center">
-          <LeoRoo size={64} />
-          <h3>You scored {correct}/{questions.length}!</h3>
+        <Card className="center"> <h3>You scored {correct}/{questions.length}!</h3>
           <p className="muted">Leo says: revisiting your own words is one of the best ways to remember them. See you tomorrow!</p>
         </Card>
       </div>
@@ -5398,7 +5390,7 @@ export default function App() {
   useEffect(() => {
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Karla:wght@400;500;700&family=Caveat:wght@600&display=swap";
+    link.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Karla:wght@400;500;700&family=Caveat:wght@600&display=swap";
     document.head.appendChild(link);
   }, []);
 
@@ -5628,7 +5620,6 @@ export default function App() {
           <header className="app-header">
             <button className="back-btn" onClick={() => setPage(null)}><ChevronLeft size={20} /> Home</button>
             <span className="app-header-title">{currentApp?.label}</span>
-            <div className="streak-pill"><Flame size={15} /> {stats.streak}</div>
           </header>
           <main className="main">
             {page === "progress" && <ProgressPage stats={stats} />}
@@ -5653,43 +5644,87 @@ export default function App() {
 
 const CSS = `
 :root{
+  /* Legacy tokens (preserved for existing components) */
   --paper:#FBFAF5; --ink:#22302A; --euca:#37624B; --euca-deep:#274A39;
   --wattle:#E8A91D; --sage:#E9EFE7; --line:#D7E1D6; --rust:#B95737; --card:#FFFFFF;
   --sand:#F2E7CF; --sand-2:#E6D4AF; --sand-grain:#C9B287; --sand-shadow:#A98D5E;
   --thong-sole:#242424; --thong-wall:#0D0D0D; --thong-tex:#4A4A4A; --thong-rim:#6B6B6B; --thong-strap:#1A1A1A; --thong-shine:#8A8A8A;
+  /* P2 Design System */
+  --leo-green:#2A7C6F; --leo-green-light:#E8F4F2; --leo-neutral:#5C5248;
+  --bg-warm:#FAFAF8; --bg-card:#FFFFFF;
+  --text-primary:#1A1A1A; --text-secondary:#6B7280; --text-tertiary:#9CA3AF;
+  --color-success:#16A34A; --color-error:#DC4A3A; --color-warning:#E5A117;
+  --space-1:4px; --space-2:8px; --space-3:16px; --space-4:24px; --space-5:32px; --space-6:48px; --space-7:64px;
 }
 *{box-sizing:border-box; margin:0;}
-.app{min-height:100vh; background:var(--paper); color:var(--ink); font-family:'Karla',sans-serif; font-size:15.5px; line-height:1.55;}
+.app{min-height:100vh; background:var(--bg-warm); color:var(--text-primary); font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-size:16px; line-height:1.6;}
 h2,h3{font-family:'Fraunces',serif; font-weight:650; color:var(--euca-deep);}
+/* P2 Type Scale */
+.text-display{font-size:28px; font-weight:700; line-height:1.2;}
+.text-page-title{font-size:22px; font-weight:600; line-height:1.3;}
+.text-section{font-size:17px; font-weight:600; line-height:1.4;}
+.text-body{font-size:16px; font-weight:400; line-height:1.6;}
+.text-leo{font-size:16px; font-weight:500; line-height:1.6;}
+.text-supporting{font-size:14px; font-weight:400; line-height:1.5;}
+.text-caption{font-size:12px; font-weight:500; line-height:1.4; letter-spacing:.02em;}
+
 h2{font-size:26px;} h3{font-size:17px; margin-bottom:6px;}
-.hand{font-family:'Caveat',cursive; color:var(--euca); font-size:24px;}
 
 /* ---- Home screen ---- */
 .home-screen{max-width:520px; margin:0 auto; padding:34px 22px 60px; text-align:center;}
-.splash-title{font-family:'Caveat',cursive; font-size:clamp(34px, 11vw, 52px); white-space:nowrap; font-weight:600; color:var(--euca); display:inline-block; line-height:1.25; padding:.08em .18em .22em .08em; margin:-.08em -.18em -.22em -.08em;}
-.splash-title.write{clip-path:inset(0 100% 0 0); animation:write 2s ease-out .5s forwards;}
-@keyframes write{to{clip-path:inset(0 0 0 0);}}
+/* ---- Ask Leo logo: type + lockups ---- */
+.logo-wordmark{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-weight:700; color:var(--leo-green); white-space:nowrap; line-height:1.1; letter-spacing:-0.01em;}
+.logo-word-splash{font-size:clamp(34px, 10vw, 46px);}
+.logo-word-home{font-size:clamp(24px, 7vw, 32px);}
+.logo-word-auth{font-size:22px;}
+.logo-stack{display:flex; flex-direction:column; align-items:center; gap:16px;}
+.logo-lockup{display:inline-flex; align-items:center; gap:12px;}
+.logo-lockup-auth{gap:8px; justify-content:center; width:100%; margin-bottom:4px;}
+.logo-mark-svg{display:block; flex:none;}
+.logo-print-step{opacity:0; animation:printStamp .45s cubic-bezier(.34,1.3,.64,1) both; transform-box:fill-box; transform-origin:center;}
+@keyframes printStamp{0%{opacity:0; transform:scale(1.18);} 100%{opacity:1; transform:scale(1);}}
+.logo-fade-in{opacity:0; animation:logoFadeIn .8s ease 3.1s forwards;}
+@keyframes logoFadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+@media (prefers-reduced-motion: reduce){
+  .logo-print-step{animation:none; opacity:1;}
+  .logo-fade-in{animation:none; opacity:1;}
+}
+
+/* P2 Motion */
+@keyframes fadeSlideIn{from{opacity:0; transform:translateX(16px);} to{opacity:1; transform:translateX(0);}}
+.screen-enter{animation:fadeSlideIn 250ms ease-out;}
+@keyframes fadeIn{from{opacity:0;} to{opacity:1;}}
+.card-stagger{animation:fadeIn 200ms ease-out both;}
+@keyframes loadingPulse{0%,100%{opacity:.4;} 50%{opacity:1;}}
+.loading-pulse{animation:loadingPulse 1.5s ease-in-out infinite; background:var(--leo-green);}
+.progress-fill{transition:width 400ms ease-out;}
+button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .sky-img{width:100%; max-width:470px; display:block; margin:8px auto 0;}
 .sky-anim{animation:skyFade 1.4s ease .3s both;}
 @keyframes skyFade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
-.leo-loader{display:flex; flex-direction:column; align-items:center; gap:12px; padding:40px 16px; text-align:center;}
-.leo-loader-row{display:flex; align-items:center; gap:8px; color:var(--euca-deep); font-weight:600;}
+.leo-loader{display:flex; flex-direction:column; align-items:center; gap:var(--space-3); padding:var(--space-6) 20px; text-align:center; border-left:3px solid var(--leo-green); padding-left:var(--space-3);}
+.leo-loader-accent{width:48px; height:4px; border-radius:99px; background:rgba(156,163,175,.2); overflow:hidden;}
+.leo-loader-accent span{display:block; width:100%; height:100%; background:var(--leo-green); border-radius:99px; transform-origin:left; animation:loadingPulse 1.5s ease-in-out infinite;}
+@keyframes leoAccent{0%{transform:scaleX(0); opacity:.4;} 50%{transform:scaleX(1); opacity:1;} 100%{transform:scaleX(0); opacity:.4;}}
+.leo-loader-text{font-size:16px; font-weight:500; color:var(--text-primary); opacity:.75; max-width:28ch; line-height:1.6;}
+@media (prefers-reduced-motion: reduce){.leo-loader-accent span{animation:none; transform:scaleX(1); opacity:.6;}}
 .spin{animation:spin360 .9s linear infinite;}
 @keyframes spin360{to{transform:rotate(360deg);}}
+.lesson-head{margin-bottom:6px;}
 .lesson-reco-head{display:flex; align-items:center; gap:12px; margin-bottom:6px;}
-.reco-kicker{font-size:12.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--euca); opacity:.7; font-weight:700;}
+.reco-kicker{font-size:12.5px; text-transform:uppercase; letter-spacing:.02em; color:var(--leo-green); opacity:.7; font-weight:700;}
 .reco-scenario{margin:2px 0 0;}
 .reco-alts{display:flex; align-items:center; justify-content:center; gap:10px; margin-top:12px;}
 .reco-dot{opacity:.4;}
-.lesson-greeting{font-family:'Fraunces',serif; font-size:17px; color:var(--euca-deep); margin:0;}
+.lesson-greeting{font-size:17px; color:var(--text-primary); margin:0;}
 .lesson-why{margin-top:4px;}
-.lesson-goal{background:var(--sage); border-radius:10px; padding:9px 12px; margin-top:10px; font-weight:600; color:var(--euca-deep);}
-.lesson-tomorrow{margin-top:12px; color:var(--ink); opacity:.85;}
-.purpose-line{font-size:13px; color:var(--euca-deep); background:var(--sage); border-radius:8px; padding:6px 10px; margin:2px 0 8px;}
-.vocab-token{display:inline; border-bottom:2px dotted var(--euca); color:var(--euca-deep); cursor:pointer; font-weight:600; transition:background .15s; border-radius:2px; padding:0 1px;}
+.lesson-goal{background:var(--leo-green-light); border-radius:10px; padding:12px 14px; margin-top:10px; font-weight:500; color:var(--text-primary); border-left:3px solid var(--leo-green);}
+.lesson-tomorrow{margin-top:12px; color:var(--text-primary); opacity:.85;}
+.purpose-line{font-size:13px; color:var(--text-primary); background:var(--leo-green-light); border-radius:8px; padding:6px 10px; margin:2px 0 8px;}
+.vocab-token{display:inline; border-bottom:2px dotted var(--leo-green); color:var(--text-primary); cursor:pointer; font-weight:600; transition:background .15s; border-radius:2px; padding:0 1px;}
 .vocab-token:hover,.vocab-token:focus-visible{background:rgba(55,98,75,.10); outline:none;}
 .vocab-overlay{position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1000; display:flex; align-items:flex-end;}
-.vocab-sheet{background:var(--paper); border-radius:20px 20px 0 0; width:100%; max-height:82vh; display:flex; flex-direction:column; box-shadow:0 -4px 32px rgba(0,0,0,.18); animation:sheetUp .22s cubic-bezier(.25,.8,.25,1); position:relative;}
+.vocab-sheet{background:var(--bg-warm); border-radius:20px 20px 0 0; width:100%; max-height:82vh; display:flex; flex-direction:column; box-shadow:0 -4px 32px rgba(0,0,0,.18); animation:sheetUp .22s cubic-bezier(.25,.8,.25,1); position:relative;}
 @keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .vocab-sheet-handle{width:40px; height:4px; background:var(--line); border-radius:2px; margin:12px auto 4px; flex-shrink:0;}
 .vocab-sheet-scroll{overflow-y:auto; padding:8px 22px 32px; flex:1; -webkit-overflow-scrolling:touch;}
@@ -5798,9 +5833,9 @@ h2{font-size:26px;} h3{font-size:17px; margin-bottom:6px;}
 .quiz-progress span{display:block; height:100%; background:var(--euca); border-radius:99px; transition:width .4s cubic-bezier(.4,0,.2,1);}
 
 .mcq-opts{display:flex; flex-direction:column; gap:8px; margin:10px 0;}
-.mcq-opt{text-align:left; background:#fff; border:1.5px solid var(--line); border-radius:10px; padding:11px 14px; font-family:'Karla'; font-size:15px; cursor:pointer; color:var(--ink);}
-.mcq-right{border-color:var(--euca); background:rgba(55,98,75,.10); font-weight:700;}
-.mcq-wrong{border-color:#B04A3A; background:rgba(176,74,58,.08);}
+.mcq-opt{text-align:left; background:var(--bg-card); border:1.5px solid var(--line); border-radius:10px; padding:14px 16px; font-size:15px; cursor:pointer; color:var(--text-primary); min-height:56px; display:flex; align-items:center; transition:background .3s ease, border-color .3s ease;}
+.mcq-right{border-color:var(--color-success); background:rgba(22,163,74,.10); font-weight:700;}
+.mcq-wrong{border-color:var(--color-error); background:rgba(220,74,58,.08);}
 .speak-thread{display:flex; flex-direction:column; gap:10px; margin-bottom:12px; max-height:44vh; overflow-y:auto;}
 .speak-turn{display:flex; gap:8px; align-items:flex-start;}
 .speak-turn p{margin:0; padding:9px 12px; border-radius:12px; font-size:15px; line-height:1.5;}
@@ -5834,7 +5869,6 @@ h2{font-size:26px;} h3{font-size:17px; margin-bottom:6px;}
 .rev-wrong{border-color:#D64040; background:#FBEAEA; color:#B22B2B; font-weight:700;}
 .rev-dim{opacity:.5;}
 .home-tag{font-family:'Fraunces',serif; font-size:15px; color:var(--euca); opacity:.8; display:block; margin-top:-2px;}
-.leo-roo path{fill:none; stroke:var(--euca-deep); stroke-width:2; stroke-linecap:round; stroke-linejoin:round;}
 .bot-avatar-leo{width:34px; height:34px; border-radius:50%; background:var(--sage); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
 .today-panel{background:#fff; border:1px solid var(--line); border-radius:16px; padding:14px 16px 16px; margin:16px auto 6px; max-width:440px; text-align:left; box-shadow:3px 3px 0 var(--sage);}
 .today-head{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
@@ -5845,11 +5879,10 @@ h2{font-size:26px;} h3{font-size:17px; margin-bottom:6px;}
 .today-row-label{flex:1; font-size:14.5px;}
 .today-done{display:inline-flex; align-items:center; gap:4px; color:#1B7A42; font-weight:700; font-size:13.5px;}
 .today-cta{margin-top:12px;}
-.today-all-done{text-align:center; font-weight:700; color:var(--euca-deep); margin-top:12px; font-size:14.5px;}
+.today-all-done{text-align:center; font-weight:700; color:var(--text-primary); margin-top:12px; font-size:14.5px;}
 .leo-feedback-head{display:flex; align-items:center; gap:7px; margin-bottom:6px; color:var(--euca-deep);}
 
 .home-greeting{margin-top:6px; font-size:14.5px; color:var(--euca-deep); display:flex; align-items:center; justify-content:center; gap:10px;}
-.streak-inline{display:inline-flex; align-items:center; gap:4px; background:var(--wattle); color:#3D2E00; font-weight:700; border-radius:999px; padding:2px 10px; font-size:12.5px;}
 .home-phrase{font-family:'Fraunces',serif; font-size:16.5px; color:var(--euca-deep); margin-top:14px;}
 .home-phrase-l1{display:block; font-family:'Karla'; font-size:13px; color:var(--euca); opacity:.75; margin-top:2px;}
 .app-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:20px 10px; margin-top:28px;}
@@ -5875,21 +5908,24 @@ h2{font-size:26px;} h3{font-size:17px; margin-bottom:6px;}
 .scroll-cue:focus-visible{outline:3px solid var(--wattle); outline-offset:2px;}
 @keyframes cueBounce{0%,100%{transform:translateX(-50%) translateY(0);} 50%{transform:translateX(-50%) translateY(6px);}}
 .apps-section{max-width:520px; margin:0 auto; padding:26px 22px 60px; text-align:center;}
-@media (prefers-reduced-motion: reduce){.sky-anim{animation:none;} .oz-fill{opacity:.92 !important; animation:none !important;}}
+@media (prefers-reduced-motion: reduce){.oz-fill{opacity:.92 !important; animation:none !important;}}
 
 /* ---- App header (inside a feature) ---- */
 .app-header{display:flex; justify-content:space-between; align-items:center; padding:14px 18px 8px; max-width:760px; margin:0 auto;}
 .back-btn{display:inline-flex; align-items:center; gap:2px; background:none; border:none; color:var(--euca); font-family:'Karla'; font-weight:700; font-size:15px; cursor:pointer; padding:4px 6px 4px 0;}
 .back-btn:focus-visible{outline:2px solid var(--wattle); outline-offset:2px; border-radius:6px;}
 .app-header-title{font-family:'Caveat',cursive; font-size:24px; color:var(--euca);}
-.streak-pill{display:flex; align-items:center; gap:5px; background:var(--wattle); color:#3D2E00; font-weight:700; border-radius:999px; padding:5px 12px; font-size:14px;}
 @media (prefers-reduced-motion: reduce){
-  .splash-title.write{animation:none; clip-path:inset(0 0 0 0);}
+  .sky-anim{animation:none;}
 }
 .main{max-width:760px; margin:0 auto; padding:10px 18px 60px;}
 .section-title{margin:8px 0 14px;}
 .section-title .sub{color:var(--euca); opacity:.75; font-size:13.5px; margin-top:2px;}
-.card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin-bottom:12px;}
+.card{background:var(--bg-card); padding:20px; border-radius:12px; border:none; box-shadow:none; margin-bottom:12px;}
+/* P2 Leo's Visual Presence */
+.leo-accent{border-left:3px solid var(--leo-green); padding-left:var(--space-3);}
+.leo-card{background:var(--leo-green-light); padding:20px; border-radius:12px; border:none; box-shadow:none; border-left:3px solid var(--leo-green);}
+
 .muted{color:var(--ink); opacity:.62;} .small{font-size:13.5px;} .center{text-align:center; margin-top:20px;}
 .stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-bottom:12px;}
 .stat{text-align:center; padding:14px 8px;}
@@ -5942,10 +5978,10 @@ h2{font-size:26px;} h3{font-size:17px; margin-bottom:6px;}
 .chip{border:1px solid var(--line); background:#fff; border-radius:999px; padding:5px 13px; font-size:13.5px; font-family:'Karla'; cursor:pointer; color:var(--ink);}
 .chip-on{background:var(--euca); color:#fff; border-color:var(--euca);}
 .chip:focus-visible,.primary-btn:focus-visible,.ghost-btn:focus-visible{outline:2px solid var(--wattle); outline-offset:2px;}
-.primary-btn{display:inline-flex; align-items:center; gap:7px; background:var(--euca); color:#fff; border:none; border-radius:10px; padding:9px 16px; font-family:'Karla'; font-weight:700; font-size:14.5px; cursor:pointer;}
+.primary-btn{display:inline-flex; align-items:center; gap:7px; background:var(--leo-green); color:#fff; border:none; border-radius:10px; padding:12px 20px; font-weight:600; font-size:15px; cursor:pointer; min-height:48px;}
 .primary-btn:disabled{opacity:.45; cursor:default;}
 .primary-btn.wide{width:100%; justify-content:center; margin-top:18px; padding:12px;}
-.ghost-btn{display:inline-flex; align-items:center; gap:6px; background:transparent; color:var(--euca); border:1px solid var(--line); border-radius:10px; padding:7px 13px; font-family:'Karla'; font-weight:500; font-size:13.5px; cursor:pointer;}
+.ghost-btn{display:inline-flex; align-items:center; gap:6px; background:transparent; color:var(--leo-green); border:1px solid var(--line); border-radius:10px; padding:10px 16px; font-weight:500; font-size:14px; cursor:pointer; min-height:48px;}
 .link-btn{background:none; border:none; color:var(--euca); font-weight:700; cursor:pointer; font-family:'Karla'; font-size:inherit; text-decoration:underline;}
 .link-btn:focus-visible{outline:2px solid var(--wattle); outline-offset:2px; border-radius:4px;}
 .icon-btn{background:none; border:none; color:var(--ink); opacity:.4; cursor:pointer; margin-left:auto;}
@@ -5965,17 +6001,16 @@ h2{font-size:26px;} h3{font-size:17px; margin-bottom:6px;}
 .phrase-card{text-align:center; padding:20px;}
 .phrase-en{font-family:'Fraunces',serif; font-size:19px; color:var(--euca-deep); margin-bottom:6px;}
 .phrase-l1{color:var(--euca); opacity:.8;}
-.ok{display:flex; align-items:center; gap:6px; color:var(--euca-deep); font-weight:700; margin-top:10px;}
-.bad{display:flex; align-items:center; gap:6px; color:var(--rust); font-weight:700; margin-top:10px;}
+.ok{display:flex; align-items:center; gap:6px; color:var(--color-success); font-weight:500; margin-top:var(--space-3); border-left:3px solid var(--leo-green); padding-left:var(--space-3); font-size:16px; line-height:1.6; animation:fadeIn 200ms ease-out 150ms both;}
+.bad{display:flex; align-items:center; gap:6px; color:var(--color-error); font-weight:500; margin-top:var(--space-3); border-left:3px solid var(--leo-green); padding-left:var(--space-3); font-size:16px; line-height:1.6; animation:fadeIn 200ms ease-out 150ms both;}
 .word-pool{display:flex; flex-wrap:wrap; gap:8px; margin:12px 0;}
 .word-tile{background:#fff; border:1.5px solid var(--euca); color:var(--euca-deep); border-radius:10px; padding:8px 14px; font-family:'Karla'; font-weight:700; font-size:15px; cursor:pointer; box-shadow:0 2px 0 var(--line);}
 .word-tile:focus-visible{outline:3px solid var(--wattle); outline-offset:2px;}
 .built-line{min-height:44px; background:var(--sage); border-radius:10px; padding:10px 14px; font-size:16px; font-weight:500;}
 .btn-row{display:flex; gap:10px; margin-top:6px;}
 .task-link-note{background:var(--sage); border-radius:10px; padding:9px 13px; font-size:13.5px; color:var(--euca-deep); margin-bottom:10px;}
-.progress-dots{display:flex; gap:8px; margin-bottom:12px;}
-.dot{width:10px; height:10px; border-radius:50%; background:var(--line);}
-.dot-on{background:var(--wattle);}
+.progress-bar{height:3px; border-radius:99px; background:rgba(156,163,175,.2); overflow:hidden; margin-bottom:var(--space-3);}
+.progress-bar span{display:block; height:100%; border-radius:99px; background:var(--leo-green); transition:width 400ms ease-out;}
 .big-emoji{font-size:44px; margin-bottom:8px;}
 /* ---- Chat (Questions) ---- */
 .chat-wrap{max-width:760px; margin:0 auto;}
@@ -6050,28 +6085,13 @@ h2{font-size:26px;} h3{font-size:17px; margin-bottom:6px;}
 .onboard{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; background:var(--paper);}
 .welcome-splash{text-align:center; display:flex; flex-direction:column; align-items:center;}
 .welcome-word{font-size:clamp(40px, 13vw, 60px); line-height:1.2;}
-/* "Australia" sits directly under "Ask Leo" — same hand, quieter voice. */
-.splash-sub{font-family:'Caveat',cursive; font-size:clamp(22px, 7vw, 30px); font-weight:500; color:var(--euca); opacity:0; letter-spacing:.06em; line-height:1; margin-top:-2px; padding-bottom:.18em; animation:fadeUp 1s ease 3s forwards;}
-
-/* ---- Thongs in the sand ---- */
-.sand-strip{width:min(340px, 90vw); margin:18px 0 4px; border-radius:60px/26px; background:linear-gradient(180deg, var(--sand) 0%, var(--sand-2) 100%); box-shadow:inset 0 3px 8px rgba(160,132,86,.16); overflow:hidden;}
-.sand-svg{display:block; width:100%; height:auto;}
-.thong-step{opacity:0; animation:stepDown .5s cubic-bezier(.34,1.3,.64,1) both;}
-@keyframes stepDown{
-  0%{opacity:0; transform:translateY(-14px) rotate(-8deg);}
-  50%{opacity:1; transform:translateY(2px) rotate(2deg);}
-  100%{opacity:1; transform:translateY(0) rotate(0deg);}
-}
 .welcome-leo{margin-top:2px; opacity:0; animation:fadeUp .8s ease 7.5s forwards;}
 @media (prefers-reduced-motion: reduce){
-  .splash-sub{animation:none; opacity:1;}
-  .thong-step{animation:none; opacity:1;}
   .welcome-leo{animation:none; opacity:1;}
 }
 .welcome-l1s{font-family:'Karla'; font-size:16px; color:var(--euca); opacity:0; margin-top:12px; animation:fadeUp .8s ease 3.9s forwards;}
 /* ---- Onboarding wizard ---- */
 .ob-card{max-width:440px; width:100%; background:#fff; border:1px solid var(--line); border-radius:20px; padding:26px 24px 22px; text-align:center;}
-.ob-brand{font-family:'Caveat',cursive; font-size:30px; color:var(--euca); display:block; line-height:1.25;}
 .ob-dots{display:flex; gap:8px; justify-content:center; margin:14px 0 22px;}
 .ob-question{font-family:'Fraunces',serif; font-size:24px; color:var(--euca-deep); margin-bottom:16px;}
 .ob-help{font-size:13.5px; color:var(--ink); opacity:.6; margin:-8px 0 16px;}
@@ -6112,9 +6132,8 @@ h2{font-size:26px;} h3{font-size:17px; margin-bottom:6px;}
 .intro-page{display:flex; flex-direction:column; align-items:center; text-align:center; max-width:440px; width:100%; padding:32px 20px;}
 .intro-dots{display:flex; gap:8px; margin-bottom:20px;}
 .intro-subtitle{font-family:'Fraunces',serif; font-size:18px; color:var(--euca-deep); opacity:.8; margin-top:10px;}
-.splash-sand{opacity:0; animation:fadeUp .8s ease 4.2s forwards;}
-.splash-tagline{opacity:0 !important; animation:fadeUp .8s ease 8.5s forwards !important;}
-.splash-arrow{opacity:0 !important; animation:fadeUp .7s ease 9.5s forwards !important;}
+.splash-tagline{opacity:0 !important; animation:fadeUp .8s ease 4.2s forwards !important;}
+.splash-arrow{opacity:0 !important; animation:fadeUp .7s ease 5s forwards !important;}
 .intro-heading{font-family:'Fraunces',serif; font-size:26px; color:var(--euca-deep); margin:14px 0 8px; line-height:1.25;}
 .intro-body{font-size:15.5px; color:var(--ink); opacity:.75; margin-bottom:18px; max-width:380px; line-height:1.55;}
 .intro-features{display:flex; flex-direction:column; gap:10px; margin-bottom:22px; text-align:left; width:100%;}
