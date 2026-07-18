@@ -920,10 +920,6 @@ function WelcomeLanding({ onSignUp, onSignIn }) {
   if (step === 0) return (
     <div className="onboard" onClick={() => setStep(1)}>
       <div className="intro-page">
-        <div className="logo-stack">
-          <LogoMark width={280} animate detail />
-          <span className="logo-wordmark logo-word-splash logo-fade-in">Ask Leo</span>
-        </div>
                 <p className="intro-subtitle splash-tagline">Your English teacher in Australia.</p>
         <button className="intro-next splash-arrow" onClick={(e) => { e.stopPropagation(); setStep(1); }}><ChevronRight size={28} /></button>
       </div>
@@ -1032,10 +1028,6 @@ function SignUpPage({ onBack, onComplete }) {
   return (
     <div className="onboard">
       <div className="ob-card fade-in">
-        <div className="logo-lockup logo-lockup-auth">
-          <LogoMarkSmall size={26} />
-          <span className="logo-wordmark logo-word-auth">Ask Leo</span>
-        </div>
         <h2 className="ob-question">Create your account</h2>
         <div style={{ textAlign: "left" }}>
           <label className="input-label">Email</label>
@@ -1088,10 +1080,6 @@ function SignInPage({ onBack, onComplete }) {
   return (
     <div className="onboard">
       <div className="ob-card fade-in">
-        <div className="logo-lockup logo-lockup-auth">
-          <LogoMarkSmall size={26} />
-          <span className="logo-wordmark logo-word-auth">Ask Leo</span>
-        </div>
         <h2 className="ob-question">Welcome back!</h2>
         <p className="muted small" style={{ textAlign: "center", marginBottom: 14 }}>Sign in to continue learning with Leo.</p>
         <div style={{ textAlign: "left" }}>
@@ -2078,10 +2066,6 @@ function HomeScreen({ profile, streak, phrase, onOpen, animate, todayInfo }) {
   return (
     <div className="home-screen">
       <div className="home-top">
-        <div className={"logo-lockup logo-lockup-home" + (animate ? " fade-in" : "")}>
-          <LogoMark width={112} detail={false} />
-          <span className="logo-wordmark logo-word-home">Ask Leo</span>
-        </div>
         <p className="home-tag">Your English learning companion</p>
         <SkylineSketch animate={animate} />
 
@@ -4963,109 +4947,91 @@ function PronunciationPage({ profile }) {
 
 /* ---------------- Onboarding ---------------- */
 
-/* ---------- The Ask Leo mark: two trails, walking together ----------
-   Two parallel trails of thong (flip-flop) impressions walking left to right,
-   in step. One trail is the student, one is Leo. Neither is larger, neither
-   leads — Leo walks WITH the student. The prints are impressions pressed into
-   sand, not drawn objects: soft filled sole shapes, with the toe-post dot and
-   Y-strap grooves left unpressed at large sizes.
-   Below ~48px the mark simplifies to a single stride-pair (LogoMarkSmall) —
-   two soft asymmetric prints, diagonally offset. At icon sizes the
-   arrangement, not the detail, carries the "two people" story. */
+/* Post-sign-in contextual UI hook — structural insertion point for future
+   Australian contextual elements (icons, environmental details, etc.).
+   Renders nothing. Exists only as plumbing so future tasks can add children
+   without modifying the app scaffold. Can be removed entirely without
+   affecting any feature or identity element. */
+/* ---------- Whiteboard logo ----------
+   The Ask Leo mark. Geometry FROZEN from askleo-mark-animready.svg.
+   Do not derive, recompute, round, or alter any coordinate.
 
-/* Detailed impression, toe up, local coords ~16×26. fillRule="evenodd" cuts
-   the unpressed areas (toe-post dot + Y-strap grooves) out of the sole. */
-const PRINT_DETAIL =
-  "M -0.5,-13 C 4.8,-13 7.6,-9.4 7.7,-5.4 C 7.8,-1.6 6.6,1.8 6,5.2 " +
-  "C 5.4,9.6 3.8,12.8 0.2,12.8 C -3.6,12.8 -5.3,9.8 -5.9,5.4 " +
-  "C -6.6,1.6 -8.2,-1.6 -8,-5.6 C -7.8,-9.8 -5.6,-13 -0.5,-13 Z " +
-  "M 0.4,-8.3 A 1.3,1.3 0 1 0 0.4,-5.7 A 1.3,1.3 0 1 0 0.4,-8.3 Z " +
-  "M -0.4,-6.6 L -5.1,-1.1 L -4.3,-0.4 L 0.3,-5.9 Z " +
-  "M 1.2,-5.9 L 5.4,-0.9 L 4.6,-0.2 L 0.5,-5.2 Z";
+   Three-tier size rule:
+     ≥ 80px  — Full mark (frame path + letter paths)
+     48–79px — Frame path only
+     < 48px  — "L" monogram
 
-/* Simplified impression for small sizes: one asymmetric filled shape —
-   wider through the ball, narrower at the heel. No Y detail. */
-const PRINT_SIMPLE =
-  "M -0.4,-11 C 4.4,-11 6.8,-7.8 6.8,-4.2 C 6.8,-0.8 5.7,2.4 5.1,5.4 " +
-  "C 4.5,8.9 3.1,11.3 0.2,11.3 C -2.9,11.3 -4.3,9 -4.9,5.6 " +
-  "C -5.5,2.2 -6.8,-1 -6.8,-4.4 C -6.8,-7.9 -4.6,-11 -0.4,-11 Z";
+   Props:
+     width    — scales via viewBox
+     animate  — plays the draw sequence (splash only)
+     onDone   — fires after animated sequence completes */
 
-/* One print. flip mirrors the asymmetry for the opposite foot. */
-function LogoPrint({ detail, flip = 1, fill }) {
+const FRAME_PATH = "M 420,548 L 49,548 L 359,317 L 0,527 L 0,0 L 796,0 L 796,548 L 420,548";
+const FRAME_LEN = 3450;
+
+const LETTER_PATHS = [
+  /* A */ "M100.70947265625 278.0 130.03564453125 197.970703125H139.05908203125L168.65380859375 278.0H160.59716796875L151.94970703125 254.2060546875H117.30615234375L108.81982421875 278.0ZM119.72314453125 247.4384765625H149.47900390625L141.58349609375 225.685546875Q140.13330078125 221.7109375 138.41455078125 216.5009765625Q136.69580078125 211.291015625 134.49365234375 204.1474609375Q132.34521484375 211.3447265625 130.599609375 216.6083984375Q128.85400390625 221.8720703125 127.51123046875 225.685546875Z",
+  /* S */ "M224.35888671875 279.3427734375Q212.05908203125 279.3427734375 204.70068359375 273.380859375Q197.34228515625 267.4189453125 196.69775390625 257.7509765625H204.48583984375Q205.07666015625 264.89453125 210.7431640625 268.654296875Q216.40966796875 272.4140625 224.35888671875 272.4140625Q230.32080078125 272.4140625 234.9130859375 270.4267578125Q239.50537109375 268.439453125 242.13720703125 264.89453125Q244.76904296875 261.349609375 244.76904296875 256.5693359375Q244.76904296875 250.5537109375 240.20361328125 247.384765625Q235.63818359375 244.2158203125 228.11865234375 241.9599609375L218.66552734375 239.220703125Q209.10498046875 236.427734375 203.94873046875 231.40576171875Q198.79248046875 226.3837890625 198.79248046875 218.7568359375Q198.79248046875 212.2578125 202.2568359375 207.31640625Q205.72119140625 202.375 211.68310546875 199.60888671875Q217.64501953125 196.8427734375 225.05712890625 196.8427734375Q232.63037109375 196.8427734375 238.404296875 199.6357421875Q244.17822265625 202.4287109375 247.53515625 207.208984375Q250.89208984375 211.9892578125 251.16064453125 218.1123046875H243.69482421875Q242.99658203125 211.4521484375 237.84033203125 207.5849609375Q232.68408203125 203.7177734375 224.84228515625 203.7177734375Q216.62451171875 203.7177734375 211.44140625 207.88037109375Q206.25830078125 212.04296875 206.25830078125 218.4345703125Q206.25830078125 222.5703125 208.5947265625 225.33642578125Q210.93115234375 228.1025390625 214.556640625 229.875Q218.18212890625 231.6474609375 222.04931640625 232.775390625L230.42822265625 235.1923828125Q235.58447265625 236.642578125 240.6064453125 239.1669921875Q245.62841796875 241.69140625 248.931640625 245.880859375Q252.23486328125 250.0703125 252.23486328125 256.6767578125Q252.23486328125 263.17578125 248.90478515625 268.2783203125Q245.57470703125 273.380859375 239.3173828125 276.36181640625Q233.06005859375 279.3427734375 224.35888671875 279.3427734375Z",
+  /* K */ "M287.79833984375 278.0V197.970703125H295.42529296875V225.7392578125L295.37158203125 242.013671875Q299.02392578125 237.501953125 302.6494140625 233.3125Q306.27490234375 229.123046875 310.24951171875 224.826171875L335.11767578125 197.970703125H345.16162109375L312.82763671875 232.66796875L345.16162109375 278.0H336.08447265625L307.56396484375 237.8779296875L295.42529296875 250.7685546875V278.0Z",
+  /* L */ "M425.90283203125 278.0V197.970703125H433.58349609375V271.1787109375H471.61083984375V278.0Z",
+  /* E */ "M505.99267578125 278.0V197.970703125H552.72119140625V204.7919921875H513.61962890625V234.3330078125H550.25048828125V241.154296875H513.61962890625V271.1787109375H553.47314453125V278.0Z",
+  /* O */ "M620.67236328125 279.07421875Q610.52099609375 279.07421875 602.67919921875 274.025390625Q594.83740234375 268.9765625 590.37939453125 259.76513671875Q585.92138671875 250.5537109375 585.92138671875 238.0390625Q585.92138671875 225.470703125 590.37939453125 216.232421875Q594.83740234375 206.994140625 602.67919921875 201.9453125Q610.52099609375 196.896484375 620.67236328125 196.896484375Q630.77001953125 196.896484375 638.61181640625 201.9453125Q646.45361328125 206.994140625 650.884765625 216.232421875Q655.31591796875 225.470703125 655.31591796875 238.0390625Q655.31591796875 250.5537109375 650.884765625 259.76513671875Q646.45361328125 268.9765625 638.61181640625 274.025390625Q630.77001953125 279.07421875 620.67236328125 279.07421875ZM620.67236328125 271.9306640625Q628.46044921875 271.9306640625 634.6103515625 267.90234375Q640.76025390625 263.8740234375 644.33203125 256.27392578125Q647.90380859375 248.673828125 647.90380859375 238.0390625Q647.90380859375 227.3505859375 644.33203125 219.7236328125Q640.76025390625 212.0966796875 634.6103515625 208.068359375Q628.46044921875 204.0400390625 620.67236328125 204.0400390625Q612.83056640625 204.0400390625 606.65380859375 208.068359375Q600.47705078125 212.0966796875 596.9052734375 219.7236328125Q593.33349609375 227.3505859375 593.33349609375 238.0390625Q593.33349609375 248.6201171875 596.9052734375 256.22021484375Q600.47705078125 263.8203125 606.65380859375 267.87548828125Q612.83056640625 271.9306640625 620.67236328125 271.9306640625Z",
+];
+
+function WhiteboardLogo({ width = 280, animate = false, onDone }) {
+  const fired = React.useRef(false);
+  const onDoneRef = React.useRef(onDone);
+  onDoneRef.current = onDone;
+  const reducedMotion = typeof window !== "undefined"
+    && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  React.useEffect(() => {
+    if (!onDoneRef.current || fired.current) return;
+    fired.current = true;
+    const delay = (animate && !reducedMotion) ? 4500 : (animate ? 1000 : 0);
+    const t = setTimeout(() => { if (onDoneRef.current) onDoneRef.current(); }, delay);
+    return () => clearTimeout(t);
+  }, []); // eslint-disable-line -- runs once on mount, callback accessed via ref
+
+  // Tier 3: < 48px
+  if (width < 48) {
+    return (
+      <svg viewBox="0 0 40 40" width={width} height={width} className="wb-logo-svg" aria-label="Ask Leo" role="img">
+        <rect x="0" y="0" width="40" height="40" rx="12" fill="var(--leo-green)" />
+        <text x="20" y="21" textAnchor="middle" dominantBaseline="central" className="wb-mono">L</text>
+      </svg>
+    );
+  }
+
+  const h = Math.round(width * 590 / 802);
+  const doAnim = animate && !reducedMotion;
+
+  // Tier 2: 48–79px — frame only
+  if (width < 80) {
+    return (
+      <svg viewBox="-3 -3 802 590" width={width} height={h} className="wb-logo-svg" aria-label="Ask Leo" role="img">
+        <path d={FRAME_PATH} className="wb-frame" />
+      </svg>
+    );
+  }
+
+  // Tier 1: ≥ 80px
   return (
-    <path
-      d={detail ? PRINT_DETAIL : PRINT_SIMPLE}
-      fill={fill}
-      fillRule="evenodd"
-      transform={flip === -1 ? "scale(-1,1)" : undefined}
-    />
-  );
-}
-
-/* The full mark: two trails × three stride-pairs, walking left to right.
-   Corresponding prints sit at matching positions — the two walkers are in
-   step. Horizontal, no rise, no container: the prints sit directly on the
-   background. detail=false drops the Y-gap for medium sizes. */
-function LogoMark({ width = 250, animate = false, detail = true }) {
-  const TRAILS = [
-    { cy: 30, fill: "var(--leo-green)" },   // Leo
-    { cy: 74, fill: "var(--leo-neutral)" }, // the student
-  ];
-  const STEPS = 6; // 3 stride-pairs per trail
-  return (
-    <svg
-      viewBox="0 0 250 104"
-      width={width}
-      height={(width * 104) / 250}
-      className="logo-mark-svg"
-      aria-hidden="true"
-    >
-      {TRAILS.map((t, ti) =>
-        Array.from({ length: STEPS }, (_, i) => {
-          const x = 27 + i * 39;
-          const upper = i % 2 === 0;               // alternate left/right foot
-          const y = t.cy + (upper ? -7 : 7);
-          const splay = upper ? -8 : 8;            // natural gait splay
-          const g = (
-            <g
-              key={ti + "-" + i}
-              transform={`translate(${x},${y}) rotate(${90 + splay}) scale(1.05)`}
-            >
-              <LogoPrint detail={detail} flip={upper ? -1 : 1} fill={t.fill} />
-            </g>
-          );
-          // In-step stamping: corresponding prints in both trails land together.
-          return animate ? (
-            <g
-              key={ti + "-" + i}
-              className="logo-print-step"
-              style={{ animationDelay: `${0.5 + i * 0.4}s` }}
-            >
-              {g}
-            </g>
-          ) : (
-            g
-          );
-        })
-      )}
+    <svg viewBox="-3 -3 802 590" width={width} height={h} className="wb-logo-svg" aria-label="Ask Leo" role="img">
+      <path d={FRAME_PATH} className={doAnim ? "wb-frame wb-frame-draw" : "wb-frame"} />
+      {LETTER_PATHS.map((d, i) => (
+        <path key={i} d={d}
+          className={doAnim ? "wb-letter-anim" : "wb-letter-static"}
+          style={doAnim ? { animationDelay: (1400 + i * 300) + "ms, " + (1900 + i * 300) + "ms" } : undefined}
+        />
+      ))}
     </svg>
   );
 }
 
-/* Small-size mark (below ~48px): a single stride-pair — one print per
-   walker, side by side, diagonally offset with a slight rotation. The
-   arrangement is the recognition payload at icon sizes. */
-function LogoMarkSmall({ size = 28 }) {
-  return (
-    <svg viewBox="0 0 40 40" width={size} height={size} className="logo-mark-svg" aria-hidden="true">
-      <g transform="translate(13.5,16) rotate(96) scale(0.82)">
-        <LogoPrint detail={false} flip={-1} fill="var(--leo-green)" />
-      </g>
-      <g transform="translate(26.5,24) rotate(84) scale(0.82)">
-        <LogoPrint detail={false} flip={1} fill="var(--leo-neutral)" />
-      </g>
-    </svg>
-  );
+function SignedInContext({ profile }) {
+  if (!profile) return null;
+  return null;
 }
 
 function Onboarding({ onDone }) {
@@ -5373,6 +5339,7 @@ export default function App() {
   const [authUser, setAuthUser] = useState(undefined); // undefined = loading, null = not signed in, object = signed in
   const [authView, setAuthView] = useState("landing"); // "landing" | "signup" | "signin"
   const [showLeoReveal, setShowLeoReveal] = useState(false);
+  const [splashPhase, setSplashPhase] = useState("boot"); // "boot" | "logo" | "done"
   const [profile, setProfile] = useState(undefined); // undefined = loading, null = needs onboarding
   const [page, setPage] = useState(null); // null = home screen
   const [introPlayed, setIntroPlayed] = useState(false);
@@ -5390,7 +5357,7 @@ export default function App() {
   useEffect(() => {
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Karla:wght@400;500;700&family=Caveat:wght@600&display=swap";
+    link.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700&family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Karla:wght@400;500;700&family=Caveat:wght@600&display=swap";
     document.head.appendChild(link);
   }, []);
 
@@ -5452,6 +5419,19 @@ export default function App() {
       return next;
     });
   }, []);
+
+  // ── Splash: boot phase (LeoLoader), then animated logo ──
+  React.useEffect(() => {
+    if (splashPhase !== "boot") return;
+    const t = setTimeout(() => setSplashPhase("logo"), 1400); // 1200ms min + 200ms fade
+    return () => clearTimeout(t);
+  }, [splashPhase]);
+
+  if (splashPhase === "boot")
+    return <div className="app" style={{background:'var(--bg-warm,#FAFAF8)'}}><style>{CSS}</style><div className="wb-splash"><div className="wb-boot"><LeoLoader label="Getting things ready…" /></div></div></div>;
+
+  if (splashPhase === "logo")
+    return <div className="app" style={{background:'var(--bg-warm,#FAFAF8)'}}><style>{CSS}</style><div className="wb-splash wb-logo-phase"><WhiteboardLogo width={Math.min(320, Math.round(window.innerWidth * 0.7))} animate onDone={() => setSplashPhase("done")} /></div></div>;
 
   if (authUser === undefined)
     return <div className="app"><style>{CSS}</style><div className="onboard"><LeoLoader label="Getting things ready…" /></div></div>;
@@ -5525,6 +5505,7 @@ export default function App() {
       </div>
     );
 
+  // ── Post-sign-in splash: wordmark on clean background, once per session ──
   const skillCount = {};
   Object.values(diaryPages).forEach((p) => (p.skills || []).forEach((s) => { skillCount[s] = (skillCount[s] || 0) + 1; }));
   const stats = {
@@ -5613,6 +5594,7 @@ export default function App() {
   return (
     <div className="app">
       <style>{CSS}</style>
+      <SignedInContext profile={profile} />
       {page === null ? (
         <HomeScreen profile={profile} streak={stats.streak} phrase={phraseOfDay} onOpen={openApp} animate={!introPlayed} todayInfo={todayInfo} />
       ) : (
@@ -5650,7 +5632,7 @@ const CSS = `
   --sand:#F2E7CF; --sand-2:#E6D4AF; --sand-grain:#C9B287; --sand-shadow:#A98D5E;
   --thong-sole:#242424; --thong-wall:#0D0D0D; --thong-tex:#4A4A4A; --thong-rim:#6B6B6B; --thong-strap:#1A1A1A; --thong-shine:#8A8A8A;
   /* P2 Design System */
-  --leo-green:#2A7C6F; --leo-green-light:#E8F4F2; --leo-neutral:#5C5248;
+  --leo-green:#2A7C6F; --leo-green-light:#E8F4F2; --leo-neutral:#5C5248; /* warm neutral — retained for future design use */
   --bg-warm:#FAFAF8; --bg-card:#FFFFFF;
   --text-primary:#1A1A1A; --text-secondary:#6B7280; --text-tertiary:#9CA3AF;
   --color-success:#16A34A; --color-error:#DC4A3A; --color-warning:#E5A117;
@@ -5660,7 +5642,7 @@ const CSS = `
 .app{min-height:100vh; background:var(--bg-warm); color:var(--text-primary); font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-size:16px; line-height:1.6;}
 h2,h3{font-family:'Fraunces',serif; font-weight:650; color:var(--euca-deep);}
 /* P2 Type Scale */
-.text-display{font-size:28px; font-weight:700; line-height:1.2;}
+.text-display{font-size:32px; font-weight:700; line-height:1.2;}
 .text-page-title{font-size:22px; font-weight:600; line-height:1.3;}
 .text-section{font-size:17px; font-weight:600; line-height:1.4;}
 .text-body{font-size:16px; font-weight:400; line-height:1.6;}
@@ -5672,22 +5654,24 @@ h2{font-size:26px;} h3{font-size:17px; margin-bottom:6px;}
 
 /* ---- Home screen ---- */
 .home-screen{max-width:520px; margin:0 auto; padding:34px 22px 60px; text-align:center;}
-/* ---- Ask Leo logo: type + lockups ---- */
-.logo-wordmark{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-weight:700; color:var(--leo-green); white-space:nowrap; line-height:1.1; letter-spacing:-0.01em;}
-.logo-word-splash{font-size:clamp(34px, 10vw, 46px);}
-.logo-word-home{font-size:clamp(24px, 7vw, 32px);}
-.logo-word-auth{font-size:22px;}
-.logo-stack{display:flex; flex-direction:column; align-items:center; gap:16px;}
-.logo-lockup{display:inline-flex; align-items:center; gap:12px;}
-.logo-lockup-auth{gap:8px; justify-content:center; width:100%; margin-bottom:4px;}
-.logo-mark-svg{display:block; flex:none;}
-.logo-print-step{opacity:0; animation:printStamp .45s cubic-bezier(.34,1.3,.64,1) both; transform-box:fill-box; transform-origin:center;}
-@keyframes printStamp{0%{opacity:0; transform:scale(1.18);} 100%{opacity:1; transform:scale(1);}}
-.logo-fade-in{opacity:0; animation:logoFadeIn .8s ease 3.1s forwards;}
-@keyframes logoFadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+/* Whiteboard logo */
+.wb-splash{display:flex; align-items:center; justify-content:center; min-height:100dvh; background:var(--bg-warm);}
+.wb-boot{animation:wbFadeOut 200ms ease 1200ms forwards;}
+.wb-logo-phase{animation:wbFadeOut 200ms ease 4300ms forwards;}
+.wb-logo-svg{display:block;}
+.wb-frame{fill:none; stroke:var(--leo-green); stroke-width:3; stroke-linecap:butt; stroke-linejoin:miter;}
+.wb-frame-draw{stroke-dasharray:3450; stroke-dashoffset:3450; animation:wbStroke 1400ms linear forwards;}
+.wb-letter-static{fill:var(--leo-green);}
+.wb-letter-anim{fill:var(--leo-green); fill-opacity:0; stroke:var(--leo-green); stroke-width:1.5; stroke-dasharray:800; stroke-dashoffset:800; animation:wbStroke 500ms linear forwards, wbFill 250ms ease-out forwards;}
+.wb-mono{font-family:'Inter',sans-serif; font-weight:700; font-size:24px; fill:var(--bg-warm, #FAFAF8);}
+@keyframes wbStroke{to{stroke-dashoffset:0;}}
+@keyframes wbFill{to{fill-opacity:1;}}
+@keyframes wbFadeOut{to{opacity:0;}}
 @media (prefers-reduced-motion: reduce){
-  .logo-print-step{animation:none; opacity:1;}
-  .logo-fade-in{animation:none; opacity:1;}
+  .wb-boot{animation:none;}
+  .wb-logo-phase{animation:none;}
+  .wb-frame-draw{animation:none; stroke-dashoffset:0;}
+  .wb-letter-anim{animation:none; stroke-dashoffset:0; fill-opacity:1;}
 }
 
 /* P2 Motion */
@@ -5730,7 +5714,7 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .vocab-sheet-scroll{overflow-y:auto; padding:8px 22px 32px; flex:1; -webkit-overflow-scrolling:touch;}
 .vocab-close{position:absolute; top:14px; right:16px; background:none; border:none; font-size:18px; color:var(--ink); opacity:.55; cursor:pointer; padding:6px; line-height:1;}
 .vocab-header{margin-bottom:14px;}
-.vocab-word{font-family:'Fraunces',serif; font-size:28px; font-weight:700; color:var(--euca-deep); margin:0 0 6px;}
+.vocab-word{font-family:'Fraunces',serif; font-size:32px; font-weight:700; color:var(--euca-deep); margin:0 0 6px;}
 .vocab-meta{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
 .vocab-ipa{font-family:'Karla',sans-serif; font-size:15px; color:var(--ink); opacity:.7; font-style:italic;}
 .vocab-chip{font-size:12px; font-weight:700; background:var(--sage); color:var(--euca-deep); border-radius:20px; padding:3px 10px; text-transform:uppercase; letter-spacing:.5px;}
@@ -5869,7 +5853,7 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .rev-wrong{border-color:#D64040; background:#FBEAEA; color:#B22B2B; font-weight:700;}
 .rev-dim{opacity:.5;}
 .home-tag{font-family:'Fraunces',serif; font-size:15px; color:var(--euca); opacity:.8; display:block; margin-top:-2px;}
-.bot-avatar-leo{width:34px; height:34px; border-radius:50%; background:var(--sage); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.bot-avatar-leo{width:34px; height:34px; border-radius:10px; background:var(--leo-green); color:var(--bg-warm); font-family:'Manrope','Inter',sans-serif; font-weight:700; font-size:18px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
 .today-panel{background:#fff; border:1px solid var(--line); border-radius:16px; padding:14px 16px 16px; margin:16px auto 6px; max-width:440px; text-align:left; box-shadow:3px 3px 0 var(--sage);}
 .today-head{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
 .today-head-text{flex:1;}
@@ -5929,7 +5913,7 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .muted{color:var(--ink); opacity:.62;} .small{font-size:13.5px;} .center{text-align:center; margin-top:20px;}
 .stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-bottom:12px;}
 .stat{text-align:center; padding:14px 8px;}
-.stat-num{font-family:'Fraunces',serif; font-size:28px; font-weight:650; color:var(--euca-deep);}
+.stat-num{font-family:'Fraunces',serif; font-size:32px; font-weight:650; color:var(--euca-deep);}
 .stat-label{font-size:12.5px; opacity:.6;}
 .wattle{color:var(--wattle);} .euca{color:var(--euca);}
 .bar-row{display:flex; align-items:center; gap:10px; margin-top:8px;}
@@ -6024,7 +6008,7 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .bubble-row{display:flex; gap:8px; align-items:flex-end;}
 .row-user{justify-content:flex-end;}
 .row-bot{justify-content:flex-start;}
-.bot-avatar{width:28px; height:28px; border-radius:50%; background:var(--euca); color:#fff; font-family:'Fraunces',serif; font-weight:650; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0;}
+.bot-avatar{width:28px; height:28px; border-radius:8px; background:var(--leo-green); color:var(--bg-warm); font-family:'Manrope','Inter',sans-serif; font-weight:700; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0;}
 .bubble{max-width:80%; padding:11px 15px; border-radius:18px; font-size:15.5px; line-height:1.5; white-space:pre-wrap; word-break:break-word;}
 .bubble-user{background:var(--euca); color:#fff; border-bottom-right-radius:5px;}
 .bubble-bot{background:#fff; border:1px solid var(--line); color:var(--ink); border-bottom-left-radius:5px;}
@@ -6132,8 +6116,8 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .intro-page{display:flex; flex-direction:column; align-items:center; text-align:center; max-width:440px; width:100%; padding:32px 20px;}
 .intro-dots{display:flex; gap:8px; margin-bottom:20px;}
 .intro-subtitle{font-family:'Fraunces',serif; font-size:18px; color:var(--euca-deep); opacity:.8; margin-top:10px;}
-.splash-tagline{opacity:0 !important; animation:fadeUp .8s ease 4.2s forwards !important;}
-.splash-arrow{opacity:0 !important; animation:fadeUp .7s ease 5s forwards !important;}
+.splash-tagline{opacity:0 !important; animation:fadeUp .8s ease .6s forwards !important;}
+.splash-arrow{opacity:0 !important; animation:fadeUp .7s ease 1.2s forwards !important;}
 .intro-heading{font-family:'Fraunces',serif; font-size:26px; color:var(--euca-deep); margin:14px 0 8px; line-height:1.25;}
 .intro-body{font-size:15.5px; color:var(--ink); opacity:.75; margin-bottom:18px; max-width:380px; line-height:1.55;}
 .intro-features{display:flex; flex-direction:column; gap:10px; margin-bottom:22px; text-align:left; width:100%;}
