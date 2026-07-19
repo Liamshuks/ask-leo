@@ -281,7 +281,7 @@ async function liveAskClaude(prompt) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
-        max_tokens: 1000,
+        max_tokens: 4000,
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -920,7 +920,7 @@ function WelcomeLanding({ onSignUp, onSignIn }) {
   if (step === 0) return (
     <div className="onboard" onClick={() => setStep(1)}>
       <div className="intro-page">
-                <p className="intro-subtitle splash-tagline">Your English teacher in Australia.</p>
+        <p className="intro-subtitle splash-tagline">Your English teacher in Australia.</p>
         <button className="intro-next splash-arrow" onClick={(e) => { e.stopPropagation(); setStep(1); }}><ChevronRight size={28} /></button>
       </div>
     </div>
@@ -1028,6 +1028,7 @@ function SignUpPage({ onBack, onComplete }) {
   return (
     <div className="onboard">
       <div className="ob-card fade-in">
+        <div className="brand-mark-sm"><WhiteboardLogo width={132} /></div>
         <h2 className="ob-question">Create your account</h2>
         <div style={{ textAlign: "left" }}>
           <label className="input-label">Email</label>
@@ -1080,6 +1081,7 @@ function SignInPage({ onBack, onComplete }) {
   return (
     <div className="onboard">
       <div className="ob-card fade-in">
+        <div className="brand-mark-sm"><WhiteboardLogo width={132} /></div>
         <h2 className="ob-question">Welcome back!</h2>
         <p className="muted small" style={{ textAlign: "center", marginBottom: 14 }}>Sign in to continue learning with Leo.</p>
         <div style={{ textAlign: "left" }}>
@@ -2066,6 +2068,7 @@ function HomeScreen({ profile, streak, phrase, onOpen, animate, todayInfo }) {
   return (
     <div className="home-screen">
       <div className="home-top">
+        <div className="brand-mark-sm"><WhiteboardLogo width={132} /></div>
         <p className="home-tag">Your English learning companion</p>
         <SkylineSketch animate={animate} />
 
@@ -5659,6 +5662,8 @@ h2{font-size:26px;} h3{font-size:17px; margin-bottom:6px;}
 .wb-boot{animation:wbFadeOut 200ms ease 1200ms forwards;}
 .wb-logo-phase{animation:wbFadeOut 200ms ease 4300ms forwards;}
 .wb-logo-svg{display:block;}
+.brand-mark{display:flex; justify-content:center; margin:0 auto var(--space-4);}
+.brand-mark-sm{display:flex; justify-content:center; margin:0 auto var(--space-3);}
 .wb-frame{fill:none; stroke:var(--leo-green); stroke-width:3; stroke-linecap:butt; stroke-linejoin:miter;}
 .wb-frame-draw{stroke-dasharray:3450; stroke-dashoffset:3450; animation:wbStroke 1400ms linear forwards;}
 .wb-letter-static{fill:var(--leo-green);}
@@ -5898,7 +5903,7 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .app-header{display:flex; justify-content:space-between; align-items:center; padding:14px 18px 8px; max-width:760px; margin:0 auto;}
 .back-btn{display:inline-flex; align-items:center; gap:2px; background:none; border:none; color:var(--euca); font-family:'Karla'; font-weight:700; font-size:15px; cursor:pointer; padding:4px 6px 4px 0;}
 .back-btn:focus-visible{outline:2px solid var(--wattle); outline-offset:2px; border-radius:6px;}
-.app-header-title{font-family:'Caveat',cursive; font-size:24px; color:var(--euca);}
+.app-header-title{font-family:'Inter',-apple-system,sans-serif; font-size:17px; font-weight:600; letter-spacing:-0.01em; color:var(--leo-green);}
 @media (prefers-reduced-motion: reduce){
   .sky-anim{animation:none;}
 }
@@ -6118,7 +6123,7 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .intro-subtitle{font-family:'Fraunces',serif; font-size:18px; color:var(--euca-deep); opacity:.8; margin-top:10px;}
 .splash-tagline{opacity:0 !important; animation:fadeUp .8s ease .6s forwards !important;}
 .splash-arrow{opacity:0 !important; animation:fadeUp .7s ease 1.2s forwards !important;}
-.intro-heading{font-family:'Fraunces',serif; font-size:26px; color:var(--euca-deep); margin:14px 0 8px; line-height:1.25;}
+.intro-heading{font-family:'Fraunces',serif; font-size:26px; color:var(--leo-green); margin:14px 0 8px; line-height:1.25;}
 .intro-body{font-size:15.5px; color:var(--ink); opacity:.75; margin-bottom:18px; max-width:380px; line-height:1.55;}
 .intro-features{display:flex; flex-direction:column; gap:10px; margin-bottom:22px; text-align:left; width:100%;}
 .intro-feat{display:flex; align-items:center; gap:10px; font-size:15px; color:var(--euca-deep); font-weight:500; background:var(--sage); border-radius:12px; padding:12px 14px;}
