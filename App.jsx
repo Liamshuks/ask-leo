@@ -4148,6 +4148,19 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       requests.pronunciation ? `Pronunciation focus: "${requests.pronunciation}"` : "",
     ].filter(Boolean).join("\n");
     const avoidCtx = (teacherCtx.match(/Situations already practised: ([^.]+)/) || ["","none yet"])[1];
+    // Stage 2 previously saw only stage 1's prose summary. These pass the same
+    // underlying facts directly, so vocabulary and error selection no longer
+    // depend on what stage 1 happened to mention. Each degrades to readable
+    // text for a brand-new student — never an empty heading.
+    const l1 = (LANGS[profile.lang] && LANGS[profile.lang].english) || "not recorded";
+    const country = profile.country || "not recorded";
+    const _mastery = Object.entries((leoMemory.store && leoMemory.store.wordMastery) || {});
+    const fragileWords = _mastery.filter(([, e]) => e.stage === "new" || e.stage === "seen")
+      .slice(0, 8).map(([w]) => w).join(", ") || "none yet";
+    const recycleWords = _mastery.filter(([, e]) => e.stage === "practised")
+      .slice(0, 5).map(([w]) => w).join(", ") || "none yet";
+    const errorTally = ((stats && stats.errorTally) || [])
+      .map(([t, c]) => `${t} (${c}x)`).join(", ") || "none yet";
     // Warm-up variety: the formats used last lesson are explicitly ruled out, so
     // a student rarely meets the same activity format twice in a row.
     const lastFormats = await loadKey("esl-lastwarmup", []);
@@ -4166,7 +4179,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       // Leo decides what this student genuinely needs today. Not what would make
       // a good lesson — what THIS STUDENT needs.
       const needsAssessment = await askClaude(
-        `You are Leo. You have just analysed your student:\n\n${studentAnalysis}\n\n${reqLines ? "They have asked to work on:\n" + reqLines + "\n\n" : ""}Do NOT repeat these recently-used contexts (choose something completely different): ${avoidCtx}.\n\nNow decide what this student genuinely needs today. Do not plan a lesson yet. Just answer these questions:\n\n- What communicative situation would help them most RIGHT NOW in their life in Australia?\n- Why today? Why is this the right lesson for this moment in their learning?\n- What specific mistakes do I predict they will make?\n- What vocabulary is absolutely essential? (Name 8-10 words they genuinely need.)\n- What vocabulary should I deliberately leave out? (Name 2-3 words that are related but not essential.)\n- What grammar naturally arises from this situation?\n- What authentic Australian material could ground this? (A real SMS, menu, sign, notice, email — write the actual text.)\n- What is the one memorable moment I want to create?\n- How should this student feel at the end?\n- What moment of success am I building towards — what is the final thing they will DO?\n\nWrite 8-12 sentences. Be specific. This is your private educational reasoning.`,
+        `You are Leo. You have just analysed your student:\n\n${studentAnalysis}\n\n${reqLines ? "They have asked to work on:\n" + reqLines + "\n\n" : ""}STUDENT'S FIRST LANGUAGE: ${l1}\nCOUNTRY OF ORIGIN: ${country}\n\nVOCABULARY — STILL FRAGILE (not yet mastered): ${fragileWords}\nVOCABULARY — TO RECYCLE (taught but needs revisiting): ${recycleWords}\nRECURRING ERRORS: ${errorTally}\n\nDo NOT repeat these recently-used contexts (choose something completely different): ${avoidCtx}.\n\nNow decide what this student genuinely needs today. Do not plan a lesson yet.\n\nIMPORTANT: You can only teach one thing well today. Choose ONE communicative objective. If this student has multiple needs — different grammar gaps, different skill weaknesses — pick the one that matters most right now and name what you are deliberately leaving for another day and why.\n\nConsider how this student's specific L1 variety affects their English — not just "Spanish" or "Chinese" but the regional variety. A Colombian Spanish speaker and a Peninsular Spanish speaker make different errors. A Cantonese speaker and a Mandarin speaker have different phonological challenges. Teach accordingly.\n\nAnswer these questions:\n\n- What ONE communicative situation would help them most RIGHT NOW in their life in Australia?\n- Why today? Why is this the right lesson for this moment in their learning?\n- What am I deliberately NOT teaching today, and why is that the right call?\n- What specific mistakes do I predict they will make, given their L1 variety?\n- What vocabulary is absolutely essential? (Name 8-10 words they genuinely need.) Include 2-3 words from the fragile or recycle lists above if any fit today's situation naturally — do not force them in if they do not belong.\n- What vocabulary should I deliberately leave out? (Name 2-3 words that are related but not essential.)\n- What grammar naturally arises from this situation?\n- What authentic Australian material could ground this? (A real SMS, menu, sign, notice, email — write the actual text.)\n- What is the one memorable moment I want to create?\n- How should this student feel at the end?\n- What moment of success am I building towards — what is the final thing they will DO?\n\nWrite 8-12 sentences. Be specific. This is your private educational reasoning.`,
         { intent: "needs_assessment" }
       );
 
