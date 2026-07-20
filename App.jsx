@@ -967,7 +967,7 @@ function LeoReveal({ onDone }) {
     <div className="onboard" onClick={() => onDone()}>
       <div className="leo-reveal fade-in">
         {phase < 2 ? (
-          <div className="leo-reveal-words" key="words">
+          <div className={"leo-reveal-words" + (phase >= 1 ? " leo-words-tighten" : "")} key="words">
             <div className="leo-reveal-word">
               <span className={"leo-reveal-key" + (phase >= 1 ? " leo-key-grow" : "")}>L</span>
               <span className={"leo-reveal-rest" + (phase >= 1 ? " leo-rest-hide" : "")}>earn</span>
@@ -1298,7 +1298,7 @@ const PLACEMENT_GOALS = [
 
 /* ── PlacementTestPage ── */
 function PlacementTestPage({ profile, onComplete }) {
-  const [section, setSection] = useState(0);
+  const [section, setSection] = useState(1);
   const [welcome, setWelcome] = useState({ confidence: 5, selfLevel: "", goals: [] });
   const [grammarHistory, setGrammarHistory] = useState([]);
   const [grammarAnswered, setGrammarAnswered] = useState(new Set());
@@ -1431,17 +1431,6 @@ function PlacementTestPage({ profile, onComplete }) {
         <div className="placement-progress-bar"><span style={{ width: `${progress * 100}%` }} /></div>
 
       </div>
-
-      {/* ── LEO FRAMING ── */}
-      {section === 0 && (
-        <Card>
-          <div className="leo-accent" style={{ marginBottom: "var(--space-4)" }}>
-            <p className="text-leo">I just want to get a sense of where your English is right now, so I know how to help.</p>
-            <p className="text-leo" style={{ opacity: 0.7, marginTop: "var(--space-2)" }}>There are no right or wrong levels here — this simply helps me plan your lessons.</p>
-          </div>
-          <button className="primary-btn wide" onClick={nextSection}>Let's begin</button>
-        </Card>
-      )}
 
       {/* ── GRAMMAR ── */}
       {section === 1 && (
@@ -2055,10 +2044,8 @@ const APPS = [
   { id: "questions", label: "Ask Leo", icon: MessageCircle, bg: "#33698C" },
   { id: "dictionary", label: "Dictionary", icon: Book, bg: "#B95737" },
   { id: "vocab", label: "Word review", icon: Repeat, bg: "#4F7D54" },
-  { id: "phrases", label: "Motivation", icon: Sparkles, bg: "#7A5C93" },
   { id: "heard", label: "Heard today", icon: Ear, bg: "#3E8578" },
   { id: "australia", label: "Australia", icon: MapPin, bg: "#A6753C" },
-  { id: "pron", label: "Say it", icon: Mic, bg: "#BC5B76" },
   { id: "progress", label: "Progress", icon: LayoutDashboard, bg: "#54739E" },
   { id: "placement", label: "Level Check", icon: Search, bg: "#2D7D9A" },
 ];
@@ -4714,28 +4701,6 @@ function DictionaryPage({ profile, words, setWords, markActivity, onAskLeo, leoM
   );
 }
 
-/* ---------------- Phrases ---------------- */
-
-function PhrasesPage({ profile, phrases }) {
-  const [idx, setIdx] = useState(() => new Date().getDate() % phrases.length);
-  const [lang, setLang] = useState("en"); // 'en' | 'l1'
-  const p = phrases[idx];
-  const next = () => setIdx((idx + 1) % phrases.length);
-  return (
-    <div className="motiv-wrap">
-      <div className="motiv-toggle">
-        <button className={"tab " + (lang === "en" ? "tab-on" : "")} onClick={() => setLang("en")}>English</button>
-        <button className={"tab " + (lang === "l1" ? "tab-on" : "")} onClick={() => setLang("l1")}>{LANGS[profile.lang].native}</button>
-      </div>
-      <div className="motiv-quote-area">
-        <span className="motiv-mark">“</span>
-        <p className="motiv-quote">{lang === "en" ? p.en : p.l1}</p>
-      </div>
-      <button className="primary-btn wide motiv-next" onClick={next}>Next <ChevronRight size={17} /></button>
-    </div>
-  );
-}
-
 /* ---------------- Heard today ---------------- */
 
 function HeardPage({ profile, heard, setHeard, markActivity, onAskLeo, leoMemory }) {
@@ -4911,56 +4876,6 @@ function AustraliaPage({ profile, memory }) {
   );
 }
 
-/* ---------------- Pronunciation ---------------- */
-
-function PronunciationPage({ profile }) {
-  const [word, setWord] = useState("");
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const tips = PRON_TIPS[profile.lang];
-
-  const lookup = async () => {
-    if (!word.trim()) return;
-    setLoading(true); setResult(null);
-    try {
-      const raw = await askClaude(
-        `Pronunciation coaching for an ESL student whose first language is ${LANGS[profile.lang].english}. Word: "${word.trim()}". Respond ONLY with JSON, no fences: {"word":"the word","ipa":"IPA with stress mark","syllables":"e.g. com·fort·a·ble","stress":"which syllable is stressed","tips":["2-3 short practical tips"],"l1Note":"one specific note about why this word is tricky for ${LANGS[profile.lang].english} speakers, or empty string"}`,
-        { intent: "pronunciation" }
-      );
-      setResult(parseJSON(raw));
-    } catch { setResult(null); alert("I'm having trouble with that one — let me try again."); }
-    setLoading(false);
-  };
-
-  return (
-    <div>
-      <SectionTitle sub={`Tips tuned for ${LANGS[profile.lang].english} speakers.`}>Pronunciation corner</SectionTitle>
-      <Card>
-        <h3>Ask Leo how to say a word</h3>
-        <div className="search-row">
-          <input className="text-input" placeholder="Type any English word…" value={word} onChange={(e) => setWord(e.target.value)} onKeyDown={(e) => e.key === "Enter" && lookup()} />
-          <button className="primary-btn" onClick={lookup} disabled={loading}><Mic size={16} /></button>
-        </div>
-        {loading && <Spinner label="Leo is listening closely…" />}
-        {result && (
-          <div className="feedback">
-            <h3 className="dict-word">{result.word} <span className="ipa">{result.ipa}</span></h3>
-            <p className="small">{result.syllables} — stress on <strong>{result.stress}</strong></p>
-            {result.tips.map((t, i) => <p key={i} className="small">• {t}</p>)}
-            {result.l1Note && <p className="small tip">💡 {result.l1Note}</p>}
-          </div>
-        )}
-      </Card>
-      {tips.map((t) => (
-        <Card key={t.title}>
-          <h3>{t.title}</h3>
-          <p className="muted">{t.tip}</p>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
 /* ---------------- Onboarding ---------------- */
 
 /* Post-sign-in contextual UI hook — structural insertion point for future
@@ -5050,13 +4965,14 @@ function SignedInContext({ profile }) {
   return null;
 }
 
-function Onboarding({ onDone }) {
-  const [page, setPage] = useState(1); // 1=language, 2=meet leo, 3=get to know, 4=level choice
-  const [lang, setLang] = useState(null);
-  const [name, setName] = useState("");
-  const [country, setCountry] = useState("");
-  const [interests, setInterests] = useState([]);
-  const [level, setLevel] = useState(null);
+function Onboarding({ onDone, initialPage, initialProfile }) {
+  const ip = initialProfile || {};
+  const [page, setPage] = useState(initialPage || 1); // 1=language, 2=meet leo, 3=get to know, 4=level choice
+  const [lang, setLang] = useState(ip.lang || null);
+  const [name, setName] = useState(ip.name || "");
+  const [country, setCountry] = useState(ip.country || "");
+  const [interests, setInterests] = useState(ip.interests || []);
+  const [level, setLevel] = useState(ip.level || null);
   const [showLevelPicker, setShowLevelPicker] = useState(false);
 
   const INTEREST_OPTIONS = [
@@ -5362,6 +5278,7 @@ export default function App() {
   const [pendingAsk, setPendingAsk] = useState(null);
   const [todayDone, setTodayDone] = useState({ task: false, vocab: false }); // grouped: Phase 8
   const [placementDone, setPlacementDone] = useState(undefined); // undefined=loading, true/false
+  const [obResume, setObResume] = useState(null); // {page, profile} when returning from placement
   const [memoryStore, setMemoryStore] = useState(DEFAULT_MEMORY_STORE);      // Leo's learning memory: Phase 4/5/6
   const [diaryPages, setDiaryPages] = useState({});
   const [words, setWords] = useState([]);
@@ -5485,7 +5402,8 @@ export default function App() {
     return (
       <div className="app">
         <style>{CSS}</style>
-        <Onboarding onDone={async (p, wantsPlacement) => {
+        <Onboarding initialPage={obResume ? obResume.page : undefined} initialProfile={obResume ? obResume.profile : undefined} onDone={async (p, wantsPlacement) => {
+          setObResume(null);
           setProfile(p);
           await saveKey("esl-profile", p);
           if (wantsPlacement) {
@@ -5507,6 +5425,14 @@ export default function App() {
       <div className="app">
         <style>{CSS}</style>
         <div className="main" style={{ maxWidth: 760, margin: "0 auto", padding: "20px 18px 60px" }}>
+          <button className="ghost-btn" style={{ marginBottom: "var(--space-3)" }} onClick={async () => {
+            // Leaving the test moves the student BACK outside the gate, never through it.
+            // Any part-finished attempt is cleared so it can never look complete.
+            await saveKey("esl-placement", null);
+            setObResume({ page: 4, profile });
+            setProfile(null);
+            setPlacementDone(false);
+          }}>Back</button>
           <PlacementTestPage profile={profile} onComplete={async (r) => {
             await saveKey("esl-placement", r);
             if (r && r.overall) {
@@ -5626,10 +5552,8 @@ export default function App() {
             {page === "questions" && <QuestionsPage profile={profile} memory={memory} leoMemory={leoMemory} pendingAsk={pendingAsk} onPendingHandled={() => setPendingAsk(null)} markActivity={markActivity} />}
             {page === "dictionary" && <DictionaryPage profile={profile} words={words} setWords={setWords} markActivity={markActivity} onAskLeo={askLeo} leoMemory={leoMemory} />}
             {page === "vocab" && <ReviewPage profile={profile} memory={memory} leoMemory={leoMemory} words={words} heard={heard} diaryPages={diaryPages} markActivity={markActivity} />}
-            {page === "phrases" && <PhrasesPage profile={profile} phrases={phrases} />}
             {page === "heard" && <HeardPage profile={profile} heard={heard} setHeard={setHeard} markActivity={markActivity} onAskLeo={askLeo} leoMemory={leoMemory} />}
             {page === "australia" && <AustraliaPage profile={profile} memory={memory} />}
-            {page === "pron" && <PronunciationPage profile={profile} />}
             {page === "placement" && <PlacementTestPage profile={profile} onComplete={async (r) => { await saveKey("esl-placement", r); await markActivity(); }} />}
           </main>
         </>
@@ -6119,16 +6043,18 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 @keyframes revealWord{from{opacity:0; transform:translateY(12px);} to{opacity:1; transform:none;}}
 .leo-reveal-key{color:var(--euca); font-weight:800; display:inline-block;}
 .leo-reveal-rest{display:inline-block; overflow:hidden;}
-.leo-key-grow{animation:keyGrow .8s cubic-bezier(.4,0,.2,1) forwards;}
-@keyframes keyGrow{to{font-size:clamp(44px, 14vw, 72px); color:var(--euca);}}
-.leo-rest-hide{animation:restHide .7s ease forwards;}
+.leo-key-grow{animation:keyGrow .8s cubic-bezier(.4,0,.2,1) .55s forwards;}
+@keyframes keyGrow{to{font-size:clamp(52px, 16vw, 80px); letter-spacing:2px; color:var(--euca);}}
+.leo-rest-hide{animation:restHide .7s cubic-bezier(.4,0,1,1) forwards;}
 @keyframes restHide{to{max-width:0; opacity:0; margin:0; padding:0;}}
+.leo-words-tighten{animation:wordsTighten .8s cubic-bezier(.4,0,.2,1) .55s forwards;}
+@keyframes wordsTighten{to{gap:2px;}}
 .leo-reveal-final{display:flex; flex-direction:column; align-items:center; gap:12px;}
 .leo-reveal-name{font-family:'Fraunces',serif; font-size:clamp(52px, 16vw, 80px); font-weight:800; color:var(--euca); letter-spacing:2px; line-height:1;}
 .leo-reveal-tagline{font-family:'Fraunces',serif; font-size:17px; color:var(--euca-deep); opacity:.8; margin:0;}
 @media (prefers-reduced-motion: reduce){
   .leo-reveal-word{animation:none; opacity:1;}
-  .leo-key-grow,.leo-rest-hide{animation:none;}
+  .leo-key-grow,.leo-rest-hide,.leo-words-tighten{animation:none;}
 }
 /* ---- Intro pages ---- */
 .intro-page{display:flex; flex-direction:column; align-items:center; text-align:center; max-width:440px; width:100%; padding:32px 20px;}
