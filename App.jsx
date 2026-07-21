@@ -3888,6 +3888,7 @@ function validateBlueprint(bp) {
   if (!Array.isArray(bp.warmUpQuestions) || bp.warmUpQuestions.length < 4) problems.push("warmUpQuestions too short");
   if (!Array.isArray(bp.vocabulary) || bp.vocabulary.length < 5) problems.push("vocabulary too small");
   if (!bp.grammar || !bp.grammar.point || !bp.grammar.form) problems.push("grammar incomplete");
+  if (!bp.grammar || !Array.isArray(bp.grammar.examples) || !bp.grammar.examples.length) problems.push("grammar.examples missing");
   if (bp.mainSkill !== "reading" && bp.mainSkill !== "listening" && bp.mainSkill !== "both") problems.push("mainSkill invalid");
 
   // ---- Lesson type validation ----
@@ -4038,6 +4039,7 @@ function buildTeacherContext({ profile, memoryStore, words, heard, diaryPages, a
     `RECENT LEARNING`,
     lastLesson ? `Yesterday's lesson: "${lastLesson.scenario}"${typeof lastLesson.score === "number" ? ` (scored ${lastLesson.score}/${lastLesson.total})` : ""}.` : "No previous lesson yet.",
     lastLesson && lastLesson.mission ? `Yesterday's mission: "${lastLesson.mission}" — Leo should ask how it went.` : "",
+    lastLesson && lastLesson.tomorrowConnection ? `Yesterday Leo told the student today would build towards: "${lastLesson.tomorrowConnection}" — Leo should honour that promise.` : "",
     recentScores.length > 1 ? `Recent performance: ${recentScores.join("; ")}.` : "",
     scenariosDone.length ? `Situations already practised: ${scenariosDone.slice(0, 8).join(", ")}.` : "",
     "",
@@ -4166,7 +4168,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       // Leo decides what this student genuinely needs today. Not what would make
       // a good lesson — what THIS STUDENT needs.
       const needsAssessment = await askClaude(
-        `You are Leo. You have just analysed your student:\n\n${studentAnalysis}\n\n${reqLines ? "They have asked to work on:\n" + reqLines + "\n\n" : ""}STUDENT'S FIRST LANGUAGE: ${l1}\nCOUNTRY OF ORIGIN: ${country}\n\nVOCABULARY — STILL FRAGILE (not yet mastered): ${fragileWords}\nVOCABULARY — TO RECYCLE (taught but needs revisiting): ${recycleWords}\nRECURRING ERRORS: ${errorTally}\n\nDo NOT repeat these recently-used contexts (choose something completely different): ${avoidCtx}.\n\nNow decide what this student genuinely needs today. Do not plan a lesson yet.\n\nIMPORTANT: You can only teach one thing well today. Choose ONE communicative objective. If this student has multiple needs — different grammar gaps, different skill weaknesses — pick the one that matters most right now and name what you are deliberately leaving for another day and why.\n\nConsider how this student's specific L1 variety affects their English — not just "Spanish" or "Chinese" but the regional variety. A Colombian Spanish speaker and a Peninsular Spanish speaker make different errors. A Cantonese speaker and a Mandarin speaker have different phonological challenges. Teach accordingly.\n\nAnswer these questions:\n\n- What ONE communicative situation would help them most RIGHT NOW in their life in Australia?\n- Why today? Why is this the right lesson for this moment in their learning?\n- What am I deliberately NOT teaching today, and why is that the right call?\n- What specific mistakes do I predict they will make, given their L1 variety?\n- What vocabulary is absolutely essential? (Name 8-10 words they genuinely need.) Include 2-3 words from the fragile or recycle lists above if any fit today's situation naturally — do not force them in if they do not belong.\n- What vocabulary should I deliberately leave out? (Name 2-3 words that are related but not essential.)\n- What grammar naturally arises from this situation?\n- What authentic Australian material could ground this? (A real SMS, menu, sign, notice, email — write the actual text.)\n- What is the one memorable moment I want to create?\n- How should this student feel at the end?\n- What moment of success am I building towards — what is the final thing they will DO?\n\nWrite 8-12 sentences. Be specific. This is your private educational reasoning.`,
+        `You are Leo. You have just analysed your student:\n\n${studentAnalysis}\n\n${reqLines ? "They have asked to work on:\n" + reqLines + "\n\n" : ""}STUDENT'S FIRST LANGUAGE: ${l1}\nCOUNTRY OF ORIGIN: ${country}\n\nVOCABULARY — STILL FRAGILE (not yet mastered): ${fragileWords}\nVOCABULARY — TO RECYCLE (taught but needs revisiting): ${recycleWords}\nRECURRING ERRORS: ${errorTally}\n\nIf several fragile words share a theme — for example, medical vocabulary, financial terms, or housing language — consider whether that theme is itself the right lesson today. A cluster of words that have been fragile for many lessons may be fragile precisely because no lesson has created a natural home for them. Teaching the situation they belong to is better than scattering them one by one across unrelated lessons where they will never stick.\n\nDo NOT repeat these recently-used contexts (choose something completely different): ${avoidCtx}.\n\nNow decide what this student genuinely needs today. Do not plan a lesson yet.\n\nIMPORTANT: You can only teach one thing well today. Choose ONE communicative objective. If this student has multiple needs — different grammar gaps, different skill weaknesses — pick the one that matters most right now and name what you are deliberately leaving for another day and why.\n\nConsider how this student's specific L1 variety affects their English — not just "Spanish" or "Chinese" but the regional variety. A Colombian Spanish speaker and a Peninsular Spanish speaker make different errors. A Cantonese speaker and a Mandarin speaker have different phonological challenges. Teach accordingly.\n\nAnswer these questions:\n\n- What ONE communicative situation would help them most RIGHT NOW in their life in Australia?\n- Why today? Why is this the right lesson for this moment in their learning?\n- What am I deliberately NOT teaching today, and why is that the right call?\n- What specific mistakes do I predict they will make, given their L1 variety?\n- What vocabulary is absolutely essential? (Name 8-10 words they genuinely need.) Include 2-3 words from the fragile or recycle lists above if any fit today's situation naturally — do not force them in if they do not belong.\n- What vocabulary should I deliberately leave out? (Name 2-3 words that are related but not essential.)\n- What grammar naturally arises from this situation?\n- What authentic Australian material could ground this? (A real SMS, menu, sign, notice, email — write the actual text.)\n- What is the one memorable moment I want to create?\n- How should this student feel at the end?\n- What moment of success am I building towards — what is the final thing they will DO?\n\nWrite 8-12 sentences. Be specific. This is your private educational reasoning.`,
         { intent: "needs_assessment" }
       );
 
@@ -4197,11 +4199,21 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       // include more items — matchVocab controls which subset appears in matching.
       blueprint.vocabulary = blueprint.vocabulary.slice(0, 8);
 
+      // Stage 4 reads fields the blueprint check does not require. These make each
+      // one safe. The warm-up list carries type AND prompt: a bare type list cannot
+      // answer question 9 (is the warm-up specific to today?) and would always
+      // return YES, so the revision pass would never fire. grammar.examples is NOT
+      // guarded here — validateBlueprint now requires it, so it is guaranteed.
+      const bpRationale = blueprint.lessonRationale || "not stated";
+      const bpScaffold = blueprint.scaffoldingStrategy || "not stated";
+      const bpWarmUps = (blueprint.warmUpActivities || [])
+        .map(a => `${a.type} — ${a.prompt || a.instruction || "(no prompt)"}`).join("\n") || "none given";
+
       // ---- STAGE 4: EDUCATIONAL REVIEW ----
       // Leo reviews his own lesson as a senior ELICOS teacher would.
       // If anything fails, he revises the blueprint before presenting it.
       const review = await askClaude(
-        `You are a senior ELICOS teacher reviewing a colleague's lesson plan. Be critically constructive.\n\nSTUDENT: ${studentAnalysis.slice(0, 300)}\n\nLESSON PLAN:\nContext: ${blueprint.context}\nObjective: ${blueprint.communicativeObjective}\nVocabulary: ${blueprint.vocabulary.map(v => v.word).join(", ")}\nGrammar: ${blueprint.grammar.point}\nFinal task: ${blueprint.finalTask}\nMemorable moment: ${blueprint.memorableMoment}\n\nAnswer YES or NO to each, then explain briefly:\n1. Would I enjoy teaching this lesson?\n2. Does every vocabulary item genuinely support the objective?\n3. Does the grammar arise naturally from the situation?\n4. Is the authentic material believable?\n5. Does everything build toward the final task?\n6. Is it memorable?\n7. Would the student leave more confident?\n8. Is there anything I would change?\n\nBe honest. If anything needs improving, say exactly what and why.`,
+        `You are a senior ELICOS teacher reviewing a colleague's lesson plan. Be critically constructive.\n\nSTUDENT: ${studentAnalysis.slice(0, 300)}\n\nLESSON PLAN:\nContext: ${blueprint.context}\nObjective: ${blueprint.communicativeObjective}\nRationale: ${bpRationale}\n\nVocabulary:\n${blueprint.vocabulary.map(v => `${v.word} — ${v.meaning}`).join("\n")}\n\nGrammar point: ${blueprint.grammar.point}\nGrammar form: ${blueprint.grammar.form}\nGrammar examples: ${blueprint.grammar.examples.join(" / ")}\n\nWarm-up activities:\n${bpWarmUps}\n\nFinal task: ${blueprint.finalTask}\nMemorable moment: ${blueprint.memorableMoment}\nScaffolding: ${bpScaffold}\n\nAnswer YES or NO to each, then explain briefly:\n1. Would I enjoy teaching this lesson?\n2. Does every vocabulary item genuinely support the objective? Check each definition — is it clear and helpful at this level, or vague and circular?\n3. Does the grammar arise naturally from the situation?\n4. Is the authentic material believable?\n5. Does everything build toward the final task — does vocabulary prepare for reading, does reading model the grammar, does grammar support speaking?\n6. Is it memorable?\n7. Would the student leave more confident?\n8. Do the grammar examples practise the target structure and ONLY the target structure? Could a student answer any grammar example correctly without knowing the grammar rule? If so, the examples are testing something else.\n9. Do the warm-up activities feel specific to today's context, or could they appear in any lesson?\n10. Is there anything I would change?\n\nBe honest. If anything needs improving, say exactly what and why.`,
         { intent: "educational_review" }
       );
 
@@ -4351,6 +4363,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
     leoMemory.recordLesson({
       scenario: bp.context, skill: bp.mainSkill, score: c1 + c2 + c3, total: (t1 + t2 + t3) || 1,
       word: bp.vocabulary[0] && bp.vocabulary[0].word, mission: bp.mission || "", template: "BP",
+      tomorrowConnection: bp.tomorrowConnection,
     });
     setPhase("done");
   };
