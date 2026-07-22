@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   BookOpen, Book, MessageCircle, Sparkles, Ear, MapPin, Mic, Gamepad2,
-  LayoutDashboard, Check, X, Search, Send, Plus, Trash2, Loader2, ChevronLeft, ChevronRight, ExternalLink, Repeat
+  LayoutDashboard, Check, X, Search, Send, Plus, Trash2, Loader2, ChevronLeft, ChevronRight, ExternalLink, Repeat,
+  Home, TrendingUp, PenLine, GraduationCap, RotateCcw,
+  AlertTriangle, Waves, Sun, CreditCard, Stethoscope, Briefcase
 } from "lucide-react";
 
 /* ============================================================
@@ -163,7 +165,7 @@ const PRON_TIPS = {
 
 const AUS_HELP = [
   {
-    icon: "🚨", title: "Emergency — call 000",
+    icon: AlertTriangle, title: "Emergency — call 000",
     intro: "In a serious emergency, call Triple Zero (000). It is the fastest way to get the police, fire service, or an ambulance. It is free from any phone.",
     display: [["👮", "Police — 000"], ["🔥", "Fire — 000"], ["🚑", "Ambulance — 000"]],
     points: [
@@ -178,7 +180,7 @@ const AUS_HELP = [
     url: "https://www.triplezero.gov.au/triple-zero/How-to-Call-000",
   },
   {
-    icon: "🏖️", title: "Swim between the flags",
+    icon: Waves, title: "Swim between the flags",
     intro: "Australian beaches are beautiful, but the ocean can be dangerous. Strong water called a 'rip' can pull you away from the beach. Always swim in the safe area.",
     points: [
       "Look for the red and yellow flags on the beach.",
@@ -191,7 +193,7 @@ const AUS_HELP = [
     url: "https://www.royallifesaving.com.au/about/campaigns-and-programs/Water-Safety",
   },
   {
-    icon: "☀️", title: "Sun safety",
+    icon: Sun, title: "Sun safety",
     intro: "The sun in Australia is very strong. The UV (sun rays that burn your skin) can be dangerous, even on cloudy or cool days. Use five easy steps.",
     points: [
       "🧥 Slip on clothes that cover your skin, like a shirt with sleeves.",
@@ -203,7 +205,7 @@ const AUS_HELP = [
     url: "https://www.cancer.org.au/cancer-information/causes-and-prevention/sun-safety/campaigns-and-events/slip-slop-slap-seek-slide",
   },
   {
-    icon: "🚆", title: "Opal card (Sydney)",
+    icon: CreditCard, title: "Opal card (Sydney)",
     intro: "An Opal card is a card you use to pay for public transport in Sydney and nearby areas like the Blue Mountains, Central Coast, the Hunter, and the Illawarra.",
     points: [
       "Use it on trains, buses, ferries, and light rail.",
@@ -215,7 +217,7 @@ const AUS_HELP = [
     url: "https://transportnsw.info/tickets-fares/opal",
   },
   {
-    icon: "🏥", title: "Medicare & OSHC (health cover)",
+    icon: Stethoscope, title: "Medicare & OSHC (health cover)",
     intro: "Health care is important. Here are two things you should understand about paying for doctors and hospitals.",
     subsections: [
       { heading: "🩺 What is Medicare?", points: [
@@ -233,7 +235,7 @@ const AUS_HELP = [
     urls: [["Medicare", "https://www.servicesaustralia.gov.au/medicare"], ["OSHC", "https://oshcaustralia.com.au/en"]],
   },
   {
-    icon: "💼", title: "Working: TFN & super",
+    icon: Briefcase, title: "Working: TFN & super",
     intro: "If you have permission to work, there are two important words to know: TFN and super.",
     subsections: [
       { heading: "🔢 Tax File Number (TFN)", points: [
@@ -316,6 +318,16 @@ async function liveAskClaude(prompt) {
    liveAskClaude() is wired to a real backend.
    ======================================================== */
 function _mockPick(p, re) { const m = p.match(re); return m ? m[1] : ""; }
+
+/* Warm-up free response — Leo's two non-pack lines.
+   These are DIFFERENT MESSAGES and must not stay identical:
+     SKIP     "you didn't do this, and that's fine"
+     FALLBACK "I received something but couldn't read it"
+   A student who types "." and a student who hits a network error are in
+   genuinely different situations. Interim identical is acceptable while
+   Lessons' wording is outstanding; permanent is not. */
+const WARMUP_SKIP_LINE = "Got it — let's keep going.";      // INTERIM — awaiting Lessons wording
+const WARMUP_FALLBACK_LINE = "Got it — let's keep going.";  // failure only, never an AI call
 // Shared mock content packs: one pack = one coherent real-life situation.
 // Every mock lesson branch (blueprint, reading, listening, grammar, summary)
 // draws from the SAME pack so offline lessons never mix scenarios.
@@ -915,8 +927,11 @@ function prepareAuthoredBlueprint(lesson) {
    real auth — the UI components stay identical.
    ======================================================== */
 
-function WelcomeLanding({ onSignUp, onSignIn }) {
-  const [step, setStep] = useState(0);
+/* `step` is deliberately NOT held here. Tapping either auth button unmounts
+   this component, and state owned here would die with it — Back would then
+   remount at step 0 and send the student four screens backwards rather than
+   one. The parent owns it so it survives the switch. */
+function WelcomeLanding({ step, setStep, onSignUp, onSignIn }) {
   if (step === 0) return (
     <div className="onboard" onClick={() => setStep(1)}>
       <div className="intro-page">
@@ -1236,15 +1251,6 @@ const PLACEMENT_FUNCTIONAL = [
   { level: "C1", area: "negotiation", stem: "You're negotiating a salary. The offer is lower than expected. What do you say?", options: ["I really appreciate the offer. Based on my experience and the market rate, I was hoping we could discuss a figure closer to $75,000. Is there any flexibility?", "That's too low. Pay me more.", "I won't accept less than $80,000.", "Whatever you think is fair."], answer: "I really appreciate the offer. Based on my experience and the market rate, I was hoping we could discuss a figure closer to $75,000. Is there any flexibility?", note: "Appreciative, data-informed, specific, and opens negotiation without confrontation." },
 ];
 
-/* PLACEMENT_ENCOURAGEMENT — currently unused after P3.1 simplification.
-   Retained for potential future use. */
-const PLACEMENT_ENCOURAGEMENT = [
-  "Let's keep going.",
-  "Nearly there.",
-  "Take your time.",
-  "No rush.",
-];
-
 const CEFR_ORDER = ["A1", "A2", "B1", "B2", "C1"];
 const CEFR_RANK = { A1: 0, A2: 1, B1: 2, B2: 3, C1: 4 };
 const CEFR_LABELS = { A1: "Beginner", A2: "Elementary", B1: "Intermediate", B2: "Upper-Intermediate", C1: "Advanced" };
@@ -1291,15 +1297,9 @@ const PLACEMENT_SECTIONS = [
   { id: "results", label: "Your Results", emoji: "🎉" },
 ];
 
-const PLACEMENT_GOALS = [
-  "Study at university", "Find work", "Permanent residency",
-  "Travel", "Everyday life", "Make friends", "Help my children", "Professional development",
-];
-
 /* ── PlacementTestPage ── */
 function PlacementTestPage({ profile, onComplete }) {
   const [section, setSection] = useState(1);
-  const [welcome, setWelcome] = useState({ confidence: 5, selfLevel: "", goals: [] });
   const [grammarHistory, setGrammarHistory] = useState([]);
   const [grammarAnswered, setGrammarAnswered] = useState(new Set());
   const [grammarLevel, setGrammarLevel] = useState("B1");
@@ -1325,8 +1325,6 @@ function PlacementTestPage({ profile, onComplete }) {
   const [funcChosen, setFuncChosen] = useState(null);
   const [funcCount, setFuncCount] = useState(0);
   const [results, setResults] = useState(null);
-
-  const encourage = () => PLACEMENT_ENCOURAGEMENT[section % PLACEMENT_ENCOURAGEMENT.length];
 
   // ── Start adaptive sections ──
   useEffect(() => {
@@ -1393,7 +1391,6 @@ function PlacementTestPage({ profile, onComplete }) {
       overall: overallLevel,
       grammar: grammar.level, vocab: vocab.level, reading: readingLevel,
       pronunciation: pron.level, functional: func.level,
-      confidence: welcome.confidence,
       strengths, improvements, areas,
       grammarDetail: grammar.byLevel, vocabDetail: vocab.byLevel,
       totalCorrect: grammarHistory.filter((h) => h.ok).length + vocabHistory.filter((h) => h.ok).length + readingScore.correct + pronHistory.filter((h) => h.ok).length + funcHistory.filter((h) => h.ok).length,
@@ -1401,12 +1398,11 @@ function PlacementTestPage({ profile, onComplete }) {
     };
   };
 
-  const sectionData = PLACEMENT_SECTIONS[section];
   const progress = section / (PLACEMENT_SECTIONS.length - 1);
 
   // ── MCQ renderer for adaptive sections ──
   const AdaptiveQuiz = ({ q, chosen, onPick, count, maxQ, label }) => {
-    if (!q) return <LeoLoader label="Preparing questions…" />;
+    if (!q) return <LeoLoader label="I'm putting your questions together…" />;
     const opts = React.useMemo(() => shuffleOptions(q.options, textSeed(q.stem)), [q]);
     return (
       <div>
@@ -1559,8 +1555,25 @@ function _mockWarmUp(pack, avoidCsv) {
    text-matching branches — they ARE the same logic, keyed by contract instead
    of by fragile substring matching. */
 const _MOCK_INTENT_HANDLERS = {
+  /* Three length-keyed paths: 1-2 chars skip, 3-15 minimal, 16+ attempt.
+     Minimal and attempt read the current pack's strings; when those are absent
+     (Lessons has not delivered them yet) they fall through to the hardcoded
+     failure line, so this ships without touching MOCK_PACKS. */
+  warmup_free_response: (p, J) => {
+    const answer = (_mockPick(p, /Student's answer: "([^"]*)"/) || "").trim();
+    const pack = _mockFindPack(p);
+    const n = answer.length;
+    if (n <= 2) return J({ category: "skip", line: WARMUP_SKIP_LINE });
+    if (n <= 15) return J({ category: "minimal", line: (pack && pack.warmupMinimalResponse) || WARMUP_FALLBACK_LINE });
+    return J({ category: "attempt", line: (pack && pack.warmupAttemptResponse) || WARMUP_FALLBACK_LINE });
+  },
   chat_reply: (p, J) => {
     const q = _mockPick(p, /The student now says: "([^"]*)"/);
+    // Refusal branch (spec A6): without this the doorway is unreachable while
+    // USE_MOCK_AI is true, so its absence in testing would mean nothing.
+    if (/medicare|visa|tax|centrelink|doctor|rent|lease|superannuation|police|licence|license/i.test(q || "")) {
+      return `${OFF_TOPIC_MARK} That one isn't English practice, so it's not something I can help with here. Ask me an English question instead — for example, "What's the difference between 'make' and 'do'?"`;
+    }
     return `That's a good question about "${q || "English"}". Here's a simple way to think about it, with a short example you can copy and adapt. Try writing one sentence yourself and I'll help you improve it.`;
   },
   diary_resources: (p, J) => J({ resources: [
@@ -1852,6 +1865,12 @@ function parseJSON(text) {
   if (start === -1 || end === -1) throw new Error("No JSON found");
   const raw = clean.slice(start, end + 1);
   try { return JSON.parse(raw); }
+  // NOT A DEFECT — DO NOT "FIX". The \u escapes below are inside a regular
+  // expression literal, where they are real character codes for the control
+  // range 0x00-0x1F and strip unprintable bytes from a malformed AI response.
+  // They are not the JSX-text escape bug fixed on 22 July (nine lines, where
+  // codes sat outside any string literal and printed to the student verbatim).
+  // Replacing these with literal characters would break JSON repair.
   catch { return JSON.parse(raw.replace(/[\u0000-\u001F]+/g, " ")); }
 }
 
@@ -1882,24 +1901,68 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
    keyed by the word/phrase text itself. All functions below are pure:
    (store, ...) -> new store, so they're easy to reason about and test. */
 
-const DEFAULT_MEMORY_STORE = { wordMastery: {}, lessonLog: [], diaryFeedbackLog: [], questionLog: [] };
+/* lessonsCompleted and firstLessonDate are LIFETIME facts and are deliberately
+   NOT derived from lessonLog. The log is trimmed, so counting it told Leo that
+   a student of six months had done ten lessons over ten days — a false history
+   fed into every plan, and a Continuity Integrity defect rather than a memory
+   limit. These two never trim. */
+const DEFAULT_MEMORY_STORE = { wordMastery: {}, lessonLog: [], diaryFeedbackLog: [], questionLog: [], lessonsCompleted: 0, firstLessonDate: null };
+/* The lesson log lives in its OWN storage key. The rest of the store is
+   rewritten on every word answered (practiceWord, touchWord) — keeping the log
+   inside it meant a single vocabulary answer re-serialised the entire lesson
+   history it had nothing to do with. Split, that cost disappears and the cap
+   becomes almost free: the log is written only when a lesson is recorded.
+   Readers are unaffected — store.lessonLog still exists in memory. */
+const LESSON_LOG_KEY = "esl-lesson-log";
+const LESSON_LOG_CAP = 2000;       // ~5.5 years of daily use
+/* The Word Bank is the ONLY surface that brings vocabulary back for review.
+   At eight words per lesson the old 200 cap saturated in 25 days, after which
+   every word Leo taught silently evicted an older one — wordMastery would know
+   a student had met 1,400 words while the review could reach 200. */
+const WORD_BANK_CAP = 2000;
+/* Heard entries are NOT the same weight as word bank entries: a word bank entry
+   is {word, date} at ~45 bytes, while a heard entry carries a full info object
+   — meaning, IPA, part of speech, example, collocations, formality, translation
+   — at ~391 bytes, roughly 8.7x heavier. 1000 is about three years at one a
+   day, which is a real horizon for a surface the student fills by hand, and
+   keeps the footprint near 380KB rather than the 764KB that matching the Word
+   Bank would cost. */
+const HEARD_CAP = 1000;
+const DIARY_FEEDBACK_CAP = 50;
 const MASTERY_STAGES = ["new", "seen", "practised", "confident", "mastered"];
 const MASTERY_RANK = { new: 0, seen: 1, practised: 2, confident: 3, mastered: 4 };
 
 async function loadMemoryStore() {
   const s = await loadKey("esl-memory-store", DEFAULT_MEMORY_STORE);
   const o = s && typeof s === "object" ? s : {};
+  // Migration: stores written before the split still carry the log inline.
+  // It is read from there once, then moves to its own key on the next save.
+  const separate = await loadKey(LESSON_LOG_KEY, null);
+  const log = Array.isArray(separate) ? separate : (Array.isArray(o.lessonLog) ? o.lessonLog : []);
   // Coerce every field to its expected type. `{...DEFAULT, ...s}` only backfills
   // MISSING keys — a corrupted or tampered store where a field is the wrong type
   // (e.g. wordMastery:null, questionLog:42) would otherwise crash the helpers.
   return {
     wordMastery: o.wordMastery && typeof o.wordMastery === "object" ? o.wordMastery : {},
-    lessonLog: Array.isArray(o.lessonLog) ? o.lessonLog : [],
+    lessonLog: log,
     diaryFeedbackLog: Array.isArray(o.diaryFeedbackLog) ? o.diaryFeedbackLog : [],
     questionLog: Array.isArray(o.questionLog) ? o.questionLog : [],
+    // Migration: a store written before these existed falls back to the log,
+    // which is no worse than the old behaviour and self-corrects from the next
+    // lesson onwards.
+    lessonsCompleted: Number.isFinite(o.lessonsCompleted) ? o.lessonsCompleted : log.length,
+    firstLessonDate: typeof o.firstLessonDate === "string" ? o.firstLessonDate
+      : (log.length ? (log[log.length - 1] || {}).date || null : null),
   };
 }
-function saveMemoryStore(store) { saveKey("esl-memory-store", store); }
+/* The log is written ONLY when it has actually changed. Every mem* helper
+   spreads the store, so lessonLog keeps its array reference unless
+   memRecordLesson replaced it — a reference check is therefore exact. */
+function saveMemoryStore(store, prev) {
+  const { lessonLog, ...rest } = store;
+  saveKey("esl-memory-store", rest);
+  if (!prev || prev.lessonLog !== lessonLog) saveKey(LESSON_LOG_KEY, lessonLog || []);
+}
 
 // A word progresses new -> seen -> practised -> confident -> mastered on a
 // streak of correct answers, and steps back to "seen" (not all the way to
@@ -1930,10 +1993,16 @@ function memSortByMasteryAsc(items, store, getTerm) {
   return [...items].sort((a, b) => MASTERY_RANK[memMasteryStage(store, getTerm(a))] - MASTERY_RANK[memMasteryStage(store, getTerm(b))]);
 }
 function memRecordLesson(store, entry) {
-  return { ...store, lessonLog: [{ ...entry, date: todayStr() }, ...store.lessonLog].slice(0, 10) };
+  const today = todayStr();
+  return {
+    ...store,
+    lessonLog: [{ ...entry, date: today }, ...store.lessonLog].slice(0, LESSON_LOG_CAP),
+    lessonsCompleted: (store.lessonsCompleted || 0) + 1,
+    firstLessonDate: store.firstLessonDate || today,
+  };
 }
 function memRecordDiaryFeedback(store, fb) {
-  return { ...store, diaryFeedbackLog: [{ ...fb, date: todayStr() }, ...store.diaryFeedbackLog].slice(0, 10) };
+  return { ...store, diaryFeedbackLog: [{ ...fb, date: todayStr() }, ...store.diaryFeedbackLog].slice(0, DIARY_FEEDBACK_CAP) };
 }
 // M6: remember what the learner asks Leo about, so future lessons can reference
 // their real questions. Deduped (case-insensitive) and capped so nothing bloats.
@@ -1958,21 +2027,83 @@ function computeStreak(dates) {
 
 /* ---------------- Loading indicator ---------------- */
 
+/* MOTION CHARACTER SPEC §3 — the drawn rule.
+   One element wherever the app waits: the completion tick's own mechanism at
+   smaller scale. stroke-dashoffset travels from full length to zero, once,
+   then rests. It never loops — a looping animation says "waiting", and Leo
+   does not need to fill silence, because Leo can talk. If the wait continues
+   the SENTENCE changes and the rule redraws BECAUSE the sentence changed, so
+   movement is always the consequence of something actually happening. */
+
+/* §3.3 — the escalation ladder, generic across every call site. These replace
+   five strings no student ever saw: every call site passed an explicit label. */
 const LEO_LOADER_MESSAGES = [
-  "Leo is getting things ready for you …",
-  "Just a moment — planning something good …",
-  "Thinking about what you need today …",
-  "Nearly there — hang on …",
-  "Preparing your next step …",
+  "Still working — I'd rather get this right than get it quickly.",  // at 4s
+  "This one's taking longer than usual. I haven't forgotten you.",   // at 9s
 ];
 
-function LeoLoader({ label }) {
-  const [msgIdx] = useState(() => Math.floor(Math.random() * LEO_LOADER_MESSAGES.length));
-  const display = label || LEO_LOADER_MESSAGES[msgIdx];
+/* §3.2 timing table. 0-400ms: nothing at all — a loader that flashes for a
+   fifth of a second is noise. 400ms: the rule draws once. 4s and 9s: the
+   line changes. No fourth stage; that would be fidgeting in words.
+   The ladder is NOT suppressed under reduced motion (§5) — a changing
+   sentence is information, not movement. */
+function useWaitStage() {
+  const [stage, setStage] = useState(0);
+  useEffect(() => {
+    const a = setTimeout(() => setStage(1), 400);
+    const b = setTimeout(() => setStage(2), 4000);
+    const c = setTimeout(() => setStage(3), 9000);
+    return () => { clearTimeout(a); clearTimeout(b); clearTimeout(c); };
+  }, []);
+  return stage;
+}
+
+function DrawnRule({ inline }) {
+  const len = inline ? 28 : 48;
+  const w = inline ? 2.5 : 3;
   return (
-    <div className="leo-loader">
-      <div className="leo-loader-accent" aria-hidden="true"><span /></div>
-      <p className="leo-loader-text text-leo">{display}</p>
+    <svg className="drawn-rule" width={len} height={w * 2} viewBox={`0 0 ${len} ${w * 2}`} aria-hidden="true">
+      <line x1="0" y1={w} x2={len} y2={w} className="drawn-rule-line"
+        strokeWidth={w} style={{ strokeDasharray: len, strokeDashoffset: len }} />
+    </svg>
+  );
+}
+
+/* The rule and the sentence together. Changing the key remounts both, which is
+   what redraws the rule when the line changes (§3.2).
+   §6: the mark is always aria-hidden and the sentence always live — the motion
+   is never the announcement. */
+function WaitIndicator({ label, inline, className, stage: forced }) {
+  const own = useWaitStage();
+  const stage = forced === undefined ? own : forced;
+  if (stage === 0) return null;
+  const text = stage >= 3 ? LEO_LOADER_MESSAGES[1]
+    : stage === 2 ? LEO_LOADER_MESSAGES[0]
+    : label;
+  const cls = (inline ? "wait-inline" : "wait-block") + (className ? " " + className : "");
+  return (
+    <div className={cls} role="status" aria-live="polite">
+      <DrawnRule key={stage} inline={inline} />
+      {text && <p className="wait-label text-leo" key={"t" + stage}>{text}</p>}
+    </div>
+  );
+}
+
+function LeoLoader({ label }) {
+  return <WaitIndicator label={label} />;
+}
+
+/* The whole row is gated, not just the rule: an empty padded bubble with an
+   avatar beside it IS an indicator, and §3.2 says nothing at all appears
+   under 400ms. The stage is owned here and passed down so the inner rule
+   does not restart the clock. */
+function ChatTypingRow() {
+  const stage = useWaitStage();
+  if (stage === 0) return null;
+  return (
+    <div className="bubble-row row-bot">
+      <span className="bot-avatar-leo">L</span>
+      <div className="bubble bubble-bot typing"><WaitIndicator inline stage={stage} /></div>
     </div>
   );
 }
@@ -1980,12 +2111,7 @@ function LeoLoader({ label }) {
 /* ---------------- small UI bits ---------------- */
 
 function Spinner({ label }) {
-  return (
-    <div className="spin-row">
-      <Loader2 size={18} className="spin" />
-      <span>{label || "Thinking…"}</span>
-    </div>
-  );
+  return <WaitIndicator label={label || "Thinking…"} inline />;
 }
 
 function Card({ children, className }) {
@@ -2021,10 +2147,88 @@ function SkylineSketch({ animate }) {
    step's completion/gating is decided. Adding, reordering or gating a daily
    activity means editing this array — HomeScreen just renders it. */
 const DAILY_JOURNEY = [
-  { key: "diary", label: "Diary page", emoji: "📖", page: "diary", isDone: (t) => t.diaryFilled, ctaLabel: "Write today's diary" },
-  { key: "task", label: "Leo's Lesson", emoji: "🎯", page: "task", isDone: (t) => t.taskDone, ctaLabel: "Start today's lesson" },
-  { key: "vocab", label: "Word review", emoji: "🔁", page: "vocab", isDone: (t) => t.vocabDone, isGated: (t) => t.wordCount < 3, gateLabel: "Save a word first", ctaLabel: "Review your words" },
+  { key: "diary", label: "Diary page", icon: PenLine, page: "diary", isDone: (t) => t.diaryFilled, ctaLabel: "Write today's diary" },
+  { key: "task", label: "Leo's Lesson", icon: GraduationCap, page: "task", isDone: (t) => t.taskDone, ctaLabel: "Start today's lesson" },
+  { key: "vocab", label: "Word review", icon: RotateCcw, page: "vocab", isDone: (t) => t.vocabDone, isGated: (t) => t.wordCount < 3, gateLabel: "Save a word first", ctaLabel: "Review your words" },
 ];
+
+/* Written-out date, composed rather than localised so it always reads
+   "Tuesday, 21 July" in British English regardless of device locale. */
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const longDate = (d) => `${DAY_NAMES[d.getDay()]}, ${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+
+/* Greeting is English, not L1: an Australian teacher greets a student in
+   English every morning, and that is the immersion the student came for.
+   L1 keeps its real jobs elsewhere — the "Hi, I'm Leo" page, dictionary
+   glosses, pronunciation notes.
+   NOTE: there is deliberately no "Good night". In English that is a
+   farewell, never a greeting; a student sitting down to study at 10pm
+   would be said goodbye to, and would learn the phrase wrong. Evening
+   covers the whole night. */
+const timeGreeting = (d) => {
+  const h = d.getHours();
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+};
+
+const clockTime = (d) => {
+  const h = d.getHours();
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(d.getMinutes()).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`;
+};
+
+/* Isolated so the minute tick redraws ONLY this block. The continuity line
+   and the Today card sit outside it and are never recomputed by the clock.
+   Once per minute, not per second: a per-second counter is the most noticed
+   motion possible on a still screen, and motion should be felt, not noticed.
+   The first tick is aligned to the next minute boundary so the displayed
+   time is never up to 59 seconds stale. */
+function HomeGreeting({ name }) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    let interval;
+    const align = setTimeout(() => {
+      setNow(new Date());
+      interval = setInterval(() => setNow(new Date()), 60000);
+    }, 60000 - (Date.now() % 60000));
+    return () => { clearTimeout(align); if (interval) clearInterval(interval); };
+  }, []);
+  return (
+    <>
+      <h1 className="greet-hello">{timeGreeting(now)}, {name}</h1>
+      <p className="greet-date">{longDate(now)} <span className="greet-clock">{clockTime(now)}</span></p>
+    </>
+  );
+}
+
+/* Line 3 of the greeting. Sourced from the lesson log — never invented, never
+   generic. Returns null whenever Leo has nothing specific to say, and the line
+   is then omitted entirely (spec A3.2). "Yesterday" is a factual claim, so the
+   wording is derived from the real gap rather than assumed. */
+function continuityLine(lessonLog) {
+  const last = (lessonLog || [])[0];
+  if (!last || !last.date) return null;
+  const gap = Math.round((new Date(todayStr()).getTime() - new Date(last.date).getTime()) / 86400000);
+  if (gap < 1 || gap > 13) return null;            // today, future, or too long ago
+  const when = gap === 1 ? "Yesterday" : "Last time";
+  const tc = (last.tomorrowConnection || "").trim();
+  if (tc) return `${when} I said today would build on this: ${tc}`;
+  const sc = (last.scenario || "").trim();
+  if (sc) return `${when} we practised ${sc.charAt(0).toLowerCase() + sc.slice(1)}. Let's build on that.`;
+  return null;
+}
+
+/* "What Leo has noticed" — prose, not statistics. Omitted entirely when there
+   is nothing true to say, on the same principle as the continuity line. */
+function noticedLine(stats) {
+  const bits = [];
+  const top = ((stats && stats.errorTally) || [])[0];
+  if (top && top[0]) bits.push(`You're working on ${top[0]} at the moment.`);
+  if (stats && stats.streak >= 2) bits.push(`${stats.streak} days running.`);
+  return bits.length ? bits.join(" ") : null;
+}
 
 // The single source of truth for "did the student do X today?" — every page
 // that needs this reads it from here rather than keeping its own copy.
@@ -2038,65 +2242,106 @@ function computeTodayProgress({ diaryPages, todayDone, words, heard }) {
   };
 }
 
-const APPS = [
-  { id: "diary", label: "Diary", icon: BookOpen, bg: "#37624B" },
-  { id: "task", label: "Leo's Lesson", icon: Gamepad2, bg: "#E8A91D" },
-  { id: "questions", label: "Ask Leo", icon: MessageCircle, bg: "#33698C" },
-  { id: "dictionary", label: "Dictionary", icon: Book, bg: "#B95737" },
-  { id: "vocab", label: "Word review", icon: Repeat, bg: "#4F7D54" },
-  { id: "heard", label: "Heard today", icon: Ear, bg: "#3E8578" },
-  { id: "australia", label: "Australia", icon: MapPin, bg: "#A6753C" },
-  { id: "progress", label: "Progress", icon: LayoutDashboard, bg: "#54739E" },
-  { id: "placement", label: "Level Check", icon: Search, bg: "#2D7D9A" },
+/* ── Navigation (A1) ──
+   Four persistent destinations replacing the nine-tile grid (spec A4).
+   Diary, Leo's Lesson and Word review are NOT tiles — they live in the Today
+   card. Diary and Leo's Lesson are sub-screens of Today; Word review is a
+   section of Words, so a student can return to it after today's row is done.
+   Tabs whose `sections` length is 1 render no segmented control. */
+const TABS = [
+  { id: "today", label: "Today", icon: Home, sections: [{ page: null, label: "Today" }] },
+  { id: "ask", label: "Ask Leo", icon: MessageCircle, sections: [
+    { page: "questions", label: "English" },
+    { page: "australia", label: "Australia" },
+  ] },
+  { id: "words", label: "Words", icon: Book, sections: [
+    { page: "dictionary", label: "Dictionary" },
+    { page: "vocab", label: "Word review" },
+    { page: "heard", label: "Heard today" },
+  ] },
+  { id: "progress", label: "Progress", icon: TrendingUp, sections: [
+    { page: "progress", label: "Progress" },
+    { page: "placement", label: "Level Check" },
+  ] },
 ];
 
-function HomeScreen({ profile, streak, phrase, onOpen, animate, todayInfo }) {
+/* Screens that belong to a tab but are not sections of it — reached from the
+   Today card, and returned from via the header back control. */
+const TAB_SUBSCREENS = { diary: "today", task: "today" };
+
+const tabOfPage = (p) => {
+  if (TAB_SUBSCREENS[p]) return TAB_SUBSCREENS[p];
+  const t = TABS.find((x) => x.sections.some((sec) => sec.page === p));
+  return t ? t.id : "today";
+};
+const defaultPageOfTab = (id) => (TABS.find((t) => t.id === id) || TABS[0]).sections[0].page;
+
+function TabBar({ tab, onSelect }) {
+  return (
+    <nav className="tab-bar" role="navigation" aria-label="Main">
+      {TABS.map(({ id, label, icon: Icon }) => (
+        <button key={id} className={"tab-item" + (tab === id ? " tab-item-on" : "")}
+          aria-current={tab === id ? "page" : undefined} onClick={() => onSelect(id)}>
+          <Icon size={22} />
+          <span className="tab-item-label">{label}</span>
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+function SectionSwitch({ sections, page, onSelect }) {
+  return (
+    <div className="seg-control" role="tablist">
+      {sections.map((sec) => (
+        <button key={String(sec.page)} role="tab" aria-selected={page === sec.page}
+          className={"seg-item" + (page === sec.page ? " seg-item-on" : "")}
+          onClick={() => onSelect(sec.page)}>{sec.label}</button>
+      ))}
+    </div>
+  );
+}
+
+function HomeScreen({ profile, onOpen, animate, todayInfo, continuity, noticed }) {
   const nextItem = DAILY_JOURNEY.find((item) => !item.isDone(todayInfo) && !(item.isGated && item.isGated(todayInfo)));
   return (
     <div className="home-screen">
-      <div className="home-top">
-        <div className="brand-mark-sm"><WhiteboardLogo width={132} /></div>
-        <p className="home-tag">Your English learning companion</p>
-        <SkylineSketch animate={animate} />
+      {/* The mark is unanchored: deleting this one element leaves the layout intact. */}
+      <div className="brand-mark-sm"><WhiteboardLogo width={132} /></div>
 
-        <div className="today-panel">
-          <div className="today-head">
-                        <div className="today-head-text">
-              <span className="today-title">Today with Leo</span>
-              <span className="today-sub">{LANGS[profile.lang].hello}, {profile.name}! {["Great to see you today.", "Let's build your English together.", "Small steps, big progress.", "Lovely to have you back."][new Date().getDate() % 4]}</span>
-            </div>
-          </div>
-          {DAILY_JOURNEY.map((item) => {
-            const done = item.isDone(todayInfo);
-            const gated = item.isGated && item.isGated(todayInfo);
-            return (
-              <div className="today-row" key={item.key}>
-                <span className="today-row-label">{item.emoji} {item.label}</span>
-                {done
-                  ? <span className="today-done"><Check size={14} /> Done</span>
-                  : gated
-                    ? <span className="muted small">{item.gateLabel}</span>
-                    : <button className="ghost-btn" onClick={() => onOpen(item.page)}>Open</button>}
-              </div>
-            );
-          })}
-          {nextItem ? (
-            <button className="primary-btn wide today-cta" onClick={() => onOpen(nextItem.page)}>{nextItem.ctaLabel}</button>
-          ) : (
-            <p className="today-all-done">🎉 All done for today — brilliant work!</p>
-          )}
-        </div>
+      <div className="home-greet">
+        <HomeGreeting name={profile.name} />
+        {continuity && <p className="greet-cont leo-accent">{continuity}</p>}
+      </div>
 
-        <p className="home-phrase">“{phrase.en}”<span className="home-phrase-l1">{phrase.l1}</span></p>
+      <div className="leo-card today-card">
+        {DAILY_JOURNEY.map((item) => {
+          const done = item.isDone(todayInfo);
+          const gated = item.isGated && item.isGated(todayInfo);
+          const Icon = item.icon;
+          return (
+            <button key={item.key} className="tc-row" disabled={gated}
+              onClick={() => onOpen(item.page)}
+              aria-label={done ? `${item.label} — done. Open again.` : item.label}>
+              <Icon size={20} className="tc-icon" />
+              <span className="tc-label">{item.label}</span>
+              {done && <span className="tc-done"><Check size={16} /> Done</span>}
+              {!done && gated && <span className="tc-gate">{item.gateLabel}</span>}
+            </button>
+          );
+        })}
+        {nextItem ? (
+          <button className="primary-btn wide tc-cta" onClick={() => onOpen(nextItem.page)}>{nextItem.ctaLabel}</button>
+        ) : (
+          <p className="tc-alldone">That's everything for today. I'll see you tomorrow.</p>
+        )}
       </div>
-      <div className="app-grid">
-        {APPS.map(({ id, label, icon: Icon, bg }) => (
-          <button key={id} className="app-icon-btn" onClick={() => onOpen(id)}>
-            <span className="app-icon" style={{ background: bg }}><Icon size={26} /></span>
-            <span className="app-icon-label">{label}</span>
-          </button>
-        ))}
-      </div>
+
+      {noticed && (
+        <button className="noticed-card" onClick={() => onOpen("progress")}>{noticed}</button>
+      )}
+
+      <div className="home-skyline"><SkylineSketch animate={animate} /></div>
     </div>
   );
 }
@@ -2200,7 +2445,56 @@ function DiaryPage({ profile, memory, leoMemory, pages, setPages, markActivity, 
   const [homeworkDraft, setHomeworkDraft] = useState(page.homework);
   const [notesDraft, setNotesDraft] = useState(page.notes);
   const [detailDraft, setDetailDraft] = useState(page.skillsDetail || "");
-  useEffect(() => { setHomeworkDraft(page.homework); setNotesDraft(page.notes); setDetailDraft(page.skillsDetail || ""); }, [current]);
+
+  /* ── Draft autosave ──────────────────────────────────────────────────────
+     A student's own writing is the most personal thing Ask Leo holds, and
+     before this a mistap on the tab bar discarded it. Drafts are stored
+     SEPARATELY from the diary page, never merged into it, because
+     computeTodayProgress treats any text on the page as a finished entry —
+     autosaving into the page would mark the day's Diary row Done on the first
+     keystroke and tell the student they had finished something they had not.
+     Save alone commits, and Save alone completes the day.
+     The net stays silent: no "draft saved" indicator. The Save button
+     remaining enabled is the only signal that work is uncommitted. */
+  const DRAFTS_KEY = "esl-diary-drafts";
+  const draftsRef = React.useRef({});           // a ref, not state: writing a
+  const [draftsLoaded, setDraftsLoaded] = useState(false); // draft must not re-render mid-typing
+
+  useEffect(() => { (async () => {
+    draftsRef.current = (await loadKey(DRAFTS_KEY, {})) || {};
+    setDraftsLoaded(true);
+  })(); }, []);
+
+  // Apply the stored draft for this date, falling back to the saved page.
+  useEffect(() => {
+    if (!draftsLoaded) return;
+    const d = draftsRef.current[current];
+    setHomeworkDraft(d ? d.homework : page.homework);
+    setNotesDraft(d ? d.notes : page.notes);
+    setDetailDraft(d ? d.detail : (page.skillsDetail || ""));
+  }, [current, draftsLoaded]);
+
+  // Latest values, so the unmount flush writes what is actually on screen.
+  const latestRef = React.useRef(null);
+  latestRef.current = { date: current, page, homework: homeworkDraft, notes: notesDraft, detail: detailDraft };
+
+  const writeDraft = async (v) => {
+    if (!v) return;
+    const differs = v.detail !== (v.page.skillsDetail || "") || v.homework !== v.page.homework || v.notes !== v.page.notes;
+    if (differs) draftsRef.current[v.date] = { homework: v.homework, notes: v.notes, detail: v.detail };
+    else delete draftsRef.current[v.date];
+    await saveKey(DRAFTS_KEY, draftsRef.current);
+  };
+
+  useEffect(() => {
+    if (!draftsLoaded) return;
+    const t = setTimeout(() => { writeDraft(latestRef.current); }, 800);
+    return () => clearTimeout(t);
+  }, [homeworkDraft, notesDraft, detailDraft, current, draftsLoaded]);
+
+  // Final write on leaving: without it, a mistap inside the debounce window
+  // still loses the last sentence typed — the one most likely to matter.
+  useEffect(() => () => { writeDraft(latestRef.current); }, []);
 
   const [busy, setBusy] = useState(null);
   const [saved, setSaved] = useState(null); // 'hw' | 'notes'
@@ -2229,6 +2523,9 @@ function DiaryPage({ profile, memory, leoMemory, pages, setPages, markActivity, 
   const dirty = detailDraft !== (page.skillsDetail || "") || homeworkDraft !== page.homework || notesDraft !== page.notes;
   const savePage = async () => {
     await update({ skillsDetail: detailDraft, homework: homeworkDraft, notes: notesDraft }, true);
+    // Committed: drop the draft so it can never shadow the saved page.
+    delete draftsRef.current[current];
+    await saveKey(DRAFTS_KEY, draftsRef.current);
     flashSaved("page");
   };
 
@@ -2420,8 +2717,24 @@ const SCENARIOS = [
 
 // One shared feedback line so all three exercises show Leo's ok/bad
 // response the exact same way, instead of each re-implementing it.
+/* The same mark as the completion tick, at reading size: one open polyline,
+   round cap and join, drawn by stroke-dashoffset, ease-out, once. A student
+   meets this after every answer — far more often than the stage tick — so it
+   is the highest-frequency mark in the app and it was appearing, not drawn.
+   currentColor is deliberate: it inherits .ok exactly as the icon did.
+   The cross is NOT drawn. Animating a wrong answer stroke by stroke gives an
+   error a flourish and holds the student's eye on it; the tick earns the
+   gesture, the cross does not. */
+function DrawnTick({ size = 15 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className="drawn-tick" aria-hidden="true">
+      <path d="M5 12.5 L10 17.5 L19 7" className="drawn-tick-mark" />
+    </svg>
+  );
+}
+
 function LeoFeedback({ ok, children }) {
-  return <p className={(ok ? "ok" : "bad") + " text-leo"}>{ok ? <Check size={15} /> : <X size={15} />} {children}</p>;
+  return <p className={(ok ? "ok" : "bad") + " text-leo"}>{ok ? <DrawnTick /> : <X size={15} />} {children}</p>;
 }
 
 
@@ -2482,7 +2795,7 @@ function VocabCardSheet({ card, lesson, onClose, onSave, isSaved }) {
             )}
           </div>
 
-          {loading && <LeoLoader label={`Leo is looking up "${word}"…`} />}
+          {loading && <LeoLoader label={`I'm looking up "${word}"…`} />}
 
           {data && !loading && (
             <>
@@ -2836,10 +3149,10 @@ function McqQuiz({ questions, vocab, onVocabTap, onDone }) {
    breaking.
    ================================================================ */
 const WARMUP_TYPES = {
-  context_discussion: { family: "free",     label: "Talk about it",         praise: "Good — that's your English switched on. Let's build on it." },
-  prediction:         { family: "free",     label: "What do you think?",    praise: "Nice prediction. Keep it in mind — you'll find out shortly whether you were right." },
-  finish_sentence:    { family: "free",     label: "Finish the sentence",   praise: "That works. Finishing someone else's sentence is exactly what real conversation asks of you." },
-  mini_task:          { family: "free",     label: "Mini task",             praise: "Well done — that's a sentence you could genuinely use today." },
+  context_discussion: { family: "free",     label: "Talk about it" },
+  prediction:         { family: "free",     label: "What do you think?" },
+  finish_sentence:    { family: "free",     label: "Finish the sentence" },
+  mini_task:          { family: "free",     label: "Mini task" },
   mcq:                { family: "choice",   label: "Choose the answer" },
   best_response:      { family: "choice",   label: "Choose the best response" },
   true_false:         { family: "choice",   label: "True or false?" },
@@ -2883,10 +3196,48 @@ function warmUpFallback(bp) {
 }
 
 /* ---------- Renderer 1: FREE — communicative, never string-matched ---------- */
-function WarmUpFree({ activity, vocab, onVocabTap, onDone }) {
+function WarmUpFree({ activity, vocab, onVocabTap, onDone, context }) {
   const [answer, setAnswer] = useState("");
   const [sent, setSent] = useState(false);
-  const submit = () => { if (answer.trim()) setSent(true); };
+  const [reply, setReply] = useState(null);      // { category, line }
+  const settledRef = React.useRef(false);        // first result wins; the other is discarded
+  const timerRef = React.useRef(null);
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  /* Whichever arrives first settles the turn. Without this a response landing
+     after the timeout would swap the fallback out from under the student
+     mid-read. */
+  const settle = (result, failureReason) => {
+    if (settledRef.current) return;
+    settledRef.current = true;
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    if (failureReason) console.warn("[warmup_free_response] fallback used:", failureReason);
+    setReply(result);
+  };
+
+  const submit = async () => {
+    const a = answer.trim();
+    if (!a || sent) return;
+    setSent(true);
+    timerRef.current = setTimeout(
+      () => settle({ category: "attempt", line: WARMUP_FALLBACK_LINE }, "timeout after 5000ms"), 5000);
+    try {
+      // PLACEHOLDER — awaiting Lessons wording. Must not go live as-is.
+      // This is neutral plumbing, not Leo's voice: it exists so the mock path
+      // can run. Shipping it live would put a stranger's words in Leo's mouth.
+      const raw = await askClaude(
+        `Warm-up free response. Activity prompt: "${activity.prompt}". Context: "${context || ""}". Student's answer: "${a}". Respond ONLY with JSON, no fences: {"category":"skip|minimal|attempt","line":"one short sentence to the student"}`,
+        { intent: "warmup_free_response" }
+      );
+      const d = parseJSON(raw);
+      if (!d || !d.line) throw new Error("invalid response shape");
+      const cat = d.category === "skip" || d.category === "minimal" ? d.category : "attempt";
+      settle({ category: cat, line: d.line });
+    } catch (err) {
+      settle({ category: "attempt", line: WARMUP_FALLBACK_LINE }, (err && err.message) || "unknown error");
+    }
+  };
+
   return (
     <div>
       <p className="q-sentence"><VocabText text={activity.prompt} vocab={vocab} onTap={onVocabTap} /></p>
@@ -2895,13 +3246,23 @@ function WarmUpFree({ activity, vocab, onVocabTap, onDone }) {
           onChange={(e) => setAnswer(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} />
         <MicButton onText={(t) => setAnswer(t)} />
       </div>
-      {!sent ? (
-        <button className="primary-btn" onClick={submit} disabled={!answer.trim()}>Send</button>
-      ) : (
+      {!sent && <button className="primary-btn" onClick={submit} disabled={!answer.trim()}>Send</button>}
+
+      {/* A typing indicator, deliberately not a spinner: a spinner says the
+          system is loading, this says someone is reading your words. */}
+      {sent && !reply && (
+        <WaitIndicator label="Leo is reading" />
+      )}
+
+      {reply && (
         <div>
-          {/* Communicative success, not accuracy: any genuine attempt is a win. */}
-          <LeoFeedback ok>{activity.note || (WARMUP_TYPES[activity.type] && WARMUP_TYPES[activity.type].praise) || "Good — that's exactly the kind of thinking that gets you speaking."}</LeoFeedback>
-          <button className="primary-btn" onClick={() => onDone(true)}>Next</button>
+          {/* skip gets no tick — a student who typed nothing is not congratulated.
+              minimal and attempt are visually identical, so the student cannot
+              read their grade off the interface; only Leo's words differ. */}
+          {reply.category === "skip"
+            ? <p className="text-leo wu-skip-line">{reply.line}</p>
+            : <LeoFeedback ok>{reply.line}</LeoFeedback>}
+          <button className="primary-btn" onClick={() => onDone(reply.category !== "skip")}>Next</button>
         </div>
       )}
     </div>
@@ -2982,11 +3343,11 @@ function WarmUpSequence({ activity, onDone }) {
   );
 }
 
-function WarmUpActivity({ activity, vocab, onVocabTap, onDone }) {
+function WarmUpActivity({ activity, vocab, onVocabTap, onDone, context }) {
   const fam = warmUpFamily(activity.type);
   if (fam === "choice") return <WarmUpChoice activity={activity} vocab={vocab} onVocabTap={onVocabTap} onDone={onDone} />;
   if (fam === "sequence") return <WarmUpSequence activity={activity} onDone={onDone} />;
-  return <WarmUpFree activity={activity} vocab={vocab} onVocabTap={onVocabTap} onDone={onDone} />;
+  return <WarmUpFree activity={activity} vocab={vocab} onVocabTap={onVocabTap} onDone={onDone} context={context} />;
 }
 
 /* ---------- Stage 1: Introduction — context, objective, varied warm-up ---------- */
@@ -3031,7 +3392,7 @@ function IntroductionSection({ bp, vocab, onVocabTap, onSkip, onDone }) {
         <span className="wu-badge">{meta.label}</span>
         <span className="muted small">{idx + 1} of {activities.length}</span>
       </div>
-      <WarmUpActivity key={idx} activity={a} vocab={vocab} onVocabTap={onVocabTap} onDone={complete} />
+      <WarmUpActivity key={idx} activity={a} vocab={vocab} onVocabTap={onVocabTap} onDone={complete} context={bp.context} />
     </SectionShell>
   );
 }
@@ -3426,7 +3787,7 @@ function PronunciationSection({ bp, onVocabTap, onSkip, onDone }) {
   );
   return (
     <SectionShell title="Say it like a local" blurb={bp.pronunciation && bp.pronunciation.focus ? `Today's focus: ${bp.pronunciation.focus}.` : undefined} onSkip={onSkip}>
-      {(bp.pronunciation && bp.pronunciation.tips || []).map((t, i) => <p key={i} className="muted small">\ud83d\udca1 {t}</p>)}
+      {(bp.pronunciation && bp.pronunciation.tips || []).map((t, i) => <p key={i} className="muted small">💡 {t}</p>)}
 
       {/* Capability: pronunciation focus sections when available */}
       {focusSections && focusSections.map((fs, i) => (
@@ -3439,7 +3800,7 @@ function PronunciationSection({ bp, onVocabTap, onSkip, onDone }) {
           {fs.targetWords && fs.targetWords.map((tw, j) => (
             <p key={j} className="pron-word"><VocabToken word={tw.word} onTap={onVocabTap} /> <span className="vocab-ipa">{tw.ipa}</span></p>
           ))}
-          {fs.instructions && fs.instructions.map((inst, j) => <p key={j} className="small">\u2022 {inst}</p>)}
+          {fs.instructions && fs.instructions.map((inst, j) => <p key={j} className="small">• {inst}</p>)}
           {fs.practiceWords && (
             <div style={{ marginTop: 6 }}>
               <span className="muted small">Practise: </span>
@@ -3454,7 +3815,7 @@ function PronunciationSection({ bp, onVocabTap, onSkip, onDone }) {
           {fs.correct && (
             <div style={{ marginTop: 6 }}>
               <p className="small"><strong>Correct:</strong> {fs.correct.join(" \u00b7 ")}</p>
-              {fs.incorrect && <p className="small" style={{ opacity: 0.5 }}><strong>Not:</strong> \u274c {fs.incorrect.join(" \u00b7 \u274c ")}</p>}
+              {fs.incorrect && <p className="small" style={{ opacity: 0.5 }}><strong>Not:</strong> ❌ {fs.incorrect.join(" · ❌ ")}</p>}
             </div>
           )}
         </Card>
@@ -3468,15 +3829,15 @@ function PronunciationSection({ bp, onVocabTap, onSkip, onDone }) {
       {showTable && items.map((it) => (
         <div key={it.word} className="pron-row">
           <div className="pron-word"><VocabToken word={it.word} onTap={onVocabTap} /><span className="vocab-ipa"> {it.ipa}</span></div>
-          <div className="pron-meta muted small">{it.syllables} \u00b7 stress on {it.stress}</div>
-          {TTS_OK && <button className="ghost-btn" onClick={() => speakText(it.word + ". " + it.example)}>\ud83d\udd0a Hear it</button>}
+          <div className="pron-meta muted small">{it.syllables} · stress on {it.stress}</div>
+          {TTS_OK && <button className="ghost-btn" onClick={() => speakText(it.word + ". " + it.example)}>🔊 Hear it</button>}
         </div>
       ))}
 
       <div className="pron-try">
         <p className="muted small">Now you — say one of the words out loud.</p>
         <MicButton onText={(t) => setHeard(t)} />
-        {heard && <LeoFeedback ok>I heard: \u201c{heard}\u201d — good on you for having a go out loud. That's how pronunciation improves.</LeoFeedback>}
+        {heard && <LeoFeedback ok>I heard: “{heard}” — good on you for having a go out loud. That's how pronunciation improves.</LeoFeedback>}
         {!TTS_OK && <p className="muted small">(Audio isn't available on this device — practise saying each word slowly, stressing the marked syllable.)</p>}
       </div>
       <button className="primary-btn" onClick={() => setDone(true)}>Continue</button>
@@ -3560,7 +3921,7 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
       <SectionShell title="Critical thinking" blurb="Use your English to solve a real problem." onSkip={() => setPhase("done")}>
         <p className="passage">{ct.prompt}</p>
         {ct.questions && ct.questions.map((q, i) => (
-          <p key={i} className="small" style={{ marginTop: 4 }}>\u2022 {q}</p>
+          <p key={i} className="small" style={{ marginTop: 4 }}>• {q}</p>
         ))}
         <SentenceFramesPanel frames={ctFrames} label="sentence frames" />
         <div style={{ marginTop: 12 }}>
@@ -3596,7 +3957,7 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
           <div key={i} className={"speak-turn " + (t.role === "leo" ? "speak-leo" : "speak-you")}>
             
             <p><VocabText text={t.text} vocab={vocab} onTap={onVocabTap} /></p>
-            {t.role === "leo" && TTS_OK && <button className="link-btn" onClick={() => speakText(t.text)}>\ud83d\udd0a</button>}
+            {t.role === "leo" && TTS_OK && <button className="link-btn" onClick={() => speakText(t.text)}>🔊</button>}
           </div>
         ))}
         {thinking && <Spinner label="Leo is listening…" />}
@@ -3674,7 +4035,7 @@ function SkillSection({ bp, section, vocab, onVocabTap, onSkip, onDone }) {
         <div className="listen-box">
           {TTS_OK && (
             <button className="primary-btn" style={{ marginBottom: 10 }} onClick={() => { speakText(listenScript.replace(/\n/g, ". ")); setPlayedOnce(true); }}>
-              \ud83d\udd0a {playedOnce ? "Play again" : "Play the recording"}
+              🔊 {playedOnce ? "Play again" : "Play the recording"}
             </button>
           )}
           {!TTS_OK && <p className="muted small">(Audio isn't available — read the text and fill in the blanks.)</p>}
@@ -3698,7 +4059,7 @@ function SkillSection({ bp, section, vocab, onVocabTap, onSkip, onDone }) {
         <div className="listen-box">
           {TTS_OK ? (
             <button className="primary-btn" onClick={() => { speakText(section.passage.replace(/\n/g, ". ")); setPlayedOnce(true); }}>
-              \ud83d\udd0a {playedOnce ? "Play again" : "Play the conversation"}
+              🔊 {playedOnce ? "Play again" : "Play the conversation"}
             </button>
           ) : (
             <p className="muted small">Audio isn't available on this device, so read the transcript below as a listening substitute.</p>
@@ -4024,8 +4385,12 @@ function buildTeacherContext({ profile, memoryStore, words, heard, diaryPages, a
   const weak = masteryEntries.filter(([, e]) => e.stage === "new" || e.stage === "seen").slice(0, 8);
   const practised = masteryEntries.filter(([, e]) => e.stage === "practised").slice(0, 5);
   const streak = computeStreak(activity);
-  const totalLessons = memoryStore.lessonLog.length;
-  const daysSinceFirst = totalLessons ? Math.max(1, Math.floor((Date.now() - new Date((memoryStore.lessonLog[memoryStore.lessonLog.length - 1] || {}).date || todayStr()).getTime()) / 86400000)) : 0;
+  // Lifetime facts, never derived from the trimmed log — see DEFAULT_MEMORY_STORE.
+  const totalLessons = Number.isFinite(memoryStore.lessonsCompleted)
+    ? memoryStore.lessonsCompleted : memoryStore.lessonLog.length;
+  const firstDate = memoryStore.firstLessonDate
+    || (memoryStore.lessonLog[memoryStore.lessonLog.length - 1] || {}).date || todayStr();
+  const daysSinceFirst = totalLessons ? Math.max(1, Math.floor((Date.now() - new Date(firstDate).getTime()) / 86400000)) : 0;
   const scenariosDone = [...new Set(memoryStore.lessonLog.map((l) => l.scenario).filter(Boolean))];
   const tp = diaryPages[todayStr()];
   const todayDiary = tp && (tp.notes || tp.skillsDetail || tp.homework) ? (tp.notes || tp.skillsDetail || tp.homework).slice(0, 200) : "";
@@ -4033,6 +4398,7 @@ function buildTeacherContext({ profile, memoryStore, words, heard, diaryPages, a
   const lines = [
     `STUDENT PROFILE`,
     `Name: ${profile.name}. First language: ${lang}. ${profile.country ? `From ${profile.country}.` : ""} CEFR: ${level}.`,
+    Array.isArray(profile.interests) && profile.interests.length ? `Interests they chose: ${profile.interests.join(", ")} — Leo should draw on these for lesson situations and examples where they fit naturally.` : "",
     totalLessons ? `Leo has taught this student ${totalLessons} lesson${totalLessons === 1 ? "" : "s"} over ${daysSinceFirst} day${daysSinceFirst === 1 ? "" : "s"}.` : "This is a brand-new student — today is their very first lesson with Leo.",
     streak > 1 ? `Current study streak: ${streak} days — consistency is building.` : "",
     "",
@@ -4360,10 +4726,15 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
     await persist({ ...lesson, status: { done: true } });
     await saveKey("esl-lastscenario", bp.context);
     await markActivity(); await bumpTasks();
+    // Every word Leo taught enters the Word Bank, so the review can reach it.
+    // All of bp.vocabulary, not just the matched subset: stage 2 chose these
+    // eight deliberately, and the student met every one.
+    if (leoMemory.saveWords) await leoMemory.saveWords((bp.vocabulary || []).map((v) => v.word));
     leoMemory.recordLesson({
       scenario: bp.context, skill: bp.mainSkill, score: c1 + c2 + c3, total: (t1 + t2 + t3) || 1,
       word: bp.vocabulary[0] && bp.vocabulary[0].word, mission: bp.mission || "", template: "BP",
       tomorrowConnection: bp.tomorrowConnection,
+      memorableMoment: bp.memorableMoment, finalTask: bp.finalTask,
     });
     setPhase("done");
   };
@@ -4397,7 +4768,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       </div>
     </div>
   );
-  if (phase === "loading") return <LeoLoader label="Opening today's lesson…" />;
+  if (phase === "loading") return <LeoLoader label="I'm opening today's lesson…" />;
   if (phase === "planning") return (<div><SectionTitle>Leo's Lesson</SectionTitle><LeoLoader label="I'm planning today's lesson for you…" /></div>);
 
   if (phase === "chooser") {
@@ -4471,7 +4842,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       <div className="progress-bar"><span style={{ width: `${((lesson.stage + 1) / LESSON_STAGES.length) * 100}%` }} /></div>
       {STAGE_BRIDGE_TEXT[stage.id] && <p className="leo-accent text-leo" style={{ marginTop: "var(--space-5)", marginBottom: "var(--space-3)" }}>{STAGE_BRIDGE_TEXT[stage.id]}</p>}
 
-      {needsAI && (!section || sectionLoading || section.skipped) && <LeoLoader label="Leo is preparing this part…" />}
+      {needsAI && (!section || sectionLoading || section.skipped) && <LeoLoader label="I'm preparing this part…" />}
 
       {stage.id === "intro" && <IntroductionSection {...stageProps} onDone={(n) => advance({ intro: n })} />}
       {stage.id === "vocab" && <VocabularySection {...stageProps} leoMemory={leoMemory} onDone={(c, t) => advance({ vocab: `${c}/${t}` })} />}
@@ -4490,6 +4861,18 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
 
 /* ---------------- Questions (English only) ---------------- */
 
+/* Sentinel the model emits when it refuses an off-topic question, stripped
+   before display — same convention as the report's [SECTION_6_OMITTED].
+   The refusal RULE is unchanged: this only lets the app know a refusal
+   happened, so the wall can be presented as a doorway (spec A6). */
+const OFF_TOPIC_MARK = "[OFF_TOPIC]";
+const readReply = (raw) => {
+  const t = (raw || "").trimStart();
+  return t.startsWith(OFF_TOPIC_MARK)
+    ? { offTopic: true, content: t.slice(OFF_TOPIC_MARK.length).trimStart() }
+    : { offTopic: false, content: raw };
+};
+
 // Multi-turn chat call: sends the whole history so the tutor remembers context
 // Runs the English tutor through the same proven API call the rest of the app uses,
 // by serialising the conversation into a single prompt.
@@ -4501,7 +4884,7 @@ async function askTutor(system, history, question) {
   return askClaude(prompt, { intent: "chat_reply" });
 }
 
-function QuestionsPage({ profile, memory, leoMemory, pendingAsk, onPendingHandled, markActivity }) {
+function QuestionsPage({ profile, memory, leoMemory, pendingAsk, onPendingHandled, markActivity, onOpenAustralia }) {
   const [messages, setMessages] = useState([]); // {role, content}
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
@@ -4513,7 +4896,7 @@ LEO'S WAY: celebrate what the student does well before correcting anything; trea
 
 STRICT TOPIC RULE: You ONLY help with the English language — grammar, vocabulary, pronunciation, spelling, meaning, word choice, phrasal verbs, idioms, writing, punctuation, differences between words, example sentences, and how to say things in English. This includes Australian English usage.
 
-If the student asks about ANYTHING that is not about learning English (for example maths, history, coding, news, personal advice, homework in other subjects, medical or legal questions, general knowledge), you must politely refuse in simple English and gently steer them back — say you can only help with English, and give an example of an English question they could ask instead. Never answer the off-topic question, even partly.
+If the student asks about ANYTHING that is not about learning English (for example maths, history, coding, news, personal advice, homework in other subjects, medical or legal questions, general knowledge), you must politely refuse in simple English and gently steer them back — say you can only help with English, and give an example of an English question they could ask instead. Never answer the off-topic question, even partly. When you refuse for this reason, begin your reply with the exact token ${OFF_TOPIC_MARK} before any other text. Use this token ONLY when refusing an off-topic question — never in any other reply.
 
 STYLE: Reply in clear, simple English suitable for their level. Keep answers focused and not too long. Use short examples. You may give a one-word translation into ${LANGS[profile.lang].english} in brackets ONLY if it helps them understand a hard word. Be encouraging.`;
 
@@ -4549,8 +4932,9 @@ STYLE: Reply in clear, simple English suitable for their level. Keep answers foc
     if (leoMemory) leoMemory.recordQuestion(q); // M6: contributes to Leo's understanding of the learner
     saveKey("esl-chat", nextMsgs.slice(-40)).catch(() => {}); // keep it even if the reply fails
     try {
-      const reply = await askTutor(SYSTEM, messages, q);
-      const withReply = [...nextMsgs, { role: "assistant", content: reply }];
+      const raw = await askTutor(SYSTEM, messages, q);
+      const { offTopic, content } = readReply(raw);
+      const withReply = [...nextMsgs, { role: "assistant", content, offTopic, askedAbout: offTopic ? q : undefined }];
       setMessages(withReply);
       // Persistence must never be able to roll back a shown reply:
       saveKey("esl-chat", withReply.slice(-40)).catch(() => {});
@@ -4585,17 +4969,22 @@ STYLE: Reply in clear, simple English suitable for their level. Keep answers foc
           </div>
         )}
         {messages.map((m, i) => (
-          <div key={i} className={"bubble-row " + (m.role === "user" ? "row-user" : "row-bot")}>
-            {m.role === "assistant" && <span className="bot-avatar-leo">L</span>}
-            <div className={"bubble " + (m.role === "user" ? "bubble-user" : "bubble-bot")}>{m.content}</div>
-          </div>
+          <React.Fragment key={i}>
+            <div className={"bubble-row " + (m.role === "user" ? "row-user" : "row-bot")}>
+              {m.role === "assistant" && <span className="bot-avatar-leo">L</span>}
+              <div className={"bubble " + (m.role === "user" ? "bubble-user" : "bubble-bot")}>{m.content}</div>
+            </div>
+            {/* The refusal becomes a doorway (spec A6): Leo's line, and one
+                control that opens Australia carrying the question across. */}
+            {m.offTopic && onOpenAustralia && (
+              <div className="leo-card doorway">
+                <p className="doorway-line">That's not English practice, but there are answers about life in Australia next door — shall I show you?</p>
+                <button className="primary-btn wide" onClick={() => onOpenAustralia(m.askedAbout || "")}>Show me</button>
+              </div>
+            )}
+          </React.Fragment>
         ))}
-        {thinking && (
-          <div className="bubble-row row-bot">
-            <span className="bot-avatar-leo">L</span>
-            <div className="bubble bubble-bot typing"><span className="typ-dot" /><span className="typ-dot" /><span className="typ-dot" /></div>
-          </div>
-        )}
+        {thinking && <ChatTypingRow />}
         <div ref={endRef} />
       </div>
 
@@ -4642,7 +5031,7 @@ function DictionaryPage({ profile, words, setWords, markActivity, onAskLeo, leoM
         const r = parseJSON(raw);
         setDict(r);
         if (!words.find((w) => w.word.toLowerCase() === r.word.toLowerCase())) {
-          const next = [{ word: r.word, date: todayStr() }, ...words].slice(0, 200);
+          const next = [{ word: r.word, date: todayStr() }, ...words].slice(0, WORD_BANK_CAP);
           setWords(next); await saveKey("esl-words", next);
           leoMemory.touchWord(r.word);
         }
@@ -4740,7 +5129,7 @@ function HeardPage({ profile, heard, setHeard, markActivity, onAskLeo, leoMemory
   const add = async () => {
     if (!input.trim()) return;
     const item = { id: Date.now(), phrase: input.trim(), date: todayStr(), info: null };
-    const next = [item, ...heard].slice(0, 200); // bound growth, matching the Word Bank's 200 cap
+    const next = [item, ...heard].slice(0, HEARD_CAP); // bound growth — see HEARD_CAP
     setHeard(next); await saveKey("esl-heard", next); await markActivity();
     leoMemory.touchWord(item.phrase); // H3: enters Leo's vocabulary memory at "new" mastery
     setInput("");
@@ -4853,38 +5242,91 @@ function HelpSection({ item }) {
   );
 }
 
-function AustraliaPage({ profile, memory }) {
-  const [q, setQ] = useState("");
+function AustraliaPage({ profile, memory, initialQuery }) {
+  /* Australia is a book Leo left on the desk (spec A6). Third person
+     throughout — never "I", never Leo's voice, no accent bar, plain white
+     cards. Browse first: the topic list IS the content and is never empty.
+     Search sits BELOW the list; placement is the signal that this is a book
+     with an index, not an assistant to interrogate. */
+  const [open, setOpen] = useState(null);
+  const [q, setQ] = useState(initialQuery || "");
   const [ans, setAns] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => { if (initialQuery) setQ(initialQuery); }, [initialQuery]);
+
+  const firstSentence = (t) => {
+    const m = (t || "").match(/^[^.!?]*[.!?]/);
+    return m ? m[0].trim() : (t || "");
+  };
 
   const ask = async () => {
     if (!q.trim()) return;
     setLoading(true); setAns(null);
     try {
       const text = await askClaude(
-        `You are Leo, a friendly Australian teacher and guide for international students living in Australia. You know this student: ${memory}. Answer in clear, simple English suitable for their level. Keep it under 120 words and practical. If the question involves visas, tax, health, or legal matters, give general guidance and name the official body they should check (e.g. Home Affairs, ATO, Fair Work, Service NSW). Question: "${q.trim()}"`,
+        `Write a short reference note for an international student living in Australia. This is reference material, NOT a teacher speaking: use the third person, never write "I", never address the reader as a student, and do not offer to help further. Plain, factual, practical. Under 120 words, clear simple English. If the question involves visas, tax, health or legal matters, give general guidance and name the official body to check (for example Home Affairs, the ATO, Fair Work, Service NSW). Question: "${q.trim()}"`,
         { intent: "australia_ask" }
       );
       setAns(text);
-    } catch { setAns("I'm having trouble with that one — let me try again."); }
+    } catch { setAns("That information could not be loaded just now. Please try again."); }
     setLoading(false);
   };
 
-  return (
-    <div>
-      <SectionTitle sub="Simple, useful help for living in Australia. Tap a topic to open it.">Help in Australia</SectionTitle>
-      {AUS_HELP.map((item) => <HelpSection key={item.title} item={item} />)}
-      <Card>
-        <h3>Ask Leo about Australia</h3>
-        <p className="muted small">Not sure about something? Ask here in simple English.</p>
-        <div className="search-row" style={{ marginTop: 10 }}>
-          <input className="text-input" placeholder="e.g. How do I see a doctor? What is a 'bond'?…" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && ask()} />
-          <button className="primary-btn" onClick={ask} disabled={loading}><Send size={16} /></button>
+  const topic = open !== null ? AUS_HELP[open] : null;
+
+  if (topic) {
+    const Icon = topic.icon;
+    return (
+      <div className="aus-wrap">
+        <button className="back-btn" onClick={() => setOpen(null)}><ChevronLeft size={20} /> All topics</button>
+        <div className="aus-detail">
+          <h2 className="aus-detail-title"><Icon size={24} className="aus-detail-icon" /> {topic.title}</h2>
+          <p className="aus-intro">{topic.intro}</p>
+          <ul className="aus-points">
+            {(topic.points || []).map((pt, i) => <li key={i}>{pt}</li>)}
+          </ul>
+          {topic.url && (
+            <a className="ghost-btn aus-source" href={topic.url} target="_blank" rel="noreferrer">
+              Official source <ExternalLink size={15} />
+            </a>
+          )}
         </div>
-        {loading && <Spinner label="Leo is finding out…" />}
-        {ans && <p className="feedback">{ans}</p>}
-      </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="aus-wrap">
+      <ul className="aus-list">
+        {AUS_HELP.map((item, i) => {
+          const Icon = item.icon;
+          return (
+            <li key={item.title}>
+              <button className="aus-card" onClick={() => setOpen(i)}>
+                <Icon size={24} className="aus-card-icon" />
+                <span className="aus-card-text">
+                  <span className="aus-card-title">{item.title}</span>
+                  <span className="aus-card-sum">{firstSentence(item.intro)}</span>
+                </span>
+                <ChevronRight size={18} className="aus-card-chev" />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="aus-search">
+        <label className="aus-search-label" htmlFor="aus-q">Look something up</label>
+        <div className="aus-search-row">
+          <input id="aus-q" className="aus-input" placeholder="e.g. How do I see a doctor?"
+            value={q} onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && ask()} />
+          <button className="primary-btn" onClick={ask} disabled={loading} aria-label="Search"><Search size={16} /></button>
+        </div>
+        {loading && <Spinner label="Looking that up…" />}
+        {ans && <p className="aus-answer">{ans}</p>}
+      </div>
     </div>
   );
 }
@@ -4932,7 +5374,9 @@ function WhiteboardLogo({ width = 280, animate = false, onDone }) {
   React.useEffect(() => {
     if (!onDoneRef.current || fired.current) return;
     fired.current = true;
-    const delay = (animate && !reducedMotion) ? 4500 : (animate ? 1000 : 0);
+    // §4.3: 1750ms last letter settles + 250ms hold + 200ms fade = 2200ms.
+    // §4.4 reduced motion: 600ms hold + 200ms fade = 800ms.
+    const delay = (animate && !reducedMotion) ? 2200 : (animate ? 800 : 0);
     const t = setTimeout(() => { if (onDoneRef.current) onDoneRef.current(); }, delay);
     return () => clearTimeout(t);
   }, []); // eslint-disable-line -- runs once on mount, callback accessed via ref
@@ -4966,7 +5410,7 @@ function WhiteboardLogo({ width = 280, animate = false, onDone }) {
       {LETTER_PATHS.map((d, i) => (
         <path key={i} d={d}
           className={doAnim ? "wb-letter-anim" : "wb-letter-static"}
-          style={doAnim ? { animationDelay: (1400 + i * 300) + "ms, " + (1900 + i * 300) + "ms" } : undefined}
+          style={doAnim ? { animationDelay: (620 + i * 130) + "ms, " + (880 + i * 130) + "ms" } : undefined}
         />
       ))}
     </svg>
@@ -5180,9 +5624,28 @@ function ReviewPage({ profile, memory, leoMemory, words, heard, diaryPages, mark
     return parts.join(" ").slice(0, 320);
   }, [diaryPages]);
 
+  /* A review in progress survives leaving the screen. Before the tab bar,
+     abandoning a review took a deliberate Back tap; now four destinations sit
+     permanently under the thumb and a mistap is one pixel away, so unsaved
+     progress here is one accidental tap from gone. Same key as the completion
+     flag, which stays a plain `done` field so the boot read is unaffected. */
+  const persistReview = async (patch) => {
+    await saveKey("esl-vocab:" + todayStr(), { questions, idx, correct, chosen, done: false, ...patch });
+  };
+
   useEffect(() => {
-    if (pool.length < 3) { setLoading(false); return; }
     (async () => {
+      const saved = await loadKey("esl-vocab:" + todayStr(), null);
+      if (saved && saved.done) { setFinished(true); setLoading(false); return; }
+      if (saved && Array.isArray(saved.questions) && saved.questions.length) {
+        setQuestions(saved.questions);
+        setIdx(saved.idx || 0);
+        setCorrect(saved.correct || 0);
+        setChosen(saved.chosen || null);
+        setLoading(false);
+        return;
+      }
+      if (pool.length < 3) { setLoading(false); return; }
       const chosenItems = pool.slice(0, 6);
       const termLines = chosenItems.map((it) => `"${it.term}" (from ${it.src}${it.meaning ? "; means: " + it.meaning : ""})`).join("; ");
       try {
@@ -5192,6 +5655,7 @@ function ReviewPage({ profile, memory, leoMemory, words, heard, diaryPages, mark
         );
         const qs = (parseJSON(raw).questions || []).filter((q) => q && q.options && q.options.includes(q.answer));
         setQuestions(qs);
+        if (qs.length) await saveKey("esl-vocab:" + todayStr(), { questions: qs, idx: 0, correct: 0, chosen: null, done: false });
       } catch { setQuestions([]); }
       setLoading(false);
     })();
@@ -5201,11 +5665,15 @@ function ReviewPage({ profile, memory, leoMemory, words, heard, diaryPages, mark
     if (chosen) return;
     setChosen(opt);
     const ok = opt === questions[idx].answer;
-    if (ok) setCorrect((c) => c + 1);
+    const nextCorrect = ok ? correct + 1 : correct;
+    if (ok) setCorrect(nextCorrect);
     if (questions[idx].word) leoMemory.practiceWord(questions[idx].word, ok);
+    // Store the chosen option too: returning mid-question must not let the
+    // same word be practised twice and skew mastery.
+    persistReview({ chosen: opt, correct: nextCorrect });
   };
   const next = async () => {
-    if (idx + 1 < questions.length) { setIdx(idx + 1); setChosen(null); }
+    if (idx + 1 < questions.length) { setIdx(idx + 1); setChosen(null); await persistReview({ idx: idx + 1, chosen: null }); }
     else {
       setFinished(true);
       await saveKey("esl-vocab:" + todayStr(), { done: true });
@@ -5283,15 +5751,34 @@ export {
 export default function App() {
   const [authUser, setAuthUser] = useState(undefined); // undefined = loading, null = not signed in, object = signed in
   const [authView, setAuthView] = useState("landing"); // "landing" | "signup" | "signin"
+  // Owned here, not in WelcomeLanding: that component unmounts when authView
+  // changes, so Back must find the step the student actually left from.
+  const [landingStep, setLandingStep] = useState(0);
   const [showLeoReveal, setShowLeoReveal] = useState(false);
-  const [splashPhase, setSplashPhase] = useState("boot"); // "boot" | "logo" | "done"
+  // §4.2 — the logo draw IS the loading state. There is no separate boot
+  // screen: showing a generic loader and then the brand spends the student's
+  // first 1400ms on a pulsing bar and splits one wait across two images.
+  const [splashPhase, setSplashPhase] = useState("logo"); // "logo" | "done"
   const [profile, setProfile] = useState(undefined); // undefined = loading, null = needs onboarding
   const [page, setPage] = useState(null); // null = home screen
   const [introPlayed, setIntroPlayed] = useState(false);
+  // The skyline draws once, ever — not every morning (spec A3.5).
+  const [skylineSeen, setSkylineSeen] = useState(true);
+  useEffect(() => { (async () => {
+    const seen = await loadKey("esl-skyline-seen", false);
+    if (!seen) { setSkylineSeen(false); await saveKey("esl-skyline-seen", true); }
+  })(); }, []);
   const [pendingAsk, setPendingAsk] = useState(null);
   const [todayDone, setTodayDone] = useState({ task: false, vocab: false }); // grouped: Phase 8
   const [placementDone, setPlacementDone] = useState(undefined); // undefined=loading, true/false
   const [obResume, setObResume] = useState(null); // {page, profile} when returning from placement
+  // Navigation state (A1/A3). MUST stay above the early-return chain below —
+  // placementDone flipping false->true lets render pass those returns for the
+  // first time, and any hook underneath would run on that render but not the
+  // previous one (React error #310).
+  const [tab, setTab] = useState("today");
+  const [tabPages, setTabPages] = useState({ today: null, ask: "questions", words: "dictionary", progress: "progress" });
+  const [ausQuery, setAusQuery] = useState("");   // carried across by the refusal doorway
   const [memoryStore, setMemoryStore] = useState(DEFAULT_MEMORY_STORE);      // Leo's learning memory: Phase 4/5/6
   const [diaryPages, setDiaryPages] = useState({});
   const [words, setWords] = useState([]);
@@ -5366,16 +5853,6 @@ export default function App() {
     });
   }, []);
 
-  // ── Splash: boot phase (LeoLoader), then animated logo ──
-  React.useEffect(() => {
-    if (splashPhase !== "boot") return;
-    const t = setTimeout(() => setSplashPhase("logo"), 1400); // 1200ms min + 200ms fade
-    return () => clearTimeout(t);
-  }, [splashPhase]);
-
-  if (splashPhase === "boot")
-    return <div className="app" style={{background:'var(--bg-warm,#FAFAF8)'}}><style>{CSS}</style><div className="wb-splash"><div className="wb-boot"><LeoLoader label="Getting things ready…" /></div></div></div>;
-
   if (splashPhase === "logo")
     return <div className="app" style={{background:'var(--bg-warm,#FAFAF8)'}}><style>{CSS}</style><div className="wb-splash wb-logo-phase"><WhiteboardLogo width={Math.min(320, Math.round(window.innerWidth * 0.7))} animate onDone={() => setSplashPhase("done")} /></div></div>;
 
@@ -5386,7 +5863,7 @@ export default function App() {
     return (
       <div className="app">
         <style>{CSS}</style>
-        {authView === "landing" && <WelcomeLanding onSignUp={() => setAuthView("signup")} onSignIn={() => setAuthView("signin")} />}
+        {authView === "landing" && <WelcomeLanding step={landingStep} setStep={setLandingStep} onSignUp={() => setAuthView("signup")} onSignIn={() => setAuthView("signin")} />}
         {authView === "signup" && <SignUpPage onBack={() => setAuthView("landing")} onComplete={(user) => { setAuthUser(user); setShowLeoReveal(true); setProfile(null); setPlacementDone(false); }} />}
         {authView === "signin" && <SignInPage onBack={() => setAuthView("landing")} onComplete={async (user) => {
           setAuthUser(user);
@@ -5417,14 +5894,20 @@ export default function App() {
         <style>{CSS}</style>
         <Onboarding initialPage={obResume ? obResume.page : undefined} initialProfile={obResume ? obResume.profile : undefined} onDone={async (p, wantsPlacement) => {
           setObResume(null);
-          setProfile(p);
+          /* ORDER IS LOAD-BEARING. placementDone is false from sign-up. Setting
+             profile first and placementDone after an await renders one frame
+             with profile set and placementDone still false — which IS the
+             placement gate — so a student who had just chosen their own level
+             was shown the test they had declined, and it began generating
+             questions before it was torn down.
+             Both keys are written before anything renders, and placementDone is
+             set BEFORE profile: the profile===null branch above renders
+             onboarding regardless of placementDone, so this order is safe
+             whether or not React batches the two updates together. */
+          if (!wantsPlacement) await saveKey("esl-placement", { skipped: true, selfReported: p.level });
           await saveKey("esl-profile", p);
-          if (wantsPlacement) {
-            setPlacementDone(false);
-          } else {
-            setPlacementDone(true);
-            await saveKey("esl-placement", { skipped: true, selfReported: p.level });
-          }
+          setPlacementDone(!wantsPlacement);
+          setProfile(p);
         }} />
       </div>
     );
@@ -5500,19 +5983,40 @@ export default function App() {
   const todayInfo = computeTodayProgress({ diaryPages, todayDone, words, heard });
   const phrases = PHRASES[profile.lang];
   const phraseOfDay = phrases[new Date().getDate() % phrases.length];
-  const currentApp = APPS.find((a) => a.id === page);
+  /* Tab layer sits ABOVE page routing — every `page === "..."` check below is
+     unchanged. Each tab remembers the section last used inside it, so leaving
+     Words and returning lands on Word review rather than resetting.
+     The three useState calls live at the top of App() with the rest of the
+     state: hooks must run on EVERY render, and everything here is below the
+     early-return chain. */
+  const currentTab = TABS.find((t) => t.id === tab) || TABS[0];
+  const isSection = currentTab.sections.some((sec) => sec.page === page);
 
-  const openApp = (id) => {
+  const goTo = (id) => {
     if (!introPlayed) setIntroPlayed(true);
+    const owner = tabOfPage(id);
+    setTab(owner);
     setPage(id);
+    if (!TAB_SUBSCREENS[id]) setTabPages((prev) => ({ ...prev, [owner]: id }));
   };
+
+  const selectTab = (id) => {
+    if (!introPlayed) setIntroPlayed(true);
+    // Tapping the tab you are already on returns it to its first section.
+    const target = id === tab ? defaultPageOfTab(id) : (tabPages[id] !== undefined ? tabPages[id] : defaultPageOfTab(id));
+    setTab(id);
+    setPage(target);
+    setTabPages((prev) => ({ ...prev, [id]: target }));
+  };
+
+  const openApp = goTo;
   const askLeo = (q) => { setPendingAsk(q); openApp("questions"); };
 
   // Leo's memory actions, grouped into one object (Phase 4/5/6/8) so pages that
   // write back to memory take a single prop instead of several separate ones.
   // Each action updates + persists the store, and — where relevant — marks
   // today's progress, replacing the old bespoke onTaskDone/onDone props.
-  const updateMemory = (updater) => setMemoryStore((prev) => { const next = updater(prev); saveMemoryStore(next); return next; });
+  const updateMemory = (updater) => setMemoryStore((prev) => { const next = updater(prev); saveMemoryStore(next, prev); return next; });
   const leoMemory = {
     store: memoryStore,
     recordLesson: (result) => {
@@ -5540,9 +6044,33 @@ export default function App() {
       if (!word) return;
       const w = word.trim();
       if ((words || []).find((x) => x.word.toLowerCase() === w.toLowerCase())) return; // already saved
-      const next = [{ word: w, date: todayStr() }, ...words].slice(0, 200);
+      const next = [{ word: w, date: todayStr() }, ...words].slice(0, WORD_BANK_CAP);
       setWords(next); await saveKey("esl-words", next);
       updateMemory((prev) => memTouchWord(prev, w));
+    },
+    /* Batched save for lesson completion. saveWord reads the `words` state
+       variable, which does NOT update between calls in the same tick — eight
+       sequential calls would each dedupe against the same stale list. This
+       builds the merged list in one pass and writes once, instead of eight
+       storage writes plus eight memory-store rewrites.
+       touchWord is deliberately omitted: mastery for these words is already
+       being tracked by the vocabulary and grammar exercises. */
+    saveWords: async (list) => {
+      const incoming = (list || [])
+        .map((w) => (typeof w === "string" ? w : w && w.word))
+        .filter(Boolean).map((w) => String(w).trim()).filter(Boolean);
+      if (!incoming.length) return;
+      const have = new Set((words || []).map((x) => (x.word || "").toLowerCase()));
+      const fresh = [];
+      for (const w of incoming) {
+        const k = w.toLowerCase();
+        if (have.has(k)) continue;   // already banked, or a repeat within this batch
+        have.add(k);
+        fresh.push({ word: w, date: todayStr() });
+      }
+      if (!fresh.length) return;
+      const next = [...fresh, ...words].slice(0, WORD_BANK_CAP);
+      setWords(next); await saveKey("esl-words", next);
     },
   };
 
@@ -5550,27 +6078,36 @@ export default function App() {
     <div className="app">
       <style>{CSS}</style>
       <SignedInContext profile={profile} />
+      <div className="app-body">
       {page === null ? (
-        <HomeScreen profile={profile} streak={stats.streak} phrase={phraseOfDay} onOpen={openApp} animate={!introPlayed} todayInfo={todayInfo} />
+        <HomeScreen profile={profile} onOpen={goTo} animate={!skylineSeen} todayInfo={todayInfo}
+          continuity={continuityLine(memoryStore.lessonLog)} noticed={noticedLine(stats)} />
       ) : (
         <>
-          <header className="app-header">
-            <button className="back-btn" onClick={() => setPage(null)}><ChevronLeft size={20} /> Home</button>
-            <span className="app-header-title">{currentApp?.label}</span>
-          </header>
+          {!isSection && (
+            <header className="app-header">
+              <button className="back-btn" onClick={() => goTo(defaultPageOfTab(tab))}><ChevronLeft size={20} /> Back</button>
+              <span className="app-header-title">{page === "diary" ? "Diary" : page === "task" ? "Leo's Lesson" : ""}</span>
+            </header>
+          )}
           <main className="main">
+            {isSection && currentTab.sections.length > 1 && (
+              <SectionSwitch sections={currentTab.sections} page={page} onSelect={goTo} />
+            )}
             {page === "progress" && <ProgressPage stats={stats} />}
             {page === "diary" && <DiaryPage profile={profile} memory={memory} leoMemory={leoMemory} pages={diaryPages} setPages={setDiaryPages} markActivity={markActivity} addErrors={addErrors} />}
             {page === "task" && <LessonPage profile={profile} memory={memory} leoMemory={leoMemory} words={words} heard={heard} diaryPages={diaryPages} activity={activity} errorLog={errorLog} stats={stats} markActivity={markActivity} bumpTasks={bumpTasks} />}
-            {page === "questions" && <QuestionsPage profile={profile} memory={memory} leoMemory={leoMemory} pendingAsk={pendingAsk} onPendingHandled={() => setPendingAsk(null)} markActivity={markActivity} />}
+            {page === "questions" && <QuestionsPage profile={profile} memory={memory} leoMemory={leoMemory} pendingAsk={pendingAsk} onPendingHandled={() => setPendingAsk(null)} markActivity={markActivity} onOpenAustralia={(term) => { setAusQuery(term); goTo("australia"); }} />}
             {page === "dictionary" && <DictionaryPage profile={profile} words={words} setWords={setWords} markActivity={markActivity} onAskLeo={askLeo} leoMemory={leoMemory} />}
             {page === "vocab" && <ReviewPage profile={profile} memory={memory} leoMemory={leoMemory} words={words} heard={heard} diaryPages={diaryPages} markActivity={markActivity} />}
             {page === "heard" && <HeardPage profile={profile} heard={heard} setHeard={setHeard} markActivity={markActivity} onAskLeo={askLeo} leoMemory={leoMemory} />}
-            {page === "australia" && <AustraliaPage profile={profile} memory={memory} />}
+            {page === "australia" && <AustraliaPage profile={profile} memory={memory} initialQuery={ausQuery} />}
             {page === "placement" && <PlacementTestPage profile={profile} onComplete={async (r) => { await saveKey("esl-placement", r); await markActivity(); }} />}
           </main>
         </>
       )}
+      </div>
+      <TabBar tab={tab} onSelect={selectTab} />
     </div>
   );
 }
@@ -5588,6 +6125,7 @@ const CSS = `
   --leo-green:#2A7C6F; --leo-green-light:#E8F4F2; --leo-neutral:#5C5248; /* warm neutral — retained for future design use */
   --bg-warm:#FAFAF8; --bg-card:#FFFFFF;
   --text-primary:#1A1A1A; --text-secondary:#6B7280; --text-tertiary:#9CA3AF;
+  --divider:#EDEDEA; /* Ruling 4 — rows inside a card, and the tab bar's top edge. Never an outer edge. */
   --color-success:#16A34A; --color-error:#DC4A3A; --color-warning:#E5A117;
   --space-1:4px; --space-2:8px; --space-3:16px; --space-4:24px; --space-5:32px; --space-6:48px; --space-7:64px;
 }
@@ -5605,26 +6143,111 @@ h2,h3{font-family:'Fraunces',serif; font-weight:650; color:var(--euca-deep);}
 
 h2{font-size:26px;} h3{font-size:17px; margin-bottom:6px;}
 
-/* ---- Home screen ---- */
-.home-screen{max-width:520px; margin:0 auto; padding:34px 22px 60px; text-align:center;}
+/* ---- A1 navigation: tab bar + section switch (settled tokens only) ---- */
+.app-body{padding-bottom:calc(56px + env(safe-area-inset-bottom, 0px));}
+.tab-bar{position:fixed; left:0; right:0; bottom:0; z-index:40; display:flex;
+  height:calc(56px + env(safe-area-inset-bottom, 0px));
+  padding-bottom:env(safe-area-inset-bottom, 0px);
+  background:var(--bg-card); border-top:1px solid var(--divider); box-shadow:none;}
+.tab-item{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:var(--space-1); background:none; border:none; cursor:pointer; padding:0; min-height:56px;
+  font-family:'Inter',-apple-system,sans-serif; color:var(--text-secondary);
+  transition:color 200ms ease;}
+.tab-item-label{font-size:12px; font-weight:500; line-height:1;}
+.tab-item-on{color:var(--leo-green);}
+.tab-item:focus-visible{outline:2px solid var(--leo-green); outline-offset:-2px; border-radius:8px;}
+.seg-control{display:flex; gap:var(--space-2); margin:0 0 var(--space-4);}
+.seg-item{flex:1; min-height:44px; border:none; background:transparent; border-radius:10px;
+  font-family:'Inter',-apple-system,sans-serif; font-size:15px; font-weight:400;
+  color:var(--text-secondary); cursor:pointer; transition:color 200ms ease, background-color 200ms ease;}
+.seg-item-on{background:var(--leo-green-light); color:var(--leo-green); font-weight:500;}
+.seg-item:focus-visible{outline:2px solid var(--leo-green); outline-offset:2px;}
+.today-done-btn{display:inline-flex; align-items:center; gap:var(--space-1); background:none;
+  border:none; padding:var(--space-1) var(--space-2); margin:calc(var(--space-1) * -1) calc(var(--space-2) * -1);
+  border-radius:8px; cursor:pointer; font-family:'Inter',-apple-system,sans-serif;
+  font-size:14px; font-weight:500; color:var(--leo-green); min-height:44px;}
+.today-done-btn:focus-visible{outline:2px solid var(--leo-green); outline-offset:2px;}
+@media (prefers-reduced-motion: reduce){.tab-item,.seg-item{transition:none;}}
+
+/* ---- Warm-up free response — indicator now the shared drawn rule (§3) ---- */
+.wu-skip-line{margin-top:var(--space-3);}
+
+/* ---- Australia section (A3) — reference voice, settled tokens only ---- */
+.aus-wrap{max-width:760px; margin:0 auto;}
+.aus-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--space-3);}
+.aus-card{display:flex; align-items:center; gap:var(--space-3); width:100%; text-align:left;
+  background:var(--bg-card); border:none; box-shadow:none; border-radius:12px; padding:20px;
+  cursor:pointer; font-family:'Inter',-apple-system,sans-serif; min-height:48px;}
+.aus-card:focus-visible{outline:2px solid var(--leo-green); outline-offset:2px;}
+.aus-card-icon{color:var(--text-secondary); flex-shrink:0;}
+.aus-card-text{flex:1; display:flex; flex-direction:column; gap:var(--space-1);}
+.aus-card-title{font-size:17px; font-weight:600; color:var(--text-primary); line-height:1.4;}
+.aus-card-sum{font-size:14px; font-weight:400; color:var(--text-secondary); line-height:1.5;}
+.aus-card-chev{color:var(--text-tertiary); flex-shrink:0;}
+.aus-detail{background:var(--bg-card); border:none; box-shadow:none; border-radius:12px; padding:20px; margin-top:var(--space-3);}
+.aus-detail-title{display:flex; align-items:center; gap:var(--space-2); font-family:'Inter',-apple-system,sans-serif;
+  font-size:22px; font-weight:600; line-height:1.3; color:var(--text-primary); margin:0 0 var(--space-3);}
+.aus-detail-icon{color:var(--text-secondary); flex-shrink:0;}
+.aus-intro{font-size:16px; font-weight:400; line-height:1.65; color:var(--text-primary);}
+.aus-points{list-style:none; margin:var(--space-4) 0 0; padding:0; display:flex; flex-direction:column; gap:var(--space-3);}
+.aus-points li{font-size:16px; font-weight:400; line-height:1.65; color:var(--text-primary);}
+.aus-source{margin-top:var(--space-4);}
+.aus-search{margin-top:var(--space-5);}
+.aus-search-label{display:block; font-size:14px; font-weight:400; color:var(--text-secondary); margin-bottom:var(--space-2);}
+.aus-search-row{display:flex; gap:var(--space-2);}
+.aus-input{flex:1; border:1px solid var(--divider); border-radius:10px; padding:12px 14px;
+  font-family:'Inter',-apple-system,sans-serif; font-size:16px; font-weight:400;
+  color:var(--text-primary); background:var(--bg-card); min-height:48px;}
+.aus-input:focus{outline:2px solid var(--leo-green); outline-offset:-1px;}
+.aus-answer{background:var(--bg-card); border-radius:12px; padding:20px; margin-top:var(--space-3);
+  font-size:16px; font-weight:400; line-height:1.65; color:var(--text-primary);}
+.doorway{margin:var(--space-3) 0 var(--space-2);}
+.doorway-line{font-size:16px; font-weight:500; line-height:1.6; color:var(--text-primary); margin-bottom:var(--space-3);}
+
+/* ---- Home screen (A2) — settled tokens only ---- */
+.home-screen{max-width:520px; margin:0 auto; padding:var(--space-4) var(--space-3) var(--space-5); text-align:left;}
+.home-greet{margin-bottom:var(--space-5);}
+.greet-hello{font-family:'Inter',-apple-system,sans-serif; font-size:22px; font-weight:600; line-height:1.3; color:var(--text-primary); margin:0; text-align:center;}
+.greet-date{font-size:14px; font-weight:400; color:var(--text-secondary); margin-top:var(--space-1); text-align:center;}
+.greet-clock{margin-left:var(--space-2); color:var(--text-tertiary);}
+.greet-cont{font-size:16px; font-weight:500; line-height:1.6; color:var(--text-primary); margin-top:var(--space-3);}
+.today-card{display:flex; flex-direction:column; gap:var(--space-3);}
+.tc-row{display:flex; align-items:center; gap:var(--space-3); width:100%; min-height:48px;
+  background:none; border:none; padding:var(--space-2) 0; text-align:left; cursor:pointer;
+  font-family:'Inter',-apple-system,sans-serif; color:var(--text-primary); border-radius:8px;}
+.tc-row:disabled{cursor:default;}
+.tc-row:focus-visible{outline:2px solid var(--leo-green); outline-offset:2px;}
+.tc-icon{color:var(--leo-green); flex-shrink:0;}
+.tc-label{flex:1; font-size:16px; font-weight:400;}
+.tc-done{display:inline-flex; align-items:center; gap:var(--space-1); font-size:14px; font-weight:400; color:var(--color-success);}
+.tc-gate{font-size:14px; font-weight:400; color:var(--text-tertiary);}
+.tc-cta{margin-top:var(--space-2);}
+.tc-alldone{font-size:16px; font-weight:400; line-height:1.6; color:var(--text-primary); margin-top:var(--space-2);}
+.noticed-card{display:block; width:100%; text-align:left; background:var(--bg-card);
+  border:none; box-shadow:none; border-radius:12px; padding:20px; margin-top:var(--space-4);
+  font-family:'Inter',-apple-system,sans-serif; font-size:16px; font-weight:400; line-height:1.6;
+  color:var(--text-primary); cursor:pointer;}
+.noticed-card:focus-visible{outline:2px solid var(--leo-green); outline-offset:2px;}
+.home-skyline{margin-top:var(--space-6); opacity:.45;}
+.home-skyline .sky-img{width:100%; max-width:none;}
 /* Whiteboard logo */
 .wb-splash{display:flex; align-items:center; justify-content:center; min-height:100dvh; background:var(--bg-warm);}
-.wb-boot{animation:wbFadeOut 200ms ease 1200ms forwards;}
-.wb-logo-phase{animation:wbFadeOut 200ms ease 4300ms forwards;}
+.wb-logo-phase{animation:wbFadeOut 200ms ease 2000ms forwards;}
 .wb-logo-svg{display:block;}
 .brand-mark{display:flex; justify-content:center; margin:0 auto var(--space-4);}
 .brand-mark-sm{display:flex; justify-content:center; margin:0 auto var(--space-3);}
 .wb-frame{fill:none; stroke:var(--leo-green); stroke-width:3; stroke-linecap:butt; stroke-linejoin:miter;}
-.wb-frame-draw{stroke-dasharray:3450; stroke-dashoffset:3450; animation:wbStroke 1400ms linear forwards;}
+.wb-frame-draw{stroke-dasharray:3450; stroke-dashoffset:3450; animation:wbStroke 900ms ease-out forwards;}
 .wb-letter-static{fill:var(--leo-green);}
-.wb-letter-anim{fill:var(--leo-green); fill-opacity:0; stroke:var(--leo-green); stroke-width:1.5; stroke-dasharray:800; stroke-dashoffset:800; animation:wbStroke 500ms linear forwards, wbFill 250ms ease-out forwards;}
+.wb-letter-anim{fill:var(--leo-green); fill-opacity:0; stroke:var(--leo-green); stroke-width:1.5; stroke-dasharray:800; stroke-dashoffset:800; animation:wbStroke 380ms ease-out forwards, wbFill 220ms ease-out forwards;}
 .wb-mono{font-family:'Inter',sans-serif; font-weight:700; font-size:24px; fill:var(--bg-warm, #FAFAF8);}
 @keyframes wbStroke{to{stroke-dashoffset:0;}}
 @keyframes wbFill{to{fill-opacity:1;}}
 @keyframes wbFadeOut{to{opacity:0;}}
 @media (prefers-reduced-motion: reduce){
-  .wb-boot{animation:none;}
-  .wb-logo-phase{animation:none;}
+  /* §4.4 — the fade is retained. An opacity transition on a still image is
+     not what a reduced-motion user asks to be spared; removing it cuts hard. */
+  .wb-logo-phase{animation:wbFadeOut 200ms ease 600ms forwards;}
   .wb-frame-draw{animation:none; stroke-dashoffset:0;}
   .wb-letter-anim{animation:none; stroke-dashoffset:0; fill-opacity:1;}
 }
@@ -5634,21 +6257,39 @@ h2{font-size:26px;} h3{font-size:17px; margin-bottom:6px;}
 .screen-enter{animation:fadeSlideIn 250ms ease-out;}
 @keyframes fadeIn{from{opacity:0;} to{opacity:1;}}
 .card-stagger{animation:fadeIn 200ms ease-out both;}
-@keyframes loadingPulse{0%,100%{opacity:.4;} 50%{opacity:1;}}
-.loading-pulse{animation:loadingPulse 1.5s ease-in-out infinite; background:var(--leo-green);}
 .progress-fill{transition:width 400ms ease-out;}
 button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .sky-img{width:100%; max-width:470px; display:block; margin:8px auto 0;}
-.sky-anim{animation:skyFade 1.4s ease .3s both;}
-@keyframes skyFade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
-.leo-loader{display:flex; flex-direction:column; align-items:center; gap:var(--space-3); padding:var(--space-6) 20px; text-align:center; border-left:3px solid var(--leo-green); padding-left:var(--space-3);}
-.leo-loader-accent{width:48px; height:4px; border-radius:99px; background:rgba(156,163,175,.2); overflow:hidden;}
-.leo-loader-accent span{display:block; width:100%; height:100%; background:var(--leo-green); border-radius:99px; transform-origin:left; animation:loadingPulse 1.5s ease-in-out infinite;}
-@keyframes leoAccent{0%{transform:scaleX(0); opacity:.4;} 50%{transform:scaleX(1); opacity:1;} 100%{transform:scaleX(0); opacity:.4;}}
-.leo-loader-text{font-size:16px; font-weight:500; color:var(--text-primary); opacity:.75; max-width:28ch; line-height:1.6;}
-@media (prefers-reduced-motion: reduce){.leo-loader-accent span{animation:none; transform:scaleX(1); opacity:.6;}}
-.spin{animation:spin360 .9s linear infinite;}
-@keyframes spin360{to{transform:rotate(360deg);}}
+/* The skyline is drawn across, not faded in. The artwork is a raster line
+   drawing, so there are no paths to stroke — a left-to-right wipe is the
+   honest equivalent: the line appears the way a hand lays it down. §8 rule 1
+   in the only form this asset allows. Still once ever, per spec A3.5. */
+.sky-anim{animation:skyDraw 1800ms ease-out .3s both;}
+@keyframes skyDraw{from{clip-path:inset(0 100% 0 0);} to{clip-path:inset(0 0 0 0);}}
+/* ---- MOTION §3: the drawn rule. Stroke only, one colour, one weight, no
+   fill, no loop. It draws once in 600ms ease-out and rests as a finished rule.
+   --euca matches the completion tick; Part C Pass 5 remaps both together. ---- */
+.wait-block{display:flex; flex-direction:column; align-items:center; gap:var(--space-3); padding:var(--space-6) 20px; text-align:center;}
+.wait-inline{display:flex; align-items:center; gap:10px; padding:8px 0;}
+.drawn-rule{display:block; overflow:visible;}
+.drawn-rule-line{stroke:var(--euca); stroke-linecap:round; fill:none; animation:drawRule 600ms ease-out forwards;}
+@keyframes drawRule{to{stroke-dashoffset:0;}}
+.drawn-tick{display:inline-block; vertical-align:-2px; flex-shrink:0;}
+.drawn-tick-mark{fill:none; stroke:currentColor; stroke-width:2.6; stroke-linecap:round;
+  stroke-linejoin:round; stroke-dasharray:21; stroke-dashoffset:21;
+  animation:drawTick 350ms ease-out forwards;}
+@keyframes drawTick{to{stroke-dashoffset:0;}}
+.wait-label{font-size:16px; font-weight:500; color:var(--text-primary); opacity:.75; max-width:28ch; line-height:1.6; margin:0; animation:scRise 400ms 200ms both ease-out;}
+.wait-inline .wait-label{font-size:14px; opacity:1; color:var(--euca);}
+/* §5 — reduced motion shows the finished artefact, never the absence of one.
+   The escalation ladder still changes on schedule: that is information. */
+@media (prefers-reduced-motion: reduce){
+  .sky-anim{animation:none; clip-path:none;}
+  .drawn-rule-line{animation:none; stroke-dashoffset:0 !important;}
+  .wait-label{animation:none;}
+  .drawn-tick-mark{animation:none; stroke-dashoffset:0;}
+  .leo-accent::before{animation:none; transform:scaleY(1);}
+}
 .lesson-head{margin-bottom:6px;}
 .lesson-reco-head{display:flex; align-items:center; gap:12px; margin-bottom:6px;}
 .reco-kicker{font-size:12.5px; text-transform:uppercase; letter-spacing:.02em; color:var(--leo-green); opacity:.7; font-weight:700;}
@@ -5862,7 +6503,15 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .section-title .sub{color:var(--euca); opacity:.75; font-size:13.5px; margin-top:2px;}
 .card{background:var(--bg-card); padding:20px; border-radius:12px; border:none; box-shadow:none; margin-bottom:12px;}
 /* P2 Leo's Visual Presence */
-.leo-accent{border-left:3px solid var(--leo-green); padding-left:var(--space-3);}
+.leo-accent{position:relative; padding-left:var(--space-3);}
+/* Leo's rule is drawn down, not printed. Same gesture as the tick: one mark,
+   made by one hand, ease-out, once, then still. A 3px line growing from its
+   top edge is a draw — stroke-dashoffset would need an SVG for what a
+   transform does identically here. */
+.leo-accent::before{content:""; position:absolute; left:0; top:0; bottom:0; width:3px;
+  background:var(--leo-green); transform:scaleY(0); transform-origin:top;
+  animation:drawAccent 450ms ease-out forwards;}
+@keyframes drawAccent{to{transform:scaleY(1);}}
 .leo-card{background:var(--leo-green-light); padding:20px; border-radius:12px; border:none; box-shadow:none; border-left:3px solid var(--leo-green);}
 
 .muted{color:var(--ink); opacity:.62;} .small{font-size:13.5px;} .center{text-align:center; margin-top:20px;}
@@ -5968,16 +6617,12 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .bubble-user{background:var(--euca); color:#fff; border-bottom-right-radius:5px;}
 .bubble-bot{background:#fff; border:1px solid var(--line); color:var(--ink); border-bottom-left-radius:5px;}
 .typing{display:flex; gap:5px; align-items:center; padding:14px 16px;}
-.typ-dot{width:7px; height:7px; border-radius:50%; background:var(--euca); opacity:.5; animation:typing 1.2s infinite ease-in-out;}
-.typ-dot:nth-child(2){animation-delay:.2s;} .typ-dot:nth-child(3){animation-delay:.4s;}
-@keyframes typing{0%,60%,100%{transform:translateY(0); opacity:.4;} 30%{transform:translateY(-4px); opacity:1;}}
 .chat-input-bar{position:sticky; bottom:0; display:flex; gap:8px; align-items:flex-end; padding:10px 0 12px; background:var(--paper); border-top:1px solid var(--line); z-index:2;}
 .chat-input{flex:1; border:1.5px solid #C6D2C5; border-radius:22px; padding:11px 16px; font-family:'Karla'; font-size:16px; resize:none; max-height:120px; color:var(--ink); background:#fff; min-height:46px;}
 .chat-input:focus{outline:3px solid rgba(55,98,75,.3); border-color:var(--euca);}
 .chat-send{width:46px; height:46px; border-radius:50%; background:var(--euca); color:#fff; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;}
 .chat-send:disabled{opacity:.4; cursor:default;}
 .chat-send:focus-visible{outline:3px solid var(--wattle); outline-offset:2px;}
-@media (prefers-reduced-motion: reduce){.typ-dot{animation:none;}}
 /* ---- Help in Australia accordions ---- */
 .accordion{background:#fff; border:1px solid var(--line); border-radius:14px; margin-bottom:10px; overflow:hidden;}
 .accordion-open{border-color:var(--euca);}
@@ -6017,10 +6662,6 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .thes-block{margin-top:12px;}
 .thes-label{display:block; font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--euca); opacity:.75; margin-bottom:6px;}
 .chip-plain{cursor:default;}
-.spin-row{display:flex; align-items:center; gap:8px; color:var(--euca); font-size:14px; padding:8px 0;}
-.spin{animation:spin 1s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
-@media (prefers-reduced-motion: reduce){.spin{animation:none;}}
 .onboard{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; background:var(--paper);}
 .welcome-splash{text-align:center; display:flex; flex-direction:column; align-items:center;}
 .welcome-word{font-size:clamp(40px, 13vw, 60px); line-height:1.2;}
