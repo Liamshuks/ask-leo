@@ -5378,7 +5378,7 @@ function DictionaryPage({ profile, words, setWords, markActivity, onAskLeo, leoM
     try {
       if (tab === "dictionary") {
         const raw = await askClaude(
-          `Dictionary entry for an adult ESL student (first language: ${LANGS[profile.lang].english}). Word or phrase: "${q}". Respond ONLY with JSON, no fences:\n{"word":"the word","ipa":"IPA pronunciation","pos":"part of speech","cefr":"CEFR level A1-C2 if known, else empty string","definition":"clear definition in simple English","example":"one natural example sentence","collocations":["up to 4 common collocations or word partners"],"translation":"translation into ${LANGS[profile.lang].english}"}`,
+          `Dictionary entry for an adult ESL student (first language: ${LANGS[profile.lang].english}). Word or phrase: "${q}". Respond ONLY with JSON, no fences:\n{"word":"the word","ipa":"IPA pronunciation","pos":"part of speech","cefr":"CEFR level A1-C2 if known, else empty string","definition":"clear definition in simple English","example":"one natural example sentence","collocations":["up to 4 common collocations or word partners"]}`,
           { intent: "dictionary" }
         );
         const r = parseJSON(raw);
@@ -5417,7 +5417,7 @@ function DictionaryPage({ profile, words, setWords, markActivity, onAskLeo, leoM
       {error && <p className="bad">{error}</p>}
       {!loading && !dict && !thes && words.length === 0 && (
         <Card className="center"> <h3>Your personal dictionary</h3>
-          <p className="muted">Look up any English word and Leo will explain it simply — with the meaning in your language, an example, and word partners. Every word you check is saved to your Word Bank.</p>
+          <p className="muted">Look up any English word and Leo will explain it simply — with a clear definition, an example, and word partners. Every word you check is saved to your Word Bank.</p>
         </Card>
       )}
 
@@ -5425,7 +5425,6 @@ function DictionaryPage({ profile, words, setWords, markActivity, onAskLeo, leoM
         <Card>
           <h3 className="dict-word">{dict.word} {dict.ipa && <span className="ipa">{dict.ipa}</span>} <span className="pos">{dict.pos}</span> {dict.cefr && <span className="cefr-badge">{dict.cefr}</span>}</h3>
           <p>{dict.definition}</p>
-          <p className="l1-line">{LANGS[profile.lang].native}: <strong>{dict.translation}</strong></p>
           <p className="muted small">“{dict.example}”</p>
           {dict.collocations?.length > 0 && <p className="small"><strong>Common word partners:</strong> {dict.collocations.join(" · ")}</p>}
           <button className="ghost-btn" style={{ marginTop: 10 }} onClick={() => onAskLeo(`Can you explain the word "${dict.word}" with more examples?`)}><Sparkles size={14} /> Ask Leo about this word</button>
@@ -5493,7 +5492,7 @@ function HeardPage({ profile, heard, setHeard, markActivity, onAskLeo, leoMemory
     setBusyId(item.id);
     try {
       const raw = await askClaude(
-        `An ESL student in Australia (first language: ${LANGS[profile.lang].english}) heard this English word or phrase in real life: "${item.phrase}". Explain it like a smart dictionary. Respond ONLY with JSON, no fences: {"meaning":"clear simple English explanation; note if it is Australian slang","ipa":"IPA pronunciation or empty","pos":"part of speech or empty","example":"one example sentence","collocations":["up to 3 common word partners, or empty"],"formality":"casual, neutral, or formal","translation":"rough equivalent in ${LANGS[profile.lang].english}"}`,
+        `An ESL student in Australia (first language: ${LANGS[profile.lang].english}) heard this English word or phrase in real life: "${item.phrase}". Explain it like a smart dictionary. Respond ONLY with JSON, no fences: {"meaning":"clear simple English explanation; note if it is Australian slang","ipa":"IPA pronunciation or empty","pos":"part of speech or empty","example":"one example sentence","collocations":["up to 3 common word partners, or empty"],"formality":"casual, neutral, or formal"}`,
         { intent: "heard_explain" }
       );
       const info = parseJSON(raw);
@@ -5535,7 +5534,6 @@ function HeardPage({ profile, heard, setHeard, markActivity, onAskLeo, leoMemory
               {(info.ipa || info.pos) && <p className="small">{info.ipa && <span className="ipa">{info.ipa}</span>} {info.pos && <span className="pos">{info.pos}</span>}</p>}
               <p className="muted small">“{info.example}”</p>
               {info.collocations?.length > 0 && <p className="small"><strong>Often used with:</strong> {info.collocations.join(" · ")}</p>}
-              <p className="l1-line small">{LANGS[profile.lang].native}: {info.translation}</p>
               <button className="link-btn small" onClick={() => onAskLeo(`Can you teach me more about the phrase "${h.phrase}"?`)}>Ask Leo more about this</button>
             </div>
           ); })()}
