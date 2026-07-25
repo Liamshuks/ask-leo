@@ -12,7 +12,13 @@ import {
    ============================================================ */
 
 const LANGS = {
-  zh: { native: "中文", english: "Chinese (Simplified)", hello: "你好" },
+  // INTERIM. The native label must not promise more than the app delivers:
+  // offering 中文 while serving Simplified only is an equivalence failure on
+  // the one screen where a student chooses their own language.
+  // Superseded when the zh-Hans / zh-Hant split lands, at which point this
+  // becomes two entries: 简体中文 / Chinese (Simplified) and
+  // 繁體中文 / Chinese (Traditional).
+  zh: { native: "简体中文", english: "Chinese (Simplified)", hello: "你好" },
   es: { native: "Español", english: "Spanish", hello: "¡Hola" },
   pt: { native: "Português", english: "Portuguese", hello: "Olá" },
   fr: { native: "Français", english: "French", hello: "Bonjour" },
@@ -326,73 +332,95 @@ function _mockPick(p, re) { const m = p.match(re); return m ? m[1] : ""; }
    A student who types "." and a student who hits a network error are in
    genuinely different situations. Interim identical is acceptable while
    Lessons' wording is outstanding; permanent is not. */
-const WARMUP_SKIP_LINE = "Got it — let's keep going.";      // INTERIM — awaiting Lessons wording
+const WARMUP_SKIP_LINE = "No problem — let's move on.";     // judgement: nothing meaningful was typed
 const WARMUP_FALLBACK_LINE = "Got it — let's keep going.";  // failure only, never an AI call
 // Shared mock content packs: one pack = one coherent real-life situation.
 // Every mock lesson branch (blueprint, reading, listening, grammar, summary)
 // draws from the SAME pack so offline lessons never mix scenarios.
 const MOCK_PACKS = [
   { match: /direction|lost|way/, warmUpQs: ["Do you know how to get to your nearest train station?", "Have you ever asked a stranger for directions in English?", "What would you say if you were lost near Central Station?", "Do you know what straight ahead means in directions?", "If someone said turn left at the lights, would you understand?", "What is the most confusing part about asking for directions in English?"], ctx: "Asking for directions",
+    warmupMinimalResponse: "Thanks — good start. Here's an easier one: when you're lost, do you usually ask someone, or check your phone? Today we'll practise the asking part.",
+    warmupAttemptResponse: "A proper answer — that's how a warm-up should work. Hold onto that thinking: today you'll learn exactly what to say when you're lost and need a stranger's help.",
     warmQ: "Have you ever asked a stranger for directions in English? What did you say?",
     model: "Excuse me, could you tell me how to get to the station?",
     dialogue: `"Excuse me, how do I get to Central Station?"\n"Go straight ahead and turn left at the lights."\n"Is it far?"\n"About five minutes. You can't miss it."`,
     vocab: ["intersection", "station", "traffic lights", "straight ahead", "turn left", "turn right", "opposite", "across from"],
     grammar: { point: "Polite question forms", meaning: "We use question forms like 'Could you…' to ask strangers politely.", form: "Could/Can + you + verb …?", usage: "Use with strangers and in public — it softens the request.", examples: ["Could you tell me where the station is?", "Can you point me towards the harbour?"] } },
   { match: /caf|coffee|barista|food|lunch|eat|restaurant|order/, warmUpQs: ["What is your usual coffee order?", "Do you know the difference between a flat white and a latte?", "Have you ever ordered food in English in Australia?", "What would you say if you wanted soy milk instead of regular?", "How would you ask for the bill at a restaurant?", "Do you feel confident ordering takeaway in English?"], ctx: "Ordering at a caf\u00e9",
+    warmupMinimalResponse: "Short and sweet — that works. Something easier: do you drink coffee at home, or out? Either way, today you'll learn to order like a local.",
+    warmupAttemptResponse: "Thanks for a real answer — you're already using English about food, and that's today's whole point. Let's make your next caf\u00e9 order feel easy.",
     warmQ: "What's your usual coffee order? How would you ask for it in English?",
     model: "Could I get a flat white, please?",
     dialogue: `"G'day, what can I get you?"\n"Could I get a flat white, thanks?"\n"No worries — regular or large?"\n"Large, takeaway please."`,
     vocab: ["flat white", "takeaway", "barista", "order", "soy milk", "long black", "regular", "eftpos"],
     grammar: { point: "Polite requests with 'could'", meaning: "'Could I get…' is the natural way to order in Australia.", form: "Could I get/have + noun (+ please)?", usage: "At counters, caf\u00e9s and shops — friendly and standard.", examples: ["Could I get a flat white, please?", "Could I have the bill, thanks?"] } },
   { match: /doctor|gp|medical|pharmac|dentist|symptom|health/, warmUpQs: ["Have you ever visited a GP in Australia?", "Do you know how to book an appointment?", "What would you say if you had a headache for three days?", "Do you know what Medicare means?", "How would you ask for a repeat prescription?", "What is the hardest part about explaining health problems in English?"], ctx: "A visit to the doctor",
+    warmupMinimalResponse: "Thanks — that's a start. An easier question: have you found a doctor near where you live yet? Today's lesson will help whenever you need one.",
+    warmupAttemptResponse: "A full answer on a topic most students avoid — good on you. Talking about health is hard in any language. Today we'll make it manageable in English.",
     warmQ: "Have you ever explained a health problem in English? What did you say?",
     model: "I've had a sore throat for three days.",
     dialogue: `"Good morning, how can I help?"\n"Hi, I'd like to book an appointment with a GP, please."\n"Of course — the clinic has an opening tomorrow morning. Any good?"\n"Yes, that works. Thank you."`,
     vocab: ["appointment", "prescription", "GP", "symptom", "receptionist", "clinic", "Medicare", "referral"],
     grammar: { point: "Present perfect for symptoms", meaning: "We use the present perfect for things that started in the past and are still true.", form: "I've + past participle (+ since/for …)", usage: "Perfect for describing ongoing symptoms to a doctor.", examples: ["I've had a headache since Monday.", "I've been feeling tired for a week."] } },
   { match: /rent|flat|apartment|lease|landlord|inspection|housing|maintenance/, warmUpQs: ["Have you ever rented a flat in Australia?", "Do you know what a bond is in Australian renting?", "What questions would you ask at a rental inspection?", "How would you report a broken tap to your landlord?", "What does available from mean on a rental ad?", "Do you feel confident reading a lease agreement?"], ctx: "Renting a flat",
+    warmupMinimalResponse: "Good — thanks. Try this easier one: do you rent your own place, or share with others? Today is about handling renting conversations in English.",
+    warmupAttemptResponse: "Thanks for that answer — renting is one of the most useful topics we can work on. Let's get you ready for landlords, leases and inspections.",
     warmQ: "Have you ever asked a landlord or agent a question in English? What was it?",
     model: "Could you tell me when the flat is available?",
     dialogue: `"Hi, are you here for the inspection?"\n"Yes — could I ask a couple of questions about the lease?"\n"Of course, fire away."\n"How much is the bond, and when is it available?"`,
     vocab: ["bond", "lease", "landlord", "inspection", "rent", "available", "agent", "utilities"],
     grammar: { point: "Indirect questions", meaning: "Indirect questions ('Could you tell me when…') sound politer than direct ones.", form: "Could you tell me + question word + subject + verb", usage: "Ideal for agents, landlords and officials.", examples: ["Could you tell me when the flat is available?", "Do you know how much the bond is?"] } },
   { match: /bank|account|atm|card/, warmUpQs: ["Do you have an Australian bank account?", "What ID did you need to open it?", "Do you know what a BSB number is?", "How would you ask about savings accounts?", "Have you ever used an Australian ATM?", "What would you do if your card stopped working?"], ctx: "Opening a bank account",
+    warmupMinimalResponse: "Thanks — short answers still count. An easier one: do you pay by card or cash most days? Today we'll practise the English that banks use.",
+    warmupAttemptResponse: "A real answer — good. Bank English is full of odd words, but by the end of today it won't feel so foreign. Let's get started.",
     warmQ: "Have you ever been to a bank in Australia? What did you need?",
     model: "I'd like to open a savings account, please.",
     dialogue: `"Hi there, how can I help today?"\n"I'd like to open a savings account, please. What identification do I need?"\n"A passport and proof of address is perfect — and your debit card will arrive within a week."\n"Great. Could I also get my BSB and account number today?"`,
     vocab: ["identification", "savings account", "debit card", "branch", "teller", "BSB", "statement", "transfer"],
     grammar: { point: "'I'd like to' for formal requests", meaning: "'I'd like to' is the standard polite opener for services.", form: "I'd like to + verb", usage: "Banks, offices, phone calls — anywhere formal but friendly.", examples: ["I'd like to open an account, please.", "I'd like to update my address."] } },
   { match: /train|bus|ferry|opal|transport|taxi|uber|airport/, warmUpQs: ["How do you usually get to class?", "Do you have an Opal card?", "Have you ever missed a bus or train here?", "What would you say if the train was delayed?", "Do you know what tap on and tap off mean?", "How would you ask which platform your train leaves from?"], ctx: "Catching a train or bus",
+    warmupMinimalResponse: "Thanks. Here's an easier one: train, bus or walking — how do you get around most days? Today's transport English is language you'll use constantly.",
+    warmupAttemptResponse: "Thanks for a full answer. Public transport comes up every single day here, so today's practice will pay off almost immediately. Let's go.",
     warmQ: "How do you usually get around? Have you asked about tickets or platforms in English?",
     model: "Excuse me, which platform is the train to the city?",
     dialogue: `"Excuse me, does this bus go to Circular Quay?"\n"Sure does — the timetable says the express is next, but this one's all stops. Tap on and grab a seat."\n"Thanks — and do I tap off as well?"\n"Yep, tap off when you hop out. No worries."`,
     vocab: ["platform", "Opal card", "tap on", "tap off", "delay", "timetable", "service", "express"],
     grammar: { point: "Question word order with 'do'", meaning: "English questions need an auxiliary: 'Where do I…?', not 'Where I…?'", form: "Question word + do/does + subject + verb", usage: "Every everyday question uses this pattern.", examples: ["Where do I tap my card?", "Does this bus go to the city?"] } },
   { match: /shop|supermarket|return|checkout|clothes|grocer|item|parcel|post/, warmUpQs: ["Have you ever returned something to a shop in Australia?", "Do you keep your receipts?", "What would you say if something you bought was faulty?", "How would you ask for a different size?", "Do you feel confident using self-checkout?", "What is the difference between a refund and an exchange?"], ctx: "Shopping and returns",
+    warmupMinimalResponse: "Thanks — that counts. An easier one: do you keep your receipts? Today you'll learn to return things and ask for refunds without stress.",
+    warmupAttemptResponse: "A proper answer — nicely done. Returning things feels awkward even for native speakers, so today's lesson will genuinely help. Let's build your counter confidence.",
     warmQ: "Have you ever returned something to a shop or asked for help finding an item?",
     model: "Excuse me, I'd like to return this — it doesn't fit.",
     dialogue: `"Hi, need any help?"\n"Yes — I'd like a refund for this jumper, please. It's faulty."\n"No worries at all. Have you got the receipt?"\n"Right here. Could I look for another size while you sort the exchange?"\n"Of course — jumpers are down aisle four."`,
     vocab: ["receipt", "refund", "exchange", "checkout", "aisle", "discount", "size", "faulty"],
     grammar: { point: "Comparatives for shopping", meaning: "Short adjectives take -er when comparing.", form: "adjective + -er / more + adjective + than", usage: "Comparing prices, sizes and options.", examples: ["This one is cheaper online.", "Do you have a bigger size?"] } },
   { match: /universit|enrol|class|teacher|study|tafe|student|presentation|lecture/, warmUpQs: ["Have you ever asked a teacher a question in English?", "What would you say if you did not understand something in class?", "How would you ask about an assignment deadline?", "Do you feel confident speaking in class discussions?", "What is the hardest part about studying in English?", "How would you email your teacher about a late assignment?"], ctx: "Talking to your teacher",
+    warmupMinimalResponse: "Thanks — a start is a start. An easier question: do you prefer asking questions in class, or after class? Today we'll practise both.",
+    warmupAttemptResponse: "Thanks for a real answer. Asking teachers questions is a skill — and it's how you get full value from any course. Let's sharpen it today.",
     warmQ: "Have you ever asked a teacher a question in English? How did you start?",
     model: "Excuse me, could you explain that last part again?",
     dialogue: `"Excuse me, could I ask about the assignment?"\nTeacher: "Of course — what would you like to know?"\n"Is it due Friday or Monday?"\nTeacher: "Friday at 5pm — but a draft earlier is always fine!"`,
     vocab: ["due", "assignment", "semester", "tutorial", "lecture", "campus", "draft", "feedback"],
     grammar: { point: "Asking for clarification", meaning: "Clarification questions keep you learning without embarrassment.", form: "Could you + explain/repeat/clarify …?", usage: "In class, at work, anywhere you didn't catch something.", examples: ["Could you explain that again, please?", "Sorry, could you say that more slowly?"] } },
   { match: /job|interview|work|manager|colleague|sick|time off|meeting|email/, warmUpQs: ["Have you ever had a job interview in English?", "How would you call in sick to work?", "What would you say if you needed to swap a shift?", "Do you feel confident talking to your manager?", "How would you ask a colleague for help?", "What is workplace small talk like in Australia?"], ctx: "Speaking to your manager",
+    warmupMinimalResponse: "Thanks. Here's an easier one: have you had a job here yet, or are you still looking? Either way, today's workplace English will be useful.",
+    warmupAttemptResponse: "A full answer — good on you. Workplace conversations are high-stakes, and that's exactly why we practise them here first, where mistakes cost nothing.",
     warmQ: "Have you ever spoken English at work or in an interview? What was the situation?",
     model: "Could I ask a quick question about the roster?",
     dialogue: `"Morning! How's it all going?"\n"Good, thanks — could I grab you for a minute about my shifts?"\n"Sure, come through — I've got the roster up now."\n"Thanks — I was hoping to swap Saturday if possible."`,
     vocab: ["roster", "shift", "manager", "colleague", "leave", "workplace", "swap", "overtime"],
     grammar: { point: "Softening requests at work", meaning: "'I was hoping to…' and 'Could I…' make workplace requests easy to say yes to.", form: "I was hoping to + verb / Could I + verb", usage: "Asking managers for time, swaps or help.", examples: ["I was hoping to take Friday off.", "Could I grab you for a minute?"] } },
   { match: /neighbour|party|friend|bbq|barbecue|small talk|invit|social|weekend/, warmUpQs: ["Have you met your neighbours yet?", "What would you say if a neighbour invited you to a BBQ?", "Do you know what arvo means in Australian English?", "How do Australians usually greet each other?", "What topics are good for small talk in Australia?", "How would you politely accept or decline an invitation?"], ctx: "Small talk with neighbours",
+    warmupMinimalResponse: "Thanks — short but real. An easier one: do you know your neighbours' names yet? Today we'll practise the small talk that starts friendships here.",
+    warmupAttemptResponse: "Thanks for a genuine answer. Small talk sounds small, but it's how Australians open every friendship. Today we'll make it feel natural, not scary.",
     warmQ: "Have you chatted with a neighbour or made small talk in English? What did you talk about?",
     model: "How's your weekend been?",
     dialogue: `"G'day! Settling in alright?"\n"Yeah, really well thanks — it's a lovely street."\n"Good to hear! We're having a barbie Saturday arvo — heaps of food, so come along!"\n"That sounds great, mate — thanks for inviting me."`,
     vocab: ["arvo", "barbie", "mate", "reckon", "heaps", "invite", "weekend", "how ya going"],
     grammar: { point: "Present perfect for small talk", meaning: "'How's your week been?' keeps conversation flowing naturally.", form: "How has + noun + been?", usage: "The classic Australian small-talk opener.", examples: ["How's your weekend been?", "How've you been settling in?"] } },
   { match: /beach|swim|surf|ocean|sun|sand|flag|lifeguard|rip|sunscreen|sunburn|thong/, warmUpQs: ["Do you like going to the beach?", "What do you do when you are at the beach?", "What must you bring to the beach?", "Is there anything you shouldn't do when at the beach?", "Have you ever been to an Australian beach?", "Do you know what the red and yellow flags mean?"], ctx: "Going to the beach",
+    warmupMinimalResponse: "Thanks. An easier one: do you prefer swimming, or just sitting on the sand? Today's beach English covers both — plus how to stay safe.",
+    warmupAttemptResponse: "A proper answer — great. The beach is where Australian English gets very Australian. Today you'll learn the words, and the safety rules that matter.",
     warmQ: "Do you like going to the beach? What must you bring?",
     model: "You should always swim between the flags.",
     dialogue: `"G'day! First time at the beach?"\n"Yes — where should I swim?"\n"See those red and yellow flags? Swim between them — that's where the lifeguards are watching."\n"Thanks! Should I put on sunscreen?"\n"Definitely — the Australian sun is no joke. Slip, slop, slap, mate."`,
@@ -927,34 +955,40 @@ function prepareAuthoredBlueprint(lesson) {
    real auth — the UI components stay identical.
    ======================================================== */
 
-/* `step` is deliberately NOT held here. Tapping either auth button unmounts
+/* `slide` is deliberately NOT held here. Tapping either auth button unmounts
    this component, and state owned here would die with it — Back would then
-   remount at step 0 and send the student four screens backwards rather than
+   remount at slide 0 and send the student four screens backwards rather than
    one. The parent owns it so it survives the switch. */
-function WelcomeLanding({ step, setStep, onSignUp, onSignIn }) {
-  if (step === 0) return (
-    <div className="onboard" onClick={() => setStep(1)}>
+function WelcomeLanding({ slide, setSlide, onSignUp, onSignIn }) {
+  if (slide === 0) return (
+    <div className="onboard" onClick={() => setSlide(1)}>
       <div className="intro-page">
         <p className="intro-subtitle splash-tagline">Your English teacher in Australia.</p>
-        <button className="intro-next splash-arrow" onClick={(e) => { e.stopPropagation(); setStep(1); }}><ChevronRight size={28} /></button>
+        <button className="intro-next splash-arrow" onClick={(e) => { e.stopPropagation(); setSlide(1); }}><ChevronRight size={28} /></button>
       </div>
     </div>
   );
-  if (step === 1) return (
+  if (slide === 1) return (
     <div className="onboard">
       <div className="intro-page">
 <h2 className="intro-heading pop-in pop-d2">Learn English for your life in Australia.</h2>
         <p className="intro-body pop-in pop-d3">Leo is an English teacher who adapts to you — your level, your goals, and what you find difficult.</p>
-        <button className="primary-btn wide pop-in pop-d7" onClick={() => setStep(2)}>Next</button>
+        <button className="primary-btn wide pop-in pop-d7" onClick={() => setSlide(2)}>Next</button>
       </div>
     </div>
   );
-  if (step === 2) return (
+  if (slide === 2) return (
     <div className="onboard" key="page3">
       <div className="intro-page">
 <h2 className="intro-heading pop-in pop-d2">Leo remembers what you learn.</h2>
-        <p className="intro-body pop-in pop-d3">Every lesson builds on the last. Leo knows what you find difficult, and plans accordingly.</p>
-        <button className="primary-btn wide pop-in pop-d7" onClick={() => setStep(3)}>Next</button>
+        {/* G-10(5). The previous line promised a shared history to a student who
+            has none yet — false at the exact moment it rendered, on the first
+            screen they ever see. The replacement says what is true now, and
+            what follows from it.
+            The HEADING above is untouched: third-person self-reference on the
+            same card, flagged but not briefed, awaiting a Genesis ruling. */}
+        <p className="intro-body pop-in pop-d3">Today I'm meeting you for the first time, so I don't know you yet. From here, what you find hard is what I plan around.</p>
+        <button className="primary-btn wide pop-in pop-d7" onClick={() => setSlide(3)}>Next</button>
       </div>
     </div>
   );
@@ -1253,6 +1287,74 @@ const PLACEMENT_FUNCTIONAL = [
 
 const CEFR_ORDER = ["A1", "A2", "B1", "B2", "C1"];
 const CEFR_RANK = { A1: 0, A2: 1, B1: 2, B2: 3, C1: 4 };
+/* Area tags are INTERNAL keys, not display strings. Rendered raw a student
+   reads "australian" and "landlord" as the names of English skills.
+   Only Pronunciation and Functional English render areas rows, so only their
+   fourteen tags need entries — seven each, no overlap:
+     pronunciation: australian · connected speech · intonation · minimal pairs ·
+                    sentence stress · silent letters · word stress
+     functional:    academic · landlord · negotiation · ordering · social ·
+                    transport · workplace
+   AWAITING LESSONS. The contents of this map are student-facing copy and are
+   Lessons' to write, not this chat's.
+   G-04 (Genesis, 23 July): an UNMAPPED TAG MUST NOT RENDER. The earlier
+   fall-through to the raw string was wrong — a blank is the honest outcome,
+   a raw tag is not, because "australian" and "landlord" read to a student as
+   the names of English skills. Omitting degrades gracefully; the screen keeps
+   its band and Leo's line and simply says less.
+   This converts an empty map from a ship blocker into missing enrichment. It
+   does NOT reduce the priority of the fourteen entries.
+   EXTEND when the placement bank extension lands: it adds roughly twenty
+   further tags, every one of which will silently omit until mapped. */
+const PLACEMENT_AREA_LABELS = {
+  // Pronunciation — seven tags, matching PLACEMENT_PRONUNCIATION exactly
+  "word stress":      "Stress in a word",
+  "sentence stress":  "Stress in a sentence",
+  "minimal pairs":    "Similar sounds",
+  "silent letters":   "Silent letters",
+  "connected speech": "How words join together",
+  "australian":       "Australian English sounds",
+  "intonation":       "Rise and fall in the voice",
+  // Functional English — seven tags, matching PLACEMENT_FUNCTIONAL exactly
+  "ordering":         "Ordering food and drinks",
+  "transport":        "Travel and transport",
+  "workplace":        "At work",
+  "landlord":         "Renting and landlords",
+  "academic":         "University and study",
+  "social":           "Everyday social situations",
+  "negotiation":      "Negotiating",
+};
+
+/* G-07 (Genesis, 23 July) — an unmapped tag is silent to the STUDENT and loud
+   to US. With the map empty, suppression protected the student from reading
+   "landlord" as the name of an English skill. Now the map is populated, the
+   failure mode inverts: content the student actually earned would disappear
+   without trace, and the bank extension adds roughly twenty more tags.
+   Deliberately NOT gated behind a build flag or an environment check. A
+   console warning is already invisible to a learner, and a gate is exactly the
+   thing that gets set wrong once and then hides the problem permanently.
+   The Set only stops the message repeating on every re-render; it is not a
+   gate, and each distinct tag still warns once per session. */
+const _unmappedAreaTags = new Set();
+function placementAreaLabel(tag) {
+  const label = PLACEMENT_AREA_LABELS[tag];
+  if (!label) {
+    if (!_unmappedAreaTags.has(tag)) {
+      _unmappedAreaTags.add(tag);
+      console.warn(
+        `[Ask Leo] Placement area tag "${tag}" has no display name. It was OMITTED ` +
+        `from the results screen, so the student saw nothing for it. ` +
+        `Add it to PLACEMENT_AREA_LABELS.`
+      );
+    }
+    return null;                                // omitted, never raw
+  }
+  return label;
+}
+function placementAreaList(tags) {
+  return (tags || []).map(placementAreaLabel).filter(Boolean);
+}
+
 const CEFR_LABELS = { A1: "Beginner", A2: "Elementary", B1: "Intermediate", B2: "Upper-Intermediate", C1: "Advanced" };
 
 /* ── Adaptive engine ──
@@ -1361,39 +1463,82 @@ function PlacementTestPage({ profile, onComplete }) {
   };
 
   // ── Compute results ──
+  /* R3 (Genesis, settled 22 July): a section that cannot resolve a CEFR band
+     does not contribute one.
+     Only Grammar and Vocabulary run a ladder that actually moves. Reading maps
+     a percentage onto a hard ceiling of "B2". Pronunciation and Functional
+     English are pinned at "B1" with a no-op setLevel, so estimateLevel can
+     return only A1 or B1 for them however well the student does.
+     Averaging all five made C1 unreachable by ANY student under ANY
+     performance: a flawless run scored C1, C1, B2, B1, B1 -> 3.0 -> B2. The
+     damage sat entirely at the top, which is why mid and low students came out
+     right by coincidence and it never surfaced in testing.
+     The three pinned sections now report what was OBSERVED instead of a band
+     they cannot support. Their ladders are deliberately still not wired and
+     maxQ is deliberately unchanged: neither bank holds an A1 item, so a
+     working ladder would descend into an empty band. Both wait for the bank
+     extension from Lessons. */
+
+  // Which areas did the student handle, and which were harder? Derived from
+  // their own answers — every adaptive item carries an `area` tag.
+  const observedAreas = (history) => {
+    const tally = new Map();
+    (history || []).forEach((h) => {
+      if (!h.area) return;
+      const e = tally.get(h.area) || { ok: 0, total: 0 };
+      e.total += 1; if (h.ok) e.ok += 1;
+      tally.set(h.area, e);
+    });
+    const handled = [], harder = [];
+    tally.forEach((e, area) => { (e.ok === e.total ? handled : harder).push(area); });
+    return { handled, harder, seen: tally.size };
+  };
+
   const computeResults = () => {
     const grammar = estimateLevel(grammarHistory);
     const vocab = estimateLevel(vocabHistory);
-    const pron = estimateLevel(pronHistory);
-    const func = estimateLevel(funcHistory);
-    // Reading estimate from score
-    const readingPct = readingScore.total > 0 ? readingScore.correct / readingScore.total : 0;
-    const readingLevel = readingPct >= 0.85 ? "B2" : readingPct >= 0.65 ? "B1" : readingPct >= 0.45 ? "A2" : "A1";
-    // Overall: weighted average
-    const levels = [grammar.level, vocab.level, readingLevel, pron.level, func.level];
-    const avgRank = levels.reduce((sum, l) => sum + CEFR_RANK[l], 0) / levels.length;
+    // Banded sections only. Two, not five.
+    const banded = [grammar.level, vocab.level];
+    const avgRank = banded.reduce((sum, l) => sum + CEFR_RANK[l], 0) / banded.length;
     const overallLevel = CEFR_ORDER[Math.round(avgRank)];
-    const strengths = [];
-    const improvements = [];
-    const areas = [
-      { name: "Grammar", level: grammar.level, rank: CEFR_RANK[grammar.level] },
-      { name: "Vocabulary", level: vocab.level, rank: CEFR_RANK[vocab.level] },
-      { name: "Reading", level: readingLevel, rank: CEFR_RANK[readingLevel] },
-      { name: "Pronunciation", level: pron.level, rank: CEFR_RANK[pron.level] },
-      { name: "Functional English", level: func.level, rank: CEFR_RANK[func.level] },
-    ];
     const overallRank = CEFR_RANK[overallLevel];
+
+    /* Reading records no per-item detail and its questions carry no `area`
+       tag, so it reports the one thing that IS observed: how much of it the
+       student got right. Not a band, and not dressed as one. */
+    const areas = [
+      { name: "Grammar", kind: "band", level: grammar.level, rank: CEFR_RANK[grammar.level] },
+      { name: "Vocabulary", kind: "band", level: vocab.level, rank: CEFR_RANK[vocab.level] },
+      { name: "Reading", kind: "count", correct: readingScore.correct, total: readingScore.total },
+      { name: "Pronunciation", kind: "areas", ...observedAreas(pronHistory) },
+      { name: "Functional English", kind: "areas", ...observedAreas(funcHistory) },
+    ];
+
+    /* Only a banded section may be called a strength or an area to improve.
+       Ranking a pinned section against the overall rank compares it with a
+       number it could never have influenced. */
+    const strengths = [], improvements = [];
     areas.forEach((a) => {
-      if (a.rank >= overallRank) strengths.push(a.name);
-      else improvements.push(a.name);
+      if (a.kind !== "band") return;
+      (a.rank >= overallRank ? strengths : improvements).push(a.name);
     });
+
     return {
       overall: overallLevel,
-      grammar: grammar.level, vocab: vocab.level, reading: readingLevel,
-      pronunciation: pron.level, functional: func.level,
+      grammar: grammar.level, vocab: vocab.level,
+      reading: { correct: readingScore.correct, total: readingScore.total },
+      pronunciation: observedAreas(pronHistory),
+      functional: observedAreas(funcHistory),
       strengths, improvements, areas,
       grammarDetail: grammar.byLevel, vocabDetail: vocab.byLevel,
-      totalCorrect: grammarHistory.filter((h) => h.ok).length + vocabHistory.filter((h) => h.ok).length + readingScore.correct + pronHistory.filter((h) => h.ok).length + funcHistory.filter((h) => h.ok).length,
+      /* totalCorrect is DELETED, not left unrendered. It summed correct answers
+         across banded, counted and PINNED sections — the same blend, in one
+         integer, that made C1 unreachable. A field that may never be read must
+         not exist: leaving it here relies on every future reader knowing why.
+         totalQuestions is RETAINED by Genesis ruling (23 July), superseding the
+         specification's deletion of the pair. Its reader is named: Leo's line
+         above the band on the results screen. It counts questions ANSWERED, not
+         presented — a count of effort, not of performance. */
       totalQuestions: grammarHistory.length + vocabHistory.length + readingScore.total + pronHistory.length + funcHistory.length,
     };
   };
@@ -1492,19 +1637,80 @@ function PlacementTestPage({ profile, onComplete }) {
         <div>
           <Card className="leo-card">
             <div className="leo-accent">
-              <p className="text-leo" style={{ marginBottom: "var(--space-3)" }}>Now I have a sense of where your English is, {profile.name}.</p>
+              {/* TWO Leo lines, not three. The deleted middle line restated the
+                  numeral directly above it and pre-empted the closing line.
+                  Structure is now observation -> evidence -> forward step, with
+                  the evidence between the lines rather than a line standing in
+                  for it.
+                  Sub-five guard: below five questions the number is dropped
+                  entirely rather than reported small. */}
+              <p className="text-leo" style={{ marginBottom: "var(--space-3)" }}>
+                {results.totalQuestions >= 5
+                  ? `${results.totalQuestions} questions, ${profile.name} — and you answered every one. Here's where I'd start you today.`
+                  : `You've got through it, ${profile.name}. Here's where I'd start you today.`}
+              </p>
               <div className="placement-overall">
                 <span className="placement-overall-level">{results.overall}</span>
                 <span className="placement-overall-desc">{CEFR_LABELS[results.overall]}</span>
               </div>
-              <p className="text-leo" style={{ marginTop: "var(--space-3)" }}>You're starting at {results.overall}. This is where we begin — I'll build your lessons from here.</p>
             </div>
           </Card>
 
-
+          {/* The breakdown iterates `areas` and switches on `kind`. It does NOT
+              name sections in markup and does NOT hardcode five rows: the two
+              pinned sections may start producing bands if their ladders are ever
+              wired, and a screen keyed to `kind` needs no redesign when they do.
+              Rows are text. Any bar drawn to a shared scale would be a combined
+              total expressed in geometry — the prohibited thing, in a costume.
+              A section holding no observation is OMITTED, never rendered empty:
+              an empty row asserts a measurement happened and returned nothing. */}
+          <Card style={{ marginTop: "var(--space-4)" }}>
+            <div className="pl-breakdown">
+              {results.areas.map((a) => a.kind === "areas"
+                  ? { ...a, handled: placementAreaList(a.handled), harder: placementAreaList(a.harder) }
+                  : a
+              ).filter((a) =>
+                a.kind === "band" ? !!a.level
+                : a.kind === "count" ? a.total > 0
+                /* G-04: a section whose every tag is unmapped has nothing it can
+                   honestly say, so the whole row goes rather than rendering an
+                   empty label. Observed-but-unnameable is not the same as
+                   observed, and neither is it worth an empty line. */
+                : (a.handled.length + a.harder.length) > 0
+              ).map((a, i) => (
+                <div key={i} className="pl-row">
+                  <span className="text-supporting pl-row-name">{a.name}</span>
+                  <span className="pl-row-evidence">
+                    {a.kind === "band" && (
+                      <span className="text-body">{a.level} <span className="text-supporting">{CEFR_LABELS[a.level]}</span></span>
+                    )}
+                    {a.kind === "count" && (
+                      <span className="text-body">{a.correct} of {a.total}</span>
+                    )}
+                    {a.kind === "areas" && (
+                      <span className="pl-areas">
+                        {a.handled.length > 0 && (
+                          <span className="pl-area-line">
+                            <span className="text-supporting pl-area-key">Areas handled</span>
+                            <span className="text-body">{a.handled.join(", ")}</span>
+                          </span>
+                        )}
+                        {a.harder.length > 0 && (
+                          <span className="pl-area-line">
+                            <span className="text-supporting pl-area-key">Areas found harder</span>
+                            <span className="text-body">{a.harder.join(", ")}</span>
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Card>
 
           <div className="leo-accent" style={{ marginTop: "var(--space-5)" }}>
-            <p className="text-leo">Now I know where to start. Let me plan your first lesson.</p>
+            <p className="text-leo">A short test only tells me where to begin — the rest I learn by teaching you. Let's start your first lesson.</p>
           </div>
 
           <button className="primary-btn wide" style={{ marginTop: "var(--space-4)" }} onClick={() => { if (onComplete) onComplete(results); }}>Continue</button>
@@ -1549,6 +1755,105 @@ function _mockWarmUp(pack, avoidCsv) {
   return all.filter((a) => chosen.includes(a));
 }
 
+/* G-05(a) — ONE definition, two readers.
+   Arrival at the end of a lesson is the same observable fact whether the
+   summary was generated first time or regenerated after a QA failure, so it
+   gets the same words, because the student cannot see which path produced
+   them. Two objects meant Leo said different things depending on whether a QA
+   regeneration happened behind the scenes — that is Continuity Integrity, not
+   a copy defect, and it had already caused the retry branch to keep
+   pre-correction wording through two separate honesty passes.
+   ONE CONSTANT, WHOLE. Deliberately not a constant per field: under a shared
+   object, a separate praise constant would be a second source of truth for one
+   field, which is the same fault one level down. An earlier pass made exactly
+   that mistake and it is corrected here.
+   READERS, named: the "closing summary" branch, and the "Regenerate this
+   exercise" summary-retry branch, both in mockAskClaude.
+
+   CONTEXT RECONCILED. The two branches read the lesson context from different
+   prompts and therefore different patterns — the first-pass prompt writes
+   "Context: …", the regeneration prompt writes 'Today's lesson: "…"'. A shared
+   object must not receive two different context strings, so all three patterns
+   are tried here in one place and the fallback is shared. */
+function _closingContext(p) {
+  return _mockPick(p, /\nContext: ([^\n]+)/)
+    || _mockPick(p, /context "([^"]+)"/)
+    || _mockPick(p, /Today's lesson: "([^"]+)"/)
+    || "today's situation";
+}
+
+function _closingSummary(p) {
+  const ctx = _closingContext(p);
+  return {
+    /* Arrival is the ONE performance fact this mock genuinely holds — the
+       summary only renders at the end. Earlier versions fabricated four things
+       it cannot see: that speaking happened (it is skippable), that full
+       sentences were produced, that this built on a previous lesson (false on
+       day one), and — introduced BY the first honesty rewrite, one clause over
+       — that the student traversed the lesson, across 24 skip points where only
+       arrival is observable. */
+    praise: "You got to the end of today's lesson — that's a decision, not luck. Now make it count: before tonight, say one thing from today out loud.",
+    /* Describes the LESSON, not the student. "Today you worked on…" claims the
+       student did the working; "Today's lesson was about…" claims only what the
+       lesson contained. "A real conversation" describes what the language is
+       for, not a quality of anything the student produced. */
+    summary: `Today's lesson was about ${ctx.toLowerCase()} — the words and phrases you need, and how they fit together in a real conversation.`,
+    strength: "You stayed with it to the end. Persistence is the one strength that guarantees all the others grow.",
+    improvement: "A habit worth building: before any request, add a softener — 'could' or 'would you mind'. It instantly makes English sound more polite and more Australian.",
+    connection: "What you practised today isn't app English — it's the exact language this situation needs out there in real life.",
+    tomorrowPreview: "Tomorrow we'll build on this — same teacher, next step. See you then.",
+  };
+}
+
+/* G-05(b) — ONE definition, two readers.
+   These two payloads were byte-identical duplicates: the diary_feedback intent
+   handler, and the text-match fallback branch that serves the same request when
+   no intent tag is present. Replacing the copy in one and not the other is the
+   failure mode Item 4 already demonstrated, so the extraction lands BEFORE any
+   new copy does. When Lessons delivers, it is one edit here.
+   READERS, named: _MOCK_INTENT_HANDLERS.diary_feedback, and the
+   "diary entry" text-match branch in mockAskClaude.
+   `praise` claimed the entry was clear and its vocabulary natural — neither
+   readable by a mock that never sees the entry. Replaced 23 July under G-05(b)
+   with a line that claims only what is observable (an entry was submitted) and
+   points forward. The extraction landed first, deliberately, so this became a
+   single edit rather than two that could diverge. */
+const MOCK_DIARY_FEEDBACK = {
+  praise: "You sat down and wrote in English today — that's the hardest part of keeping a diary. Do it again tomorrow, even if it's only two lines.",
+  reformulation: "A slightly more natural version of your entry would appear here, keeping your meaning and your first-person voice.",
+  errorTypes: (typeof ERROR_TYPES !== "undefined" && ERROR_TYPES.length ? [ERROR_TYPES[0]] : []),
+  tip: "Read your entry aloud once — it's a great way to catch small slips.",
+};
+
+/* ITEM 4 (Lessons v2.1, 23 July) — honest mock speaking replies.
+   The previous mock rotated three fixed praise lines, so a five-character
+   nonsense word was told it was a great start and clearly expressed. A
+   fabricated evaluation from Leo is a trust defect, not a style issue.
+   v2.1 also removed v2's own replacements — "short and CLEAR" and "a full
+   SENTENCE" — because neither comprehensibility nor sentence-hood is knowable
+   from a length check. What follows claims ONLY word count and turn number,
+   both directly measurable. All warmth is carried by the task, which is
+   honest whatever the student typed.
+   Defined once and called from BOTH call sites (the speaking_reply intent
+   handler and the text-match branch) so the two cannot drift apart. */
+const SPEAKING_TIER1 = "I didn't quite catch that one — no stress. Give me one short sentence: what would you say first in this situation?";
+const SPEAKING_TIER2 = "A short one — let's stretch it. Say it again for me as one complete sentence, start to finish.";
+const SPEAKING_TIER3 = [
+  "A longer answer this time. Here's your next turn: imagine they ask you a follow-up question — what would you say?",
+  "Another turn — that's how speaking practice works, one turn at a time. Try this: say your last answer again, but more politely.",
+  "You've taken several turns today — and turns are the unit speaking grows in. Let's carry that into the next part of the lesson.",
+];
+function _mockSpeakingReply(p) {
+  const said = (_mockPick(p, /The student just said: "([^"]*)"/) || "").trim();
+  const turn = (p.match(/Teacher: /g) || []).length;
+  // Tier 1 — nothing recognisable arrived. No praise, and no pretence of one.
+  if (!said || said.length <= 2 || !/[aeiou]/i.test(said) || /^(.)\1*$/.test(said)) return SPEAKING_TIER1;
+  // Tier 2 — 1 to 3 words. Length only; the task does the teaching.
+  if (said.split(/\s+/).length <= 3) return SPEAKING_TIER2;
+  // Tier 3 — longer, keyed by turn. "Another turn", "several turns" are counts.
+  return SPEAKING_TIER3[Math.min(turn, SPEAKING_TIER3.length - 1)];
+}
+
 /* Intent handler table: one entry per call-site intent. Each handler receives
    (prompt, J) where J = JSON.stringify, and returns the mock response. Handlers
    reuse the same helper functions (_mockPick, _mockFindPack, etc.) as the
@@ -1561,7 +1866,19 @@ const _MOCK_INTENT_HANDLERS = {
      failure line, so this ships without touching MOCK_PACKS. */
   warmup_free_response: (p, J) => {
     const answer = (_mockPick(p, /Student's answer: "([^"]*)"/) || "").trim();
-    const pack = _mockFindPack(p);
+    /* Match on the LESSON'S CONTEXT, never the whole prompt. The prompt's own
+       fixed wording contains the word "student" twice — in "Student's answer:"
+       and in "one short sentence to the student" — which is a trigger for the
+       pack whose ctx is "Talking to your teacher". Array.find returns the
+       first match, so that pack became a permanent floor and every pack
+       defined after it was unreachable: a beach lesson answered the student in
+       the teacher pack's voice, and the student's own words steered the match.
+       Measured 8/11 before, 11/11 after (owner-verified, 22 July).
+       This also brings the last call site into line with the other four, which
+       all extract a named field before matching. _mockPick returns "" when the
+       context is absent and _mockFindPack("") returns null, so the fallback
+       below applies — the intended behaviour on that path, currently unreached. */
+    const pack = _mockFindPack(_mockPick(p, /Context: "([^"]*)"/));
     const n = answer.length;
     if (n <= 2) return J({ category: "skip", line: WARMUP_SKIP_LINE });
     if (n <= 15) return J({ category: "minimal", line: (pack && pack.warmupMinimalResponse) || WARMUP_FALLBACK_LINE });
@@ -1581,7 +1898,7 @@ const _MOCK_INTENT_HANDLERS = {
     { title: "6 Minute English", site: "BBC Learning English", url: "https://www.bbc.co.uk/learningenglish", why: "Short listening practice on everyday topics." },
     { title: "Cambridge Dictionary", site: "Cambridge", url: "https://dictionary.cambridge.org", why: "Check new words, meanings and pronunciation." },
   ] }),
-  diary_feedback: (p, J) => J({ praise: "You expressed your ideas clearly and used natural everyday vocabulary — lovely work.", reformulation: "A slightly more natural version of your entry would appear here, keeping your meaning and your first-person voice.", errorTypes: (typeof ERROR_TYPES !== "undefined" && ERROR_TYPES.length ? [ERROR_TYPES[0]] : []), tip: "Read your entry aloud once — it's a great way to catch small slips." }),
+  diary_feedback: (p, J) => J(MOCK_DIARY_FEEDBACK),
   student_analysis: (p) => `This student has been learning with me for a while now. They are making genuine progress — their confidence in everyday situations is growing, and I can see improvement in their willingness to attempt full sentences rather than single words. Their vocabulary is expanding, though some words are still fragile and need more encounters before they stick. Grammar-wise, polite request forms are getting stronger but they still default to direct forms under pressure. Their recent diary entries show they are engaging with English outside class, which is encouraging. They completed a mission recently, and I should ask how it went — that follow-up matters for building trust. Emotionally, they seem motivated but still anxious about speaking to strangers. Today I want to build on that growing confidence.`,
   needs_assessment: (p) => {
     const ctx = _mockPick(p, /asked to work on: "([^"]*)"/);
@@ -1616,16 +1933,7 @@ const _MOCK_INTENT_HANDLERS = {
     const distractorPhrasings = ["doesn't quite work here", "isn't the right fit for this sentence", "would confuse the meaning"];
     return J({ questions: terms.map((t) => ({ word: t, stem: `Which sentence uses "${t}" correctly?`, options: [`This is a natural, correct use of "${t}".`, ...distractorPhrasings.map((d) => `This use of "${t}" ${d}.`)], answer: `This is a natural, correct use of "${t}".`, note: `Well done — that's a natural way to use "${t}".` })) });
   },
-  speaking_reply: (p) => {
-    const said = _mockPick(p, /The student just said: "([^"]*)"/);
-    const turn = (p.match(/Teacher: /g) || []).length;
-    const replies = [
-      `That's a great start — I like how you expressed that. And what would you say next if they asked you a follow-up question?`,
-      "Nice, that sounds natural. Let me push you a little: how would you say it even more politely?",
-      "Lovely work — you communicated clearly and that's what matters most. Let's carry that into the next part of the lesson.",
-    ];
-    return replies[Math.min(turn, replies.length - 1)];
-  },
+  speaking_reply: (p) => _mockSpeakingReply(p),
   vocab_card: (p) => {
     const word = _mockPick(p, /tapped on the word "([^"]+)"/);
     const scen = _mockPick(p, /lesson about "([^"]+)"/);
@@ -1666,7 +1974,7 @@ async function mockAskClaude(prompt, opts) {
   }
   // 3) Diary feedback
   if (p.includes("wrote this diary entry")) {
-    return J({ praise: "You expressed your ideas clearly and used natural everyday vocabulary — lovely work.", reformulation: "A slightly more natural version of your entry would appear here, keeping your meaning and your first-person voice.", errorTypes: (typeof ERROR_TYPES !== "undefined" && ERROR_TYPES.length ? [ERROR_TYPES[0]] : []), tip: "Read your entry aloud once — it's a great way to catch small slips." });
+    return J(MOCK_DIARY_FEEDBACK);
   }
   // 4-pre-a) Stage 1: Student Analysis (plain text, no JSON)
   if (p.includes("write a brief STUDENT ANALYSIS")) {
@@ -1766,16 +2074,10 @@ async function mockAskClaude(prompt, opts) {
   if (p.includes("Regenerate this exercise")) {
     if (p.includes("Your skill exercise")) return _skillPayload(_sectionPack());
     if (p.includes("Your grammar exercise")) return _grammarPayload(_sectionPack());
-    // summary retry falls through to the closing-summary branch below via its shape
-    const ctx2 = _mockPick(p, /Today's lesson: "([^"]+)"/) || "today's situation";
-    return J({
-      praise: "You put in real, specific effort today — you kept going through every stage.",
-      summary: `Today you worked on ${ctx2.toLowerCase()}: the vocabulary, the pronunciation, and putting it together in conversation.`,
-      strength: "Producing full sentences rather than single words.",
-      improvement: "Add one polite softener ('could', 'would you mind') before requests.",
-      connection: "This builds directly on your recent lessons.",
-      tomorrowPreview: "Tomorrow we'll handle the follow-up questions people ask.",
-    });
+    // A summary regeneration returns the SAME object the first-pass branch
+    // returns. The comment that previously sat here claimed this already
+    // happened; it did not, and the branch held its own pre-correction copy.
+    return J(_closingSummary(p));
   }
   // 4c) Section: five grammar practice questions — must test GRAMMAR (structure,
   // word order, verb forms, articles, prepositions), NOT politeness or function.
@@ -1784,26 +2086,11 @@ async function mockAskClaude(prompt, opts) {
   }
   // 4d) Speaking practice — Leo replies as a conversational teacher, plain text
   if (p.includes("continuing a short speaking practice conversation") || p.includes("in a speaking practice about")) {
-    const said = _mockPick(p, /The student just said: "([^"]*)"/);
-    const turn = (p.match(/Teacher: /g) || []).length;
-    const replies = [
-      `That's a great start${said ? "" : ""} — I like how you expressed that. And what would you say next if they asked you a follow-up question?`,
-      "Nice, that sounds natural. Let me push you a little: how would you say it even more politely?",
-      "Lovely work — you communicated clearly and that's what matters most. Let's carry that into the next part of the lesson.",
-    ];
-    return replies[Math.min(turn, replies.length - 1)];
+    return _mockSpeakingReply(p);
   }
   // 4e) Section: closing summary
   if (p.includes("closing summary for today's lesson") || p.includes("closing reflection for today's lesson")) {
-    const ctx = _mockPick(p, /\nContext: ([^\n]+)/) || _mockPick(p, /context "([^"]+)"/) || "today's situation";
-    return J({
-      praise: "You put in real effort today — especially in the speaking practice, where you kept going even when it was challenging.",
-      summary: `Today you worked on ${ctx.toLowerCase()}: the key vocabulary, the pronunciation, and how to put it all together in a real conversation.`,
-      strength: "Your willingness to produce full sentences rather than single words — that's exactly how fluency grows.",
-      improvement: "Next time, try adding one polite softener ('could', 'would you mind') before your requests — it will make you sound instantly more natural.",
-      connection: "This builds directly on what we practised recently — you're stacking real situations one on top of another.",
-      tomorrowPreview: "Tomorrow we'll take this one step further and handle the follow-up questions people ask.",
-    });
+    return J(_closingSummary(p));
   }
   // 4f) Vocabulary card — student taps a highlighted word (non-blueprint words)
   if (p.includes("tapped on the word")) {
@@ -3222,11 +3509,30 @@ function WarmUpFree({ activity, vocab, onVocabTap, onDone, context }) {
     timerRef.current = setTimeout(
       () => settle({ category: "attempt", line: WARMUP_FALLBACK_LINE }, "timeout after 5000ms"), 5000);
     try {
-      // PLACEHOLDER — awaiting Lessons wording. Must not go live as-is.
-      // This is neutral plumbing, not Leo's voice: it exists so the mock path
-      // can run. Shipping it live would put a stranger's words in Leo's mouth.
+      // Leo's voice, delivered by Lessons 22 July. The JSON shape is unchanged,
+      // so the existing parsing, category clamp, timeout and fallback all keep
+      // working. The mock reads "Context:" out of this prompt to select today's
+      // pack — do not reorder or rename that field.
       const raw = await askClaude(
-        `Warm-up free response. Activity prompt: "${activity.prompt}". Context: "${context || ""}". Student's answer: "${a}". Respond ONLY with JSON, no fences: {"category":"skip|minimal|attempt","line":"one short sentence to the student"}`,
+        `You are Leo, an experienced Australian ELICOS teacher, replying to your student's warm-up answer. A warm-up has one job: switch the student into English and make them feel ready. Never correct grammar, spelling or pronunciation here.
+
+Activity prompt: "${activity.prompt}"
+Today's lesson context: "${context || ""}"
+The student typed: "${a}"
+
+First, classify the answer:
+- "skip": no real effort — a single character, repeated characters, punctuation only, or meaningless letters.
+- "minimal": a real answer, but only one or two words, or a short phrase with no detail.
+- "attempt": real communicative content — the student actually said something.
+
+Then write ONE reply line, maximum 35 words, B1 English, warm Australian teacher's voice:
+- skip: reply with exactly this and nothing more: No problem — let's move on.
+- minimal: acknowledge the short answer warmly, connect it to today's lesson context, and ask ONE follow-up question that is EASIER than the original prompt (a choice question or yes/no question works well).
+- attempt: respond to something SPECIFIC the student said — name it in your reply — then connect it to today's lesson.
+
+The generic-praise test: if your line would make equal sense no matter what the student typed, rewrite it. Never invent details the student did not give you. Never praise a skip.
+
+Respond ONLY with JSON, no fences: {"category":"skip|minimal|attempt","line":"your one reply line"}`,
         { intent: "warmup_free_response" }
       );
       const d = parseJSON(raw);
@@ -3782,7 +4088,20 @@ function PronunciationSection({ bp, onVocabTap, onSkip, onDone }) {
   const [showTable, setShowTable] = useState(!focusSections);
   if (done) return (
     <SectionShell title="Say it like a local" onSkip={onSkip}>
-      <StageComplete message={{ title: "Well done!", sub: "Saying it out loud is how pronunciation actually changes — that's the hard bit done." }} onContinue={onDone} />
+      {/* Part B rev 2. The microphone is optional and `done` is set by the
+          Continue button, so the old line asserted an act never observed.
+          `heard` is a SINGLE STRING holding the most recent transcript — it is
+          evidence that speech was captured and nothing more. It carries no
+          count, so no copy here may quantify the speaking.
+          NOTE: a different `heard` exists elsewhere in the file as an array.
+          This is not that one. */}
+      <StageComplete message={
+        heard
+          ? { title: "You had a go out loud.",
+              sub: "That's the part that actually changes pronunciation. Keep going with the rest of today's words — out loud, even quietly, wherever you are." }
+          : { title: "That's the sounds covered.",
+              sub: "You've seen how these words are built. Pronunciation only changes once the words leave your mouth — say three of them out loud before today's over." }
+      } onContinue={onDone} />
     </SectionShell>
   );
   return (
@@ -3909,7 +4228,22 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
 
   if (phase === "done") return (
     <SectionShell title="Speaking practice" onSkip={onSkip}>
-      <StageComplete message={{ title: "Excellent!", sub: `${youTurns} turn${youTurns === 1 ? "" : "s"} of real conversation — that's the part most students avoid, and you did it.` }}
+      {/* Part B rev 2. "Excellent!" was awarded before anything was known and
+          fired for "s". "N turns of REAL CONVERSATION" attached a fabricated
+          adjective to a true number — a count is observation, its quality is
+          not. The count now appears ONCE, and every screen ends with a next
+          step rather than a verdict. youTurns is the only thing knowable here;
+          nothing about content, ever. */}
+      <StageComplete message={
+        youTurns === 0
+          ? { title: "Speaking practice",
+              sub: "No turns this time. Speaking is the one part of English that only moves when you actually use it — it's here whenever you're ready." }
+          : youTurns === 1
+          ? { title: "You spoke once.",
+              sub: "Speaking is the hardest skill to practise on your own. Next time, stay in for one turn longer than feels comfortable — that's where it grows." }
+          : { title: `You spoke ${youTurns} times.`,
+              sub: "Speaking is the hardest skill to practise on your own. Next time, aim for one more turn than today — that's how the habit builds." }
+      }
         onContinue={() => onDone(youTurns)} />
     </SectionShell>
   );
@@ -4652,7 +4986,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
         if (data.questions.length < 3) throw new Error("grammar section invalid");
       } else {
         const perf = lesson.perf || {};
-        raw = await askClaude(`You are Leo, an experienced ELICOS teacher, writing the closing reflection for today's lesson.\nContext: ${bp.context}\nObjective: ${bp.communicativeObjective}\nEmotional objective: ${bp.emotionalObjective || "build confidence"}\nLearning outcome: ${bp.learningOutcome}\nMemorable moment: ${bp.memorableMoment || ""}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\nTomorrow: ${bp.tomorrowConnection || ""}\nStudent: ${memory}\nPerformance: vocab ${perf.vocab || "not attempted"}, comprehension ${perf.skill || "not attempted"}, grammar ${perf.grammar || "not attempted"}, speaking turns ${perf.speak || 0}\n${priorCtx}\n\nWrite a closing summary as a teacher who genuinely cares. Praise SPECIFIC effort. Name what they can now DO. Reference the memorable moment if appropriate. Name one strength. Suggest ONE improvement connected to predicted difficulties. Connect today to their journey. Preview tomorrow so they want to come back. They should close feeling: "${bp.emotionalObjective || "more confident"}".\nRespond ONLY with JSON, no fences: {"praise":"","summary":"","strength":"","improvement":"","connection":"","tomorrowPreview":""}`,
+        raw = await askClaude(`You are Leo, an experienced ELICOS teacher, writing the closing reflection for today's lesson.\nContext: ${bp.context}\nObjective: ${bp.communicativeObjective}\nEmotional objective: ${bp.emotionalObjective || "build confidence"}\nToday's objective — what the lesson aimed at, NOT an achievement to certify: ${bp.learningOutcome}\nMemorable moment: ${bp.memorableMoment || ""}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\nTomorrow: ${bp.tomorrowConnection || ""}\nStudent: ${memory}\nPerformance: vocab ${perf.vocab || "not attempted"}, comprehension ${perf.skill || "not attempted"}, grammar ${perf.grammar || "not attempted"}, speaking turns ${perf.speak || 0}\n${priorCtx}\n\nWrite a closing summary as a teacher who genuinely cares. Praise SPECIFIC effort. Name what they can now DO. Reference the memorable moment if appropriate. Name one strength. Suggest ONE improvement connected to predicted difficulties. Connect today to their journey. Preview tomorrow so they want to come back. They should close feeling: "${bp.emotionalObjective || "more confident"}".\nRespond ONLY with JSON, no fences: {"praise":"","summary":"","strength":"","improvement":"","connection":"","tomorrowPreview":""}`,
           { intent: "lesson_summary" });
         data = parseJSON(raw);
         if (!data.praise) throw new Error("summary invalid");
@@ -4689,7 +5023,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       const fallback = stageId === "grammar"
         ? { grammarPoint: bp.grammar && bp.grammar.point, questions: [], explanationOnly: true }
         : stageId === "summary"
-          ? { praise: "You showed up and did the work today — that's what progress is made of.", summary: `Today you practised ${bp.context.toLowerCase()}.`, strength: "Your persistence.", improvement: "Keep using today's phrases out loud.", connection: "Every lesson builds on the last.", tomorrowPreview: "Tomorrow we'll build on this again." }
+          ? { praise: "You showed up and did the work today — that's what progress is made of.", summary: `Today you practised ${bp.context.toLowerCase()}.`, strength: "Your persistence.", improvement: "Keep using today's phrases out loud.", connection: "Today's language belongs outside this app — use one line of it the next time you're in that situation.", tomorrowPreview: "Tomorrow we'll build on this again." }
           : null;
       if (fallback) await persist({ ...lesson, sections: { ...lesson.sections, [stageId]: fallback } });
       else await persist({ ...lesson, sections: { ...lesson.sections, [stageId]: { skipped: true } } });
@@ -5422,9 +5756,24 @@ function SignedInContext({ profile }) {
   return null;
 }
 
-function Onboarding({ onDone, initialPage, initialProfile }) {
+/* §13.1 — the sequence lives in ONE declared constant and nowhere else.
+   Two queued changes insert screens. `setObResume` hard-codes its destination
+   from OUTSIDE this component, so it cannot see what it points at; with
+   numeric pages, each inserting pass adjusts that literal for its own change
+   and the last one wins. The symptom is a returning student resuming at the
+   wrong screen — Continuity Integrity arriving as an off-by-one. Named steps
+   put it beyond reach of any insertion.
+   `'interests'` is NOT here yet: it is still inside 'about-you' and is
+   separated by step (b). A named step no screen renders would be a constant
+   with no reader. */
+const OB_STEPS = ["language", "welcome", "about-you", "level"];
+
+function Onboarding({ onDone, initialStep, initialProfile }) {
   const ip = initialProfile || {};
-  const [page, setPage] = useState(initialPage || 1); // 1=language, 2=meet leo, 3=get to know, 4=level choice
+  const [obStep, setObStep] = useState(initialStep || OB_STEPS[0]);
+  // Navigation derives from position in OB_STEPS. Nothing else encodes order.
+  const next = () => setObStep(OB_STEPS[Math.min(OB_STEPS.indexOf(obStep) + 1, OB_STEPS.length - 1)]);
+  const back = () => setObStep(OB_STEPS[Math.max(OB_STEPS.indexOf(obStep) - 1, 0)]);
   const [lang, setLang] = useState(ip.lang || null);
   const [name, setName] = useState(ip.name || "");
   const [country, setCountry] = useState(ip.country || "");
@@ -5449,6 +5798,19 @@ function Onboarding({ onDone, initialPage, initialProfile }) {
 
   /* Hardcoded L1 translations for Leo's greeting.
      zh/es/pt: reviewed. fr/de/sv/ja/ko: best-effort, flagged for professional review. */
+  /* L1 EQUIVALENCE PRINCIPLE — clause 6 suppression, 22 July 2026.
+     All eight HELLO_L1 entries fail clause 3: each was authored against the
+     English FIRST sentence only, so the L1 line says less than the English
+     says. Constitution has voided their sign-offs, so no entry may ship.
+     Clause 6: where equivalence cannot be achieved, fall back to English IN
+     FULL rather than L1 in part.
+     The strings and the render are KEPT, not deleted. Reversal is expected
+     language by language as each passes native-speaker review against the
+     reviewer specification, starting with German, French and Japanese — the
+     three the variety register unblocks.
+     TO REVERSE: add the language code to this list. Nothing else changes. */
+  const HELLO_L1_REVIEWED = [];
+
   const HELLO_L1 = {
     zh: "你好，我是Leo。",
     es: "Hola, soy Leo.",
@@ -5461,7 +5823,7 @@ function Onboarding({ onDone, initialPage, initialProfile }) {
   };
 
   // ── PAGE 1: THE LANGUAGE ── (no Back)
-  if (page === 1) return (
+  if (obStep === "language") return (
     <div className="onboard">
       <div className="ob-card fade-in" style={{ textAlign: "left" }}>
         <p className="text-leo" style={{ marginBottom: "var(--space-4)" }}>What is your first language?</p>
@@ -5470,7 +5832,7 @@ function Onboarding({ onDone, initialPage, initialProfile }) {
             <button key={code}
               className={"card" + (lang === code ? " leo-card" : "")}
               style={{ textAlign: "left", cursor: "pointer", padding: "14px 16px", border: lang === code ? undefined : "1px solid var(--text-tertiary)" }}
-              onClick={() => { setLang(code); setTimeout(() => setPage(2), 300); }}>
+              onClick={() => { setLang(code); setTimeout(next, 300); }}>
               <span style={{ fontWeight: 600 }}>{l.native}</span>
               <span className="text-supporting" style={{ marginLeft: 8 }}>{l.english}</span>
             </button>
@@ -5481,7 +5843,7 @@ function Onboarding({ onDone, initialPage, initialProfile }) {
   );
 
   // ── PAGE 2: MEET LEO ── (Back → Page 1)
-  if (page === 2) return (
+  if (obStep === "welcome") return (
     <div className="onboard">
       <div className="ob-card fade-in" style={{ textAlign: "left" }}>
         <div className="leo-accent" style={{ marginBottom: "var(--space-5)" }}>
@@ -5489,24 +5851,24 @@ function Onboarding({ onDone, initialPage, initialProfile }) {
             Hi. I'm Leo.
           </p>
           <p className="text-leo" style={{ marginBottom: "var(--space-3)" }}>
-            I'm here to help you with your English in Australia.
+            I'm your English teacher here in Australia.
           </p>
-          {HELLO_L1[lang] && (
+          {HELLO_L1_REVIEWED.includes(lang) && HELLO_L1[lang] && (
             <p className="text-supporting" style={{ opacity: 0.65, fontStyle: "italic" }}>
               {HELLO_L1[lang]}
             </p>
           )}
         </div>
         <div style={{ display: "flex", gap: "var(--space-2)" }}>
-          <button className="ghost-btn" onClick={() => setPage(1)}>Back</button>
-          <button className="primary-btn" onClick={() => setPage(3)}>Continue</button>
+          <button className="ghost-btn" onClick={back}>Back</button>
+          <button className="primary-btn" onClick={next}>Continue</button>
         </div>
       </div>
     </div>
   );
 
   // ── PAGE 3: GET TO KNOW YOU ── (Back → Page 2)
-  if (page === 3) return (
+  if (obStep === "about-you") return (
     <div className="onboard">
       <div className="ob-card fade-in" style={{ textAlign: "left" }}>
         <p className="text-leo" style={{ marginBottom: "var(--space-4)" }}>I'd like to get to know you a little.</p>
@@ -5518,7 +5880,7 @@ function Onboarding({ onDone, initialPage, initialProfile }) {
         <label className="input-label" style={{ marginTop: "var(--space-3)" }}>Your language</label>
         <div className="card" style={{ padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span>{LANGS[lang] ? `${LANGS[lang].native} — ${LANGS[lang].english}` : "Not selected"}</span>
-          <button className="ghost-btn" style={{ minHeight: "auto", padding: "4px 10px", fontSize: 13 }} onClick={() => setPage(1)}>Change language</button>
+          <button className="ghost-btn" style={{ minHeight: "auto", padding: "4px 10px", fontSize: 13 }} onClick={() => setObStep("language")}>Change language</button>
         </div>
 
         <label className="input-label" style={{ marginTop: "var(--space-3)" }}>Where are you from?</label>
@@ -5536,15 +5898,15 @@ function Onboarding({ onDone, initialPage, initialProfile }) {
         </div>
 
         <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
-          <button className="ghost-btn" onClick={() => setPage(2)}>Back</button>
-          <button className="primary-btn" disabled={!name.trim()} onClick={() => setPage(4)}>Continue</button>
+          <button className="ghost-btn" onClick={back}>Back</button>
+          <button className="primary-btn" disabled={!name.trim()} onClick={next}>Continue</button>
         </div>
       </div>
     </div>
   );
 
   // ── PAGE 4: LEVEL PICKER sub-view ── (Back → Page 4 main)
-  if (page === 4 && showLevelPicker) return (
+  if (obStep === "level" && showLevelPicker) return (
     <div className="onboard">
       <div className="ob-card fade-in" style={{ textAlign: "left" }}>
         <p className="text-leo" style={{ marginBottom: "var(--space-3)" }}>Select your English level</p>
@@ -5565,7 +5927,7 @@ function Onboarding({ onDone, initialPage, initialProfile }) {
   );
 
   // ── PAGE 4: CEFR LEVEL CHOICE ── (Back → Page 3)
-  if (page === 4) return (
+  if (obStep === "level") return (
     <div className="onboard">
       <div className="ob-card fade-in" style={{ textAlign: "left" }}>
         <p className="text-leo" style={{ marginBottom: "var(--space-4)" }}>One last thing, {name.trim() || "there"} — what is your English level?</p>
@@ -5582,8 +5944,15 @@ function Onboarding({ onDone, initialPage, initialProfile }) {
           <span className="level-choice-badge">Recommended</span>
         </button>
 
+        {/* English only — no L1 line. Under the ratified L1 Equivalence
+            Principle a new string ships in English until a reviewer holding
+            the specification has passed it in the named variety. */}
+        <p className="text-supporting" style={{ marginTop: "var(--space-3)" }}>
+          Right now I teach at one level, so today's lesson is the same either way. Whichever you pick is a starting point, not a verdict — once I'm teaching every level, I'll adjust it as I get to know you.
+        </p>
+
         <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-3)" }}>
-          <button className="ghost-btn" onClick={() => setPage(3)}>Back</button>
+          <button className="ghost-btn" onClick={back}>Back</button>
         </div>
       </div>
     </div>
@@ -5650,7 +6019,7 @@ function ReviewPage({ profile, memory, leoMemory, words, heard, diaryPages, mark
       const termLines = chosenItems.map((it) => `"${it.term}" (from ${it.src}${it.meaning ? "; means: " + it.meaning : ""})`).join("; ");
       try {
         const raw = await askClaude(
-          `You are Leo, a warm Australian English teacher. Build a short, personalised vocabulary review for your student (${memory}). Use ONLY these words and phrases the student has learned: ${termLines}.${diaryContext ? ` Recent things they wrote in their diary: "${diaryContext}".` : ""} Build a RETRIEVAL LADDER across the set, staying multiple-choice throughout (same format, same length): the FIRST question is easy RECOGNITION (match the word to its meaning); the MIDDLE questions are RECALL (a fill-in-the-blank sentence with ___ where only the target word fits in context); the LAST question(s) test PRODUCTIVE USE (which sentence uses the word correctly and naturally in a real Australian situation). Australian context is welcome, and you may gently reference where an item came from (their diary or something they heard). ADAPT to the learner: pitch difficulty and distractors to their CEFR ${levelFor(profile)} level and recent performance (subtler distractors and richer sentences if they are strong; clearer and shorter if they are lower level). Respond ONLY with JSON, no fences: {"questions":[{"word":"the word","stem":"the question or fill-in-the-blank sentence using ___ for the gap","options":["four options"],"answer":"the exact text of the correct option","note":"one short, encouraging explanation from Leo that teaches, not just confirms"}]} Make up to 5 questions that climb from recognition to production; plausible distractors.`,
+          `You are Leo, a warm Australian English teacher. Build a short, personalised vocabulary review for your student (${memory}). Use ONLY these words and phrases you have taught this student: ${termLines}.${diaryContext ? ` Recent things they wrote in their diary: "${diaryContext}".` : ""} Build a RETRIEVAL LADDER across the set, staying multiple-choice throughout (same format, same length): the FIRST question is easy RECOGNITION (match the word to its meaning); the MIDDLE questions are RECALL (a fill-in-the-blank sentence with ___ where only the target word fits in context); the LAST question(s) test PRODUCTIVE USE (which sentence uses the word correctly and naturally in a real Australian situation). Australian context is welcome, and you may gently reference where an item came from (their diary or something they heard). ADAPT to the learner: pitch difficulty and distractors to their CEFR ${levelFor(profile)} level and recent performance (subtler distractors and richer sentences if they are strong; clearer and shorter if they are lower level). Respond ONLY with JSON, no fences: {"questions":[{"word":"the word","stem":"the question or fill-in-the-blank sentence using ___ for the gap","options":["four options"],"answer":"the exact text of the correct option","note":"one short, encouraging explanation from Leo that teaches, not just confirms"}]} Make up to 5 questions that climb from recognition to production; plausible distractors.`,
           { intent: "vocab_review" }
         );
         const qs = (parseJSON(raw).questions || []).filter((q) => q && q.options && q.options.includes(q.answer));
@@ -5753,7 +6122,7 @@ export default function App() {
   const [authView, setAuthView] = useState("landing"); // "landing" | "signup" | "signin"
   // Owned here, not in WelcomeLanding: that component unmounts when authView
   // changes, so Back must find the step the student actually left from.
-  const [landingStep, setLandingStep] = useState(0);
+  const [landingSlide, setLandingSlide] = useState(0);
   const [showLeoReveal, setShowLeoReveal] = useState(false);
   // §4.2 — the logo draw IS the loading state. There is no separate boot
   // screen: showing a generic loader and then the brand spends the student's
@@ -5771,7 +6140,7 @@ export default function App() {
   const [pendingAsk, setPendingAsk] = useState(null);
   const [todayDone, setTodayDone] = useState({ task: false, vocab: false }); // grouped: Phase 8
   const [placementDone, setPlacementDone] = useState(undefined); // undefined=loading, true/false
-  const [obResume, setObResume] = useState(null); // {page, profile} when returning from placement
+  const [obResume, setObResume] = useState(null); // {step, profile} when returning from placement
   // Navigation state (A1/A3). MUST stay above the early-return chain below —
   // placementDone flipping false->true lets render pass those returns for the
   // first time, and any hook underneath would run on that render but not the
@@ -5863,7 +6232,7 @@ export default function App() {
     return (
       <div className="app">
         <style>{CSS}</style>
-        {authView === "landing" && <WelcomeLanding step={landingStep} setStep={setLandingStep} onSignUp={() => setAuthView("signup")} onSignIn={() => setAuthView("signin")} />}
+        {authView === "landing" && <WelcomeLanding slide={landingSlide} setSlide={setLandingSlide} onSignUp={() => setAuthView("signup")} onSignIn={() => setAuthView("signin")} />}
         {authView === "signup" && <SignUpPage onBack={() => setAuthView("landing")} onComplete={(user) => { setAuthUser(user); setShowLeoReveal(true); setProfile(null); setPlacementDone(false); }} />}
         {authView === "signin" && <SignInPage onBack={() => setAuthView("landing")} onComplete={async (user) => {
           setAuthUser(user);
@@ -5892,7 +6261,7 @@ export default function App() {
     return (
       <div className="app">
         <style>{CSS}</style>
-        <Onboarding initialPage={obResume ? obResume.page : undefined} initialProfile={obResume ? obResume.profile : undefined} onDone={async (p, wantsPlacement) => {
+        <Onboarding initialStep={obResume ? obResume.step : undefined} initialProfile={obResume ? obResume.profile : undefined} onDone={async (p, wantsPlacement) => {
           setObResume(null);
           /* ORDER IS LOAD-BEARING. placementDone is false from sign-up. Setting
              profile first and placementDone after an await renders one frame
@@ -5925,7 +6294,7 @@ export default function App() {
             // Leaving the test moves the student BACK outside the gate, never through it.
             // Any part-finished attempt is cleared so it can never look complete.
             await saveKey("esl-placement", null);
-            setObResume({ page: 4, profile });
+            setObResume({ step: "level", profile });
             setProfile(null);
             setPlacementDone(false);
           }}>Back</button>
@@ -6763,8 +7132,19 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .confidence-slider::-moz-range-thumb{width:24px; height:24px; border-radius:50%; background:var(--euca); cursor:pointer; border:3px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,.18);}
 .confidence-val{font-family:'Fraunces',serif; font-size:22px; font-weight:700; color:var(--euca-deep); min-width:44px; text-align:center;}
 .placement-overall{display:flex; flex-direction:column; align-items:center; padding:20px 0 14px; gap:2px;}
-.placement-overall-label{font-size:13px; text-transform:uppercase; letter-spacing:1px; color:var(--euca); font-weight:700;}
 .placement-overall-level{font-family:'Fraunces',serif; font-size:52px; font-weight:700; color:var(--euca-deep); line-height:1.1;}
+/* ---- Placement breakdown — new design system only. No Fraunces, no .fade-in.
+   --divider is legitimate here: rules BETWEEN rows inside a card, never an
+   outer edge. Deliberately no green/red on the two area lists — a
+   correct/incorrect palette turns an observation into a mark. ---- */
+.pl-breakdown{display:flex; flex-direction:column;}
+.pl-row{display:flex; justify-content:space-between; align-items:flex-start; gap:var(--space-4); padding:var(--space-3) 0; border-top:1px solid var(--divider);}
+.pl-row:first-child{border-top:none;}
+.pl-row-name{color:var(--text-secondary); flex-shrink:0;}
+.pl-row-evidence{text-align:right; color:var(--text-primary);}
+.pl-areas{display:flex; flex-direction:column; gap:var(--space-2);}
+.pl-area-line{display:flex; flex-direction:column; gap:2px;}
+.pl-area-key{color:var(--text-tertiary);}
 .placement-overall-desc{font-size:16px; color:var(--ink); opacity:.7;}
 .placement-skill-row{display:flex; align-items:center; gap:10px; margin:10px 0;}
 .placement-skill-name{width:130px; font-size:14px; font-weight:600; color:var(--euca-deep);}
