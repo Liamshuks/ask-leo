@@ -334,6 +334,21 @@ function _mockPick(p, re) { const m = p.match(re); return m ? m[1] : ""; }
    Lessons' wording is outstanding; permanent is not. */
 const WARMUP_SKIP_LINE = "No problem — let's move on.";     // judgement: nothing meaningful was typed
 const WARMUP_FALLBACK_LINE = "Got it — let's keep going.";  // failure only, never an AI call
+
+// G-10(2): closing-summary honesty rules, held once so the first-pass summary
+// prompt and (once Genesis rules) the summary retry can never drift apart.
+// Static text, no interpolation.
+const SUMMARY_HONESTY_RULES = `WHAT YOU KNOW, AND WHAT YOU DO NOT
+The Performance line above is your only evidence about what this student did today. Where it reads "not attempted", that stage did not happen: do not mention it, do not praise it, do not imply it took place. You have scores and a turn count — you did not see or hear anything they produced. Never describe the quality of their English.
+
+- Praise SPECIFIC effort, drawn from the Performance line: a score, a number of speaking turns, a stage completed. If little was attempted, praise the fact that they came and finished, and say nothing further about performance.
+- Do NOT tell the student what they can now do. One lesson does not make a skill, and nothing above tells you they acquired anything. Name what they PRACTISED, then point forward to where it gets used: "Today you practised X — next time you're in that situation, try one line of it."
+- Name one strength the Performance line actually shows. If it shows nothing, name the strength of finishing, and nothing else.
+- Suggest ONE improvement drawn from the predicted difficulties. These were predicted BEFORE the lesson and you did not observe them: frame each as worth practising, never as something the student got wrong.
+- Reference the memorable moment only as part of today's lesson — never as something you saw them enjoy, notice or understand.
+- Connect today to their journey ONLY if the prior-lesson context above is non-empty. If it is empty this is their first lesson with you: say so warmly, and never imply a history that does not exist.
+- Preview tomorrow as your intention, not as a promise of specific content.
+- Every field must leave the student with something to do or somewhere to go next. A closing screen that only grades is a receipt, not teaching.`;
 // Shared mock content packs: one pack = one coherent real-life situation.
 // Every mock lesson branch (blueprint, reading, listening, grammar, summary)
 // draws from the SAME pack so offline lessons never mix scenarios.
@@ -980,13 +995,13 @@ function WelcomeLanding({ slide, setSlide, onSignUp, onSignIn }) {
   if (slide === 2) return (
     <div className="onboard" key="page3">
       <div className="intro-page">
-<h2 className="intro-heading pop-in pop-d2">Leo remembers what you learn.</h2>
+<h2 className="intro-heading pop-in pop-d2">I'll remember what you learn.</h2>
         {/* G-10(5). The previous line promised a shared history to a student who
             has none yet — false at the exact moment it rendered, on the first
             screen they ever see. The replacement says what is true now, and
             what follows from it.
-            The HEADING above is untouched: third-person self-reference on the
-            same card, flagged but not briefed, awaiting a Genesis ruling. */}
+            The HEADING above was also changed under G-10(5): it was third person on the
+            same card; Genesis ruled it in G-10(5), so it is now Leo's first person. */}
         <p className="intro-body pop-in pop-d3">Today I'm meeting you for the first time, so I don't know you yet. From here, what you find hard is what I plan around.</p>
         <button className="primary-btn wide pop-in pop-d7" onClick={() => setSlide(3)}>Next</button>
       </div>
@@ -2833,7 +2848,7 @@ function DiaryPage({ profile, memory, leoMemory, pages, setPages, markActivity, 
     setBusy("feedback");
     try {
       const raw = await askClaude(
-        `You are Leo, a kind, encouraging Australian English teacher who knows this student well (${memory}). Celebrate strengths before mistakes, and only mention the mistakes that matter most. Teach like an expert: rather than only correcting, give a gentle HINT that helps them fix one thing themselves, and where their English is already good, UPGRADE it to more natural or more Australian phrasing. The student wrote this diary entry:\n\n"${notesDraft}"\n\nRespond ONLY with JSON, no markdown fences, exactly this shape:\n{"praise":"one specific, genuine thing they did well in English","reformulation":"a natural, native-like version of their entry, keeping their meaning and first person voice","errorTypes":["up to 3 items from this list only: ${ERROR_TYPES.join(", ")}, or an empty array if none"],"tip":"one short, friendly coaching tip in simple English that either prompts them to self-correct ONE specific thing (a hint, not the full answer) or upgrades a good sentence into more natural English"}`,
+        `You are Leo, a kind, encouraging Australian English teacher who knows this student well (${memory}). Celebrate strengths before mistakes, and only mention the mistakes that matter most. Teach like an expert: rather than only correcting, give a gentle HINT that helps them fix one thing themselves, and where their English is already good, UPGRADE it to more natural or more Australian phrasing. The student wrote this diary entry:\n\n"${notesDraft}"\n\nRespond ONLY with JSON, no markdown fences, exactly this shape:\n{"praise":"one specific, genuine thing they did well in English — name or quote the actual words you are praising, so it could not have been written about anyone else's entry","reformulation":"a natural, native-like version of their entry, keeping their meaning and first person voice","errorTypes":["up to 3 items from this list only: ${ERROR_TYPES.join(", ")}, or an empty array if none"],"tip":"one short, friendly coaching tip in simple English that either prompts them to self-correct ONE specific thing (a hint, not the full answer) or upgrades a good sentence into more natural English"}`,
         { intent: "diary_feedback" }
       );
       const fb = parseJSON(raw);
@@ -4986,7 +5001,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
         if (data.questions.length < 3) throw new Error("grammar section invalid");
       } else {
         const perf = lesson.perf || {};
-        raw = await askClaude(`You are Leo, an experienced ELICOS teacher, writing the closing reflection for today's lesson.\nContext: ${bp.context}\nObjective: ${bp.communicativeObjective}\nEmotional objective: ${bp.emotionalObjective || "build confidence"}\nToday's objective — what the lesson aimed at, NOT an achievement to certify: ${bp.learningOutcome}\nMemorable moment: ${bp.memorableMoment || ""}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\nTomorrow: ${bp.tomorrowConnection || ""}\nStudent: ${memory}\nPerformance: vocab ${perf.vocab || "not attempted"}, comprehension ${perf.skill || "not attempted"}, grammar ${perf.grammar || "not attempted"}, speaking turns ${perf.speak || 0}\n${priorCtx}\n\nWrite a closing summary as a teacher who genuinely cares. Praise SPECIFIC effort. Name what they can now DO. Reference the memorable moment if appropriate. Name one strength. Suggest ONE improvement connected to predicted difficulties. Connect today to their journey. Preview tomorrow so they want to come back. They should close feeling: "${bp.emotionalObjective || "more confident"}".\nRespond ONLY with JSON, no fences: {"praise":"","summary":"","strength":"","improvement":"","connection":"","tomorrowPreview":""}`,
+        raw = await askClaude(`You are Leo, an experienced ELICOS teacher, writing the closing reflection for today's lesson.\nContext: ${bp.context}\nObjective: ${bp.communicativeObjective}\nEmotional objective: ${bp.emotionalObjective || "build confidence"}\nToday's objective — what the lesson aimed at, NOT an achievement to certify: ${bp.learningOutcome}\nMemorable moment: ${bp.memorableMoment || ""}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\nTomorrow: ${bp.tomorrowConnection || ""}\nStudent: ${memory}\nPerformance: vocab ${perf.vocab || "not attempted"}, comprehension ${perf.skill || "not attempted"}, grammar ${perf.grammar || "not attempted"}, speaking turns ${perf.speak || 0}\n${priorCtx}\n\nWrite a closing summary as a teacher who genuinely cares.\n\n${SUMMARY_HONESTY_RULES}\n\nThey should close feeling: "${bp.emotionalObjective || "more confident"}".\nRespond ONLY with JSON, no fences: {"praise":"","summary":"","strength":"","improvement":"","connection":"","tomorrowPreview":""}`,
           { intent: "lesson_summary" });
         data = parseJSON(raw);
         if (!data.praise) throw new Error("summary invalid");
@@ -6019,7 +6034,7 @@ function ReviewPage({ profile, memory, leoMemory, words, heard, diaryPages, mark
       const termLines = chosenItems.map((it) => `"${it.term}" (from ${it.src}${it.meaning ? "; means: " + it.meaning : ""})`).join("; ");
       try {
         const raw = await askClaude(
-          `You are Leo, a warm Australian English teacher. Build a short, personalised vocabulary review for your student (${memory}). Use ONLY these words and phrases you have taught this student: ${termLines}.${diaryContext ? ` Recent things they wrote in their diary: "${diaryContext}".` : ""} Build a RETRIEVAL LADDER across the set, staying multiple-choice throughout (same format, same length): the FIRST question is easy RECOGNITION (match the word to its meaning); the MIDDLE questions are RECALL (a fill-in-the-blank sentence with ___ where only the target word fits in context); the LAST question(s) test PRODUCTIVE USE (which sentence uses the word correctly and naturally in a real Australian situation). Australian context is welcome, and you may gently reference where an item came from (their diary or something they heard). ADAPT to the learner: pitch difficulty and distractors to their CEFR ${levelFor(profile)} level and recent performance (subtler distractors and richer sentences if they are strong; clearer and shorter if they are lower level). Respond ONLY with JSON, no fences: {"questions":[{"word":"the word","stem":"the question or fill-in-the-blank sentence using ___ for the gap","options":["four options"],"answer":"the exact text of the correct option","note":"one short, encouraging explanation from Leo that teaches, not just confirms"}]} Make up to 5 questions that climb from recognition to production; plausible distractors.`,
+          `You are Leo, a warm Australian English teacher. Build a short, personalised vocabulary review for your student (${memory}). Use ONLY these words and phrases you have taught this student: ${termLines}. The list records what they have MET, not what they have mastered. Do not tell the student they have learned, mastered or know a word — the review exists precisely because that is still uncertain.${diaryContext ? ` Recent things they wrote in their diary: "${diaryContext}".` : ""} Build a RETRIEVAL LADDER across the set, staying multiple-choice throughout (same format, same length): the FIRST question is easy RECOGNITION (match the word to its meaning); the MIDDLE questions are RECALL (a fill-in-the-blank sentence with ___ where only the target word fits in context); the LAST question(s) test PRODUCTIVE USE (which sentence uses the word correctly and naturally in a real Australian situation). Australian context is welcome, and you may gently reference where an item came from (their diary or something they heard). ADAPT to the learner: pitch difficulty and distractors to their CEFR ${levelFor(profile)} level and recent performance (subtler distractors and richer sentences if they are strong; clearer and shorter if they are lower level). Respond ONLY with JSON, no fences: {"questions":[{"word":"the word","stem":"the question or fill-in-the-blank sentence using ___ for the gap","options":["four options"],"answer":"the exact text of the correct option","note":"one short, encouraging explanation from Leo that teaches, not just confirms"}]} Make up to 5 questions that climb from recognition to production; plausible distractors.`,
           { intent: "vocab_review" }
         );
         const qs = (parseJSON(raw).questions || []).filter((q) => q && q.options && q.options.includes(q.answer));
