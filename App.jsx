@@ -4984,6 +4984,8 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
     const priorCtx = [
       prior.skill && prior.skill.passage ? `The reading/listening passage used today was: "${prior.skill.passage.slice(0, 250)}"` : "",
     ].filter(Boolean).join("\n");
+    const perf = lesson.perf || {};
+    const perfLine = `Performance: vocab ${perf.vocab || "not attempted"}, comprehension ${perf.skill || "not attempted"}, grammar ${perf.grammar || "not attempted"}, speaking turns ${perf.speak || 0}`;
     try {
       let raw, data;
       if (stageId === "skill") {
@@ -5000,8 +5002,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
         data.questions = validateQuestions(data.questions);
         if (data.questions.length < 3) throw new Error("grammar section invalid");
       } else {
-        const perf = lesson.perf || {};
-        raw = await askClaude(`You are Leo, an experienced ELICOS teacher, writing the closing reflection for today's lesson.\nContext: ${bp.context}\nObjective: ${bp.communicativeObjective}\nEmotional objective: ${bp.emotionalObjective || "build confidence"}\nToday's objective — what the lesson aimed at, NOT an achievement to certify: ${bp.learningOutcome}\nMemorable moment: ${bp.memorableMoment || ""}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\nTomorrow: ${bp.tomorrowConnection || ""}\nStudent: ${memory}\nPerformance: vocab ${perf.vocab || "not attempted"}, comprehension ${perf.skill || "not attempted"}, grammar ${perf.grammar || "not attempted"}, speaking turns ${perf.speak || 0}\n${priorCtx}\n\nWrite a closing summary as a teacher who genuinely cares.\n\n${SUMMARY_HONESTY_RULES}\n\nThey should close feeling: "${bp.emotionalObjective || "more confident"}".\nRespond ONLY with JSON, no fences: {"praise":"","summary":"","strength":"","improvement":"","connection":"","tomorrowPreview":""}`,
+        raw = await askClaude(`You are Leo, an experienced ELICOS teacher, writing the closing reflection for today's lesson.\nContext: ${bp.context}\nObjective: ${bp.communicativeObjective}\nEmotional objective: ${bp.emotionalObjective || "build confidence"}\nToday's objective — what the lesson aimed at, NOT an achievement to certify: ${bp.learningOutcome}\nMemorable moment: ${bp.memorableMoment || ""}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\nTomorrow: ${bp.tomorrowConnection || ""}\nStudent: ${memory}\n${perfLine}\n${priorCtx}\n\nWrite a closing summary as a teacher who genuinely cares.\n\n${SUMMARY_HONESTY_RULES}\n\nThey should close feeling: "${bp.emotionalObjective || "more confident"}".\nRespond ONLY with JSON, no fences: {"praise":"","summary":"","strength":"","improvement":"","connection":"","tomorrowPreview":""}`,
           { intent: "lesson_summary" });
         data = parseJSON(raw);
         if (!data.praise) throw new Error("summary invalid");
@@ -5018,8 +5019,11 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
           : stageId === "skill"
             ? `{"passage":"the text","questions":[{"stem":"","options":["four options"],"answer":"exact text of correct option","note":"one warm teaching line"}]}`
             : `{"grammarPoint":"${bp.grammar && bp.grammar.point}","questions":[{"stem":"","options":["four options"],"answer":"exact text of correct option","note":"one warm teaching line that names the rule"}]}`;
+        const retryGuidance = stageId === "summary"
+          ? `\nMemorable moment: ${bp.memorableMoment || ""}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\n${perfLine}\n${priorCtx}\n\n${SUMMARY_HONESTY_RULES}`
+          : `\nToday's lesson: "${bp.context}" (CEFR ${bp.cefr}). Objective: "${bp.communicativeObjective}". Today's vocabulary: ${(bp.vocabulary || []).map((v) => v.word).join(", ")}.\nTHE ONE GRAMMAR POINT: "${bp.grammar && bp.grammar.point}" — form: ${bp.grammar && bp.grammar.form}. Every question must drill THAT form, and every note must name the rule.`;
         try {
-          const retryRaw = await askClaude(`You are Leo, regenerating a lesson exercise. Your ${stageId} exercise was:\n${JSON.stringify(data)}\n\nIt had these problems: ${qaProblems.join("; ")}.\n\nRegenerate this exercise, fixing ALL the problems.\nToday's lesson: "${bp.context}" (CEFR ${bp.cefr}). Objective: "${bp.communicativeObjective}". Today's vocabulary: ${(bp.vocabulary || []).map((v) => v.word).join(", ")}.\nTHE ONE GRAMMAR POINT: "${bp.grammar && bp.grammar.point}" — form: ${bp.grammar && bp.grammar.form}. Every question must drill THAT form, and every note must name the rule.\n\nRespond ONLY with JSON, no fences:\n${retryShape}`,
+          const retryRaw = await askClaude(`You are Leo, regenerating a lesson exercise. Your ${stageId} exercise was:\n${JSON.stringify(data)}\n\nIt had these problems: ${qaProblems.join("; ")}.\n\nRegenerate this exercise, fixing ALL the problems.${retryGuidance}\n\nRespond ONLY with JSON, no fences:\n${retryShape}`,
         { intent: "section_retry" });
           const retryData = parseJSON(retryRaw);
           if (retryData) {
