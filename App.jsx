@@ -5813,31 +5813,27 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
     level: lvl || level, interests,
   }, wantsPlacement);
 
-  /* Hardcoded L1 translations for Leo's greeting.
-     zh/es/pt: reviewed. fr/de/sv/ja/ko: best-effort, flagged for professional review. */
-  /* L1 EQUIVALENCE PRINCIPLE — clause 6 suppression, 22 July 2026.
-     All eight HELLO_L1 entries fail clause 3: each was authored against the
-     English FIRST sentence only, so the L1 line says less than the English
-     says. Constitution has voided their sign-offs, so no entry may ship.
-     Clause 6: where equivalence cannot be achieved, fall back to English IN
-     FULL rather than L1 in part.
-     The strings and the render are KEPT, not deleted. Reversal is expected
-     language by language as each passes native-speaker review against the
-     reviewer specification, starting with German, French and Japanese — the
-     three the variety register unblocks.
-     TO REVERSE: add the language code to this list. Nothing else changes. */
-  const HELLO_L1_REVIEWED = [];
+  /* Leo's greeting, L1 line — SUPPRESSED. §13.4a (Genesis, 22 July 2026);
+     welcome-screen-review-package.md rev 1, MD5 cc8efab4200ba4ac545c399d8dac260a.
+     All eight prior entries failed L1-equivalence clause 3 (authored against the
+     English first sentence only); their sign-offs are void. Suppression is by
+     EMPTY DATA, not a flag: the render is `{HELLO_L1[lang] && …}`, so an empty
+     object shows no L1 line, and adding one reviewed entry lights up exactly that
+     one language. The void drafts in the ratified principle doc are NOT a starting
+     point — restore only from fresh native review.
 
-  const HELLO_L1 = {
-    zh: "你好，我是Leo。",
-    es: "Hola, soy Leo.",
-    pt: "Olá, eu sou o Leo.",
-    fr: "Bonjour, je suis Leo.",
-    de: "Hallo, ich bin Leo.",
-    sv: "Hej, jag är Leo.",
-    ja: "こんにちは、Leoです。",
-    ko: "안녕하세요, 저는 Leo입니다.",
-  };
+     TO RESTORE ONE LANGUAGE — read before adding any entry:
+       1. Add a native-reviewed entry to HELLO_L1, reviewed against the reviewer
+          specification for that variety. One key, one language.
+       2. Fix the L1 line's markup at the 'welcome' render below: it still carries
+          the OLD suppressed styling — className "text-supporting", opacity 0.65,
+          fontStyle italic. Binding treatment on restoration: className "text-leo";
+          NO inline opacity (and not inside .fade-in until motion §11.3); NO italic
+          (invalid for zh and ja); position THIRD, after both English lines — order
+          carries the hierarchy.
+     Restoring the string with the old styling reinstates a WCAG failure alongside a
+     reviewed line and looks faithful. Do both, or neither. */
+  const HELLO_L1 = {};
 
   // ── PAGE 1: THE LANGUAGE ── (no Back)
   if (obStep === "language") return (
@@ -5870,7 +5866,7 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
           <p className="text-leo" style={{ marginBottom: "var(--space-3)" }}>
             I'm your English teacher here in Australia.
           </p>
-          {HELLO_L1_REVIEWED.includes(lang) && HELLO_L1[lang] && (
+          {HELLO_L1[lang] && (
             <p className="text-supporting" style={{ opacity: 0.65, fontStyle: "italic" }}>
               {HELLO_L1[lang]}
             </p>
