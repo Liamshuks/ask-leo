@@ -1008,7 +1008,7 @@ function WelcomeLanding({ slide, setSlide, onSignUp, onSignIn }) {
     </div>
   );
   return (
-    <div className="onboard" key="page4">
+    <div className="onboard" key="slide-3">
       <div className="intro-page">
 <h2 className="intro-heading pop-in pop-d2">Ready to begin?</h2>
         <button className="primary-btn wide auth-btn pop-in pop-d7" onClick={onSignUp}>Create Account</button>
