@@ -6300,7 +6300,7 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
             Principle a new string ships in English until a reviewer holding
             the specification has passed it in the named variety. */}
         <p className="text-supporting" style={{ marginTop: "var(--space-3)" }}>
-          Right now I teach at one level, so today's lesson is the same either way. Whichever you pick is a starting point, not a verdict — once I'm teaching every level, I'll adjust it as I get to know you.
+          Right now I teach at one level, so today's lesson is the same for everyone. Your choice is a start, not a test. When I teach every level, I will change your lessons to fit you.
         </p>
 
         <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-3)" }}>
