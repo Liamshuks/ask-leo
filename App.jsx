@@ -4746,7 +4746,7 @@ function buildTeacherContext({ profile, memoryStore, words, heard, diaryPages, a
 
   const lines = [
     `STUDENT PROFILE`,
-    `Name: ${profile.name}. First language: ${lang}. ${profile.country ? `From ${profile.country}.` : ""} CEFR: ${level}.`,
+    `Name: ${profile.name}. First language: ${lang}. ${countryDisplay(profile.country) ? `From ${countryDisplay(profile.country)}.` : ""} CEFR: ${level}.`,
     Array.isArray(profile.interests) && profile.interests.length ? `Interests they chose: ${profile.interests.join(", ")} — Leo should draw on these for lesson situations and examples where they fit naturally.` : "",
     totalLessons ? `Leo has taught this student ${totalLessons} lesson${totalLessons === 1 ? "" : "s"} over ${daysSinceFirst} day${daysSinceFirst === 1 ? "" : "s"}.` : "This is a brand-new student — today is their very first lesson with Leo.",
     streak > 1 ? `Current study streak: ${streak} days — consistency is building.` : "",
@@ -4857,7 +4857,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
     // depend on what stage 1 happened to mention. Each degrades to readable
     // text for a brand-new student — never an empty heading.
     const l1 = (LANGS[profile.lang] && LANGS[profile.lang].english) || "not recorded";
-    const country = profile.country || "not recorded";
+    const country = countryDisplay(profile.country) || "not recorded";
     const _mastery = Object.entries((leoMemory.store && leoMemory.store.wordMastery) || {});
     const fragileWords = _mastery.filter(([, e]) => e.stage === "new" || e.stage === "seen")
       .slice(0, 8).map(([w]) => w).join(", ") || "none yet";
@@ -5780,10 +5780,251 @@ function SignedInContext({ profile }) {
    and the last one wins. The symptom is a returning student resuming at the
    wrong screen — Continuity Integrity arriving as an off-by-one. Named steps
    put it beyond reach of any insertion.
-   `'interests'` is NOT here yet: it is still inside 'about-you' and is
-   separated by step (b). A named step no screen renders would be a constant
-   with no reader. */
-const OB_STEPS = ["language", "welcome", "about-you", "level"];
+   'interests' is now its own step (§13.2 step (b)) with its own render,
+   inserted between 'about-you' and 'level'. Navigation derives from position
+   in OB_STEPS; nothing else encodes order. */
+const COUNTRIES = [
+  ["afghanistan","Afghanistan"],
+  ["albania","Albania"],
+  ["algeria","Algeria"],
+  ["andorra","Andorra"],
+  ["angola","Angola"],
+  ["antigua-and-barbuda","Antigua and Barbuda"],
+  ["argentina","Argentina"],
+  ["armenia","Armenia"],
+  ["australia","Australia"],
+  ["austria","Austria"],
+  ["azerbaijan","Azerbaijan"],
+  ["bahamas","Bahamas"],
+  ["bahrain","Bahrain"],
+  ["bangladesh","Bangladesh"],
+  ["barbados","Barbados"],
+  ["belarus","Belarus"],
+  ["belgium","Belgium"],
+  ["belize","Belize"],
+  ["benin","Benin"],
+  ["bhutan","Bhutan"],
+  ["bolivia","Bolivia"],
+  ["bosnia-and-herzegovina","Bosnia and Herzegovina"],
+  ["botswana","Botswana"],
+  ["brazil","Brazil"],
+  ["brunei","Brunei"],
+  ["bulgaria","Bulgaria"],
+  ["burkina-faso","Burkina Faso"],
+  ["burundi","Burundi"],
+  ["cabo-verde","Cabo Verde",["Cape Verde"]],
+  ["cambodia","Cambodia"],
+  ["cameroon","Cameroon"],
+  ["canada","Canada"],
+  ["canada-quebec","Canada (Québec)",["Quebec"]],
+  ["central-african-republic","Central African Republic"],
+  ["chad","Chad"],
+  ["chile","Chile"],
+  ["china-mainland","China (Mainland)",["China"]],
+  ["colombia","Colombia"],
+  ["comoros","Comoros"],
+  ["congo-dr","Congo (Democratic Republic)",["DRC", "DR Congo"]],
+  ["congo-republic","Congo (Republic)"],
+  ["costa-rica","Costa Rica"],
+  ["croatia","Croatia"],
+  ["cuba","Cuba"],
+  ["cyprus","Cyprus"],
+  ["czech-republic","Czech Republic",["Czechia"]],
+  ["cote-divoire","Côte d'Ivoire",["Ivory Coast"]],
+  ["denmark","Denmark"],
+  ["djibouti","Djibouti"],
+  ["dominica","Dominica"],
+  ["dominican-republic","Dominican Republic"],
+  ["ecuador","Ecuador"],
+  ["egypt","Egypt"],
+  ["el-salvador","El Salvador"],
+  ["equatorial-guinea","Equatorial Guinea"],
+  ["eritrea","Eritrea"],
+  ["estonia","Estonia"],
+  ["eswatini","Eswatini",["Swaziland"]],
+  ["ethiopia","Ethiopia"],
+  ["fiji","Fiji"],
+  ["finland","Finland"],
+  ["france","France"],
+  ["gabon","Gabon"],
+  ["gambia","Gambia"],
+  ["georgia","Georgia"],
+  ["germany","Germany"],
+  ["ghana","Ghana"],
+  ["greece","Greece"],
+  ["grenada","Grenada"],
+  ["guatemala","Guatemala"],
+  ["guinea","Guinea"],
+  ["guinea-bissau","Guinea-Bissau"],
+  ["guyana","Guyana"],
+  ["haiti","Haiti"],
+  ["honduras","Honduras"],
+  ["hong-kong","Hong Kong"],
+  ["hungary","Hungary"],
+  ["iceland","Iceland"],
+  ["india","India"],
+  ["indonesia","Indonesia"],
+  ["iran","Iran"],
+  ["iraq","Iraq"],
+  ["ireland","Ireland"],
+  ["israel","Israel"],
+  ["italy","Italy"],
+  ["jamaica","Jamaica"],
+  ["japan","Japan"],
+  ["jordan","Jordan"],
+  ["kazakhstan","Kazakhstan"],
+  ["kenya","Kenya"],
+  ["kiribati","Kiribati"],
+  ["kosovo","Kosovo"],
+  ["kuwait","Kuwait"],
+  ["kyrgyzstan","Kyrgyzstan"],
+  ["laos","Laos"],
+  ["latvia","Latvia"],
+  ["lebanon","Lebanon"],
+  ["lesotho","Lesotho"],
+  ["liberia","Liberia"],
+  ["libya","Libya"],
+  ["liechtenstein","Liechtenstein"],
+  ["lithuania","Lithuania"],
+  ["luxembourg","Luxembourg"],
+  ["macau","Macau",["Macao"]],
+  ["madagascar","Madagascar"],
+  ["malawi","Malawi"],
+  ["malaysia","Malaysia"],
+  ["maldives","Maldives"],
+  ["mali","Mali"],
+  ["malta","Malta"],
+  ["marshall-islands","Marshall Islands"],
+  ["mauritania","Mauritania"],
+  ["mauritius","Mauritius"],
+  ["mexico","Mexico"],
+  ["micronesia","Micronesia"],
+  ["moldova","Moldova"],
+  ["monaco","Monaco"],
+  ["mongolia","Mongolia"],
+  ["montenegro","Montenegro"],
+  ["morocco","Morocco"],
+  ["mozambique","Mozambique"],
+  ["myanmar","Myanmar",["Burma"]],
+  ["namibia","Namibia"],
+  ["nauru","Nauru"],
+  ["nepal","Nepal"],
+  ["netherlands","Netherlands",["Holland"]],
+  ["new-zealand","New Zealand"],
+  ["nicaragua","Nicaragua"],
+  ["niger","Niger"],
+  ["nigeria","Nigeria"],
+  ["north-korea","North Korea"],
+  ["north-macedonia","North Macedonia",["Macedonia"]],
+  ["norway","Norway"],
+  ["oman","Oman"],
+  ["pakistan","Pakistan"],
+  ["palau","Palau"],
+  ["palestine","Palestine"],
+  ["panama","Panama"],
+  ["papua-new-guinea","Papua New Guinea"],
+  ["paraguay","Paraguay"],
+  ["peru","Peru"],
+  ["philippines","Philippines"],
+  ["poland","Poland"],
+  ["portugal","Portugal"],
+  ["puerto-rico","Puerto Rico"],
+  ["qatar","Qatar"],
+  ["romania","Romania"],
+  ["russia","Russia"],
+  ["rwanda","Rwanda"],
+  ["saint-kitts-and-nevis","Saint Kitts and Nevis",["St Kitts"]],
+  ["saint-lucia","Saint Lucia",["St Lucia"]],
+  ["saint-vincent-and-the-grenadines","Saint Vincent and the Grenadines",["St Vincent"]],
+  ["samoa","Samoa"],
+  ["san-marino","San Marino"],
+  ["saudi-arabia","Saudi Arabia"],
+  ["senegal","Senegal"],
+  ["serbia","Serbia"],
+  ["seychelles","Seychelles"],
+  ["sierra-leone","Sierra Leone"],
+  ["singapore","Singapore"],
+  ["slovakia","Slovakia"],
+  ["slovenia","Slovenia"],
+  ["solomon-islands","Solomon Islands"],
+  ["somalia","Somalia"],
+  ["south-africa","South Africa"],
+  ["south-korea","South Korea",["Korea"]],
+  ["south-sudan","South Sudan"],
+  ["spain","Spain"],
+  ["sri-lanka","Sri Lanka"],
+  ["sudan","Sudan"],
+  ["suriname","Suriname"],
+  ["sweden","Sweden"],
+  ["switzerland","Switzerland"],
+  ["syria","Syria"],
+  ["sao-tome-and-principe","São Tomé and Príncipe",["Sao Tome"]],
+  ["taiwan","Taiwan"],
+  ["tajikistan","Tajikistan"],
+  ["tanzania","Tanzania"],
+  ["thailand","Thailand"],
+  ["timor-leste","Timor-Leste",["East Timor"]],
+  ["togo","Togo"],
+  ["tonga","Tonga"],
+  ["trinidad-and-tobago","Trinidad and Tobago"],
+  ["tunisia","Tunisia"],
+  ["turkmenistan","Turkmenistan"],
+  ["tuvalu","Tuvalu"],
+  ["turkiye","Türkiye",["Turkey"]],
+  ["uganda","Uganda"],
+  ["ukraine","Ukraine"],
+  ["united-arab-emirates","United Arab Emirates",["UAE"]],
+  ["united-kingdom","United Kingdom",["UK", "Britain", "England"]],
+  ["united-states","United States",["USA", "America"]],
+  ["uruguay","Uruguay"],
+  ["uzbekistan","Uzbekistan"],
+  ["vanuatu","Vanuatu"],
+  ["vatican-city","Vatican City"],
+  ["venezuela","Venezuela"],
+  ["vietnam","Vietnam"],
+  ["yemen","Yemen"],
+  ["zambia","Zambia"],
+  ["zimbabwe","Zimbabwe"],
+  ["prefer-not-to-say","Prefer not to say"],
+];
+const COUNTRY_NAME = Object.fromEntries(COUNTRIES.map(([k, n]) => [k, n]));
+const COUNTRY_ALIASES = Object.fromEntries(COUNTRIES.map(([k, n, a]) => [k, a || []]));
+// Strip diacritics + lowercase, so "turkey" finds "Türkiye" and "cote" finds "Côte d'Ivoire".
+const obFold = (s) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+const countryMatch = (key, name, query) => {
+  const q = obFold(query);
+  if (!q) return false;
+  if (obFold(name).includes(q)) return true;
+  return (COUNTRY_ALIASES[key] || []).some((a) => obFold(a).includes(q));
+};
+// Storage is the key; the AI prompt and any display need the readable name.
+// Unset or "prefer not to say" reads as empty (Leo teaches without it, §12.5);
+// an unmigrated free-text value is returned as-is.
+const countryDisplay = (v) => (!v || v === "prefer-not-to-say") ? "" : (COUNTRY_NAME[v] || v);
+// Migrate a stored free-text country to a key (case-insensitive, name or alias);
+// unmatched values are retained as-is and read as unset for keyed lookups (§12.2).
+const countryMigrate = (v) => {
+  if (!v) return "";
+  if (COUNTRY_NAME[v]) return v; // already a key
+  const f = obFold(v);
+  const hit = COUNTRIES.find(([k, n, a]) => obFold(n) === f || (a || []).some((x) => obFold(x) === f));
+  return hit ? hit[0] : v; // retain unmatched free-text as-is
+};
+
+// ── About-you group two: the four questions (Lessons-signed, about-you-questions-signoff.md 6f2e4a96). Chips per §5, all skippable, none gates Continue. ──
+const Q_SETTLEMENT = ["Just arrived", "Less than a year", "1–3 years", "More than 3 years", "Not in Australia yet"]; // Q1 single
+const Q_GOALS = ["Work", "Study", "Everyday life", "Family", "Citizenship"]; // Q2 multi
+const Q_HARDEST = ["Understanding fast speech", "Speaking with confidence", "Being understood when I speak", "Finding the right words", "Reading in English", "Writing in English"]; // Q3 multi
+const Q_OCCUPATION = ["Working", "Studying", "Both", "Looking for work", "Neither"]; // Q4 single
+
+// ── Conditional spoken-variety question (§13.2). Options are the register's (rev 2 b8c7e066): the only L1 the register recognises with >1 spoken variety is Chinese (Mandarin vs Cantonese — country/script do not determine speech). ──
+const SPOKEN_VARIETY = { zh: [["mandarin", "Mandarin"], ["cantonese", "Cantonese"]] };
+// Spoken-variety label — Lessons-signed, 26 July 2026. "at home" makes this a
+// dominance question (answerable by students who speak both), and home variety is
+// the substrate pronunciation teaching needs.
+const SPOKEN_VARIETY_LABEL = "Which of these do you speak at home?";
+
+const OB_STEPS = ["language", "welcome", "about-you", "interests", "level"];
 
 function Onboarding({ onDone, initialStep, initialProfile }) {
   const ip = initialProfile || {};
@@ -5793,8 +6034,14 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
   const back = () => setObStep(OB_STEPS[Math.max(OB_STEPS.indexOf(obStep) - 1, 0)]);
   const [lang, setLang] = useState(ip.lang || null);
   const [name, setName] = useState(ip.name || "");
-  const [country, setCountry] = useState(ip.country || "");
+  const [country, setCountry] = useState(() => countryMigrate(ip.country || ""));
+  const [countrySearch, setCountrySearch] = useState("");
   const [interests, setInterests] = useState(ip.interests || []);
+  const [settlement, setSettlement] = useState(ip.settlement || null);
+  const [goals, setGoals] = useState(ip.goals || []);
+  const [hardest, setHardest] = useState(ip.hardest || []);
+  const [occupation, setOccupation] = useState(ip.occupation || null);
+  const [spokenVariety, setSpokenVariety] = useState(ip.spokenVariety || null);
   const [level, setLevel] = useState(ip.level || null);
   const [showLevelPicker, setShowLevelPicker] = useState(false);
 
@@ -5807,10 +6054,14 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
   const toggleInterest = (item) => setInterests((prev) =>
     prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item]
   );
+  const toggleFrom = (setter, item) => setter((prev) =>
+    prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item]
+  );
 
   const finish = (lvl, wantsPlacement) => onDone({
-    name: name.trim(), lang, country: country.trim(),
+    name: name.trim(), lang, country,
     level: lvl || level, interests,
+    settlement, goals, hardest, occupation, spokenVariety,
   }, wantsPlacement);
 
   /* Leo's greeting, L1 line — SUPPRESSED. §13.4a (Genesis, 22 July 2026);
@@ -5880,11 +6131,17 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
     </div>
   );
 
-  // ── PAGE 3: GET TO KNOW YOU ── (Back → Page 2)
-  if (obStep === "about-you") return (
+  // ── PAGE 3: GET TO KNOW YOU ── (Back → Page 2). §12/§13.2: two groups, strict country, four questions. Interests are their own step now.
+  if (obStep === "about-you") {
+    const spokenOpts = SPOKEN_VARIETY[lang];
+    const countryMatches = COUNTRIES.filter(([k, n]) => k !== "prefer-not-to-say" && countryMatch(k, n, countrySearch)).slice(0, 50);
+    return (
     <div className="onboard">
       <div className="ob-card fade-in" style={{ textAlign: "left" }}>
         <p className="text-leo" style={{ marginBottom: "var(--space-4)" }}>I'd like to get to know you a little.</p>
+
+        {/* Group one — Who you are */}
+        <p className="input-label" style={{ textTransform: "uppercase", letterSpacing: 0.5, opacity: 0.6, marginBottom: "var(--space-2)" }}>Who you are</p>
 
         <label className="input-label">What's your name?</label>
         <input className="big-input" autoFocus value={name} placeholder="Your name"
@@ -5897,11 +6154,93 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
         </div>
 
         <label className="input-label" style={{ marginTop: "var(--space-3)" }}>Where are you from?</label>
-        <input className="big-input" value={country} placeholder="e.g. Brazil, China, Colombia…"
-          onChange={(e) => setCountry(e.target.value)} />
+        {country ? (
+          <div className="card" style={{ padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span>{countryDisplay(country) || "Prefer not to say"}</span>
+            <button className="ghost-btn" style={{ minHeight: "auto", padding: "4px 10px", fontSize: 13 }} onClick={() => { setCountry(""); setCountrySearch(""); }}>Change</button>
+          </div>
+        ) : (
+          <>
+            <input className="big-input" value={countrySearch} placeholder="Type your country…"
+              onChange={(e) => setCountrySearch(e.target.value)} />
+            <div className="card" style={{ marginTop: "var(--space-1)", padding: 4, maxHeight: 220, overflowY: "auto" }}>
+              {countrySearch.trim() && countryMatches.map(([k, n]) => (
+                <button key={k} className="ghost-btn" style={{ display: "block", width: "100%", textAlign: "left", minHeight: "auto", padding: "10px 12px", fontSize: 15 }}
+                  onClick={() => { setCountry(k); setCountrySearch(""); }}>{n}</button>
+              ))}
+              {countrySearch.trim() && countryMatches.length === 0 && (
+                <p className="text-supporting" style={{ padding: "10px 12px", margin: 0 }}>No match — check the spelling, or choose below.</p>
+              )}
+              <button className="ghost-btn" style={{ display: "block", width: "100%", textAlign: "left", minHeight: "auto", padding: "10px 12px", fontSize: 15, opacity: 0.75 }}
+                onClick={() => { setCountry("prefer-not-to-say"); setCountrySearch(""); }}>Prefer not to say</button>
+            </div>
+          </>
+        )}
 
-        <label className="input-label" style={{ marginTop: "var(--space-4)" }}>What are you interested in?</label>
-        <p className="text-supporting" style={{ margin: "0 0 var(--space-2)", opacity: 0.7 }}>Choose as many as you like. This helps Leo plan lessons around things you enjoy.</p>
+        {spokenOpts && (
+          <>
+            <label className="input-label" style={{ marginTop: "var(--space-3)" }}>{SPOKEN_VARIETY_LABEL}</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
+              {spokenOpts.map(([k, lbl]) => (
+                <button key={k} className={"chip" + (spokenVariety === k ? " chip-on" : "")}
+                  onClick={() => setSpokenVariety(spokenVariety === k ? null : k)}>{lbl}</button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Group two — Your English */}
+        <div style={{ borderTop: "1px solid var(--divider)", margin: "var(--space-4) 0 var(--space-3)" }} />
+        <p className="input-label" style={{ textTransform: "uppercase", letterSpacing: 0.5, opacity: 0.6, marginBottom: "var(--space-1)" }}>Your English</p>
+        <p className="text-supporting" style={{ margin: "0 0 var(--space-3)", opacity: 0.8 }}>A few quick questions. They help me plan lessons that are actually about your life.</p>
+
+        <label className="input-label">How long have you been in Australia?</label>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
+          {Q_SETTLEMENT.map((o) => (
+            <button key={o} className={"chip" + (settlement === o ? " chip-on" : "")}
+              onClick={() => setSettlement(settlement === o ? null : o)}>{o}</button>
+          ))}
+        </div>
+
+        <label className="input-label">What do you want English for?</label>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
+          {Q_GOALS.map((o) => (
+            <button key={o} className={"chip" + (goals.includes(o) ? " chip-on" : "")}
+              onClick={() => toggleFrom(setGoals, o)}>{o}</button>
+          ))}
+        </div>
+
+        <label className="input-label">What's hardest for you right now?</label>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
+          {Q_HARDEST.map((o) => (
+            <button key={o} className={"chip" + (hardest.includes(o) ? " chip-on" : "")}
+              onClick={() => toggleFrom(setHardest, o)}>{o}</button>
+          ))}
+        </div>
+
+        <label className="input-label">Are you working or studying at the moment?</label>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
+          {Q_OCCUPATION.map((o) => (
+            <button key={o} className={"chip" + (occupation === o ? " chip-on" : "")}
+              onClick={() => setOccupation(occupation === o ? null : o)}>{o}</button>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
+          <button className="ghost-btn" onClick={back}>Back</button>
+          <button className="primary-btn" disabled={!name.trim()} onClick={next}>Continue</button>
+        </div>
+      </div>
+    </div>
+    );
+  }
+
+  // ── PAGE 3b: INTERESTS ── (Back → about-you, Continue → level). Split from about-you per §13.2 step (b).
+  if (obStep === "interests") return (
+    <div className="onboard">
+      <div className="ob-card fade-in" style={{ textAlign: "left" }}>
+        <p className="text-leo" style={{ marginBottom: "var(--space-2)" }}>What are you interested in?</p>
+        <p className="text-supporting" style={{ margin: "0 0 var(--space-4)", opacity: 0.8 }}>Choose as many as you like. This helps me plan lessons around things you enjoy.</p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
           {INTEREST_OPTIONS.map((item) => (
             <button key={item}
@@ -5909,10 +6248,9 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
               onClick={() => toggleInterest(item)}>{item}</button>
           ))}
         </div>
-
         <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
           <button className="ghost-btn" onClick={back}>Back</button>
-          <button className="primary-btn" disabled={!name.trim()} onClick={next}>Continue</button>
+          <button className="primary-btn" onClick={next}>Continue</button>
         </div>
       </div>
     </div>
@@ -6351,7 +6689,7 @@ export default function App() {
   const memory = [
     `CEFR level ${levelFor(profile)}`,
     `first language ${LANGS[profile.lang].english}`,
-    profile.country ? `from ${profile.country}` : null,
+    countryDisplay(profile.country) ? `from ${countryDisplay(profile.country)}` : null,
     stats.errorTally.length ? `their common error areas are: ${stats.errorTally.map(([t]) => t).join(", ")}` : null,
     stats.skillTally.length ? `they most often practise: ${stats.skillTally.slice(0, 3).map(([s]) => s).join(", ")}` : null,
     stats.words ? `they have ${stats.words} words in their word bank` : null,
