@@ -274,7 +274,7 @@ const ERROR_TYPES = ["articles", "verb tense", "prepositions", "word order", "sp
      liveAskClaude() at your real backend. NOTHING ELSE in the
      app needs to change — this function is the only seam.
    ============================================================ */
-const USE_MOCK_AI = true;
+const USE_MOCK_AI = false;
 
 async function askClaude(prompt, opts) {
   return USE_MOCK_AI ? mockAskClaude(prompt, opts) : liveAskClaude(prompt);
@@ -284,14 +284,10 @@ async function askClaude(prompt, opts) {
 async function liveAskClaude(prompt) {
   let res;
   try {
-    res = await fetch("https://api.anthropic.com/v1/messages", {
+    res = await fetch("https://ask-leo-proxy.vercel.app/api/claude", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 4000,
-        messages: [{ role: "user", content: prompt }],
-      }),
+      body: JSON.stringify({ prompt }),
     });
   } catch (networkErr) {
     console.error("[liveAskClaude] fetch rejected before any response (CORS/offline/DNS):", networkErr);
