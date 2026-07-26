@@ -4500,22 +4500,254 @@ function SummarySection({ bp, section, vocab, onVocabTap, onFinish }) {
    the fix-retry and the post-review revision — restates this exact shape.
    askClaude() is stateless, so a retry that doesn't restate the shape
    cannot possibly succeed. */
-// PROVISIONAL A1 boundaries pending Lessons_ASKLEO ratification. A2–C2 to be authored by Lessons. Do not edit without Lessons ruling.
+// CEFR productive-language constraints. RATIFIED by Lessons_ASKLEO, 26 July 2026
+// (cefr-constraints-v1.md, MD5 5afcd36a61c1b6e79cf22d25bd16d362). A1 ratified with
+// amendments; A2-C2 authored by Lessons. Governs PRODUCTIVE target language only,
+// not receptive reading/listening (i+1). C2 is authored but RESERVED — CEFR_ORDER
+// does not include it, so it is unreachable until the picker extends. Do not edit
+// without a Lessons ruling.
 const CEFR_CONSTRAINTS = {
-  A1: `- ALLOWED grammar ONLY: present simple; present continuous; "to be"; "have got"; "can/can't" (ability); imperatives; basic questions (what/where/when/who/how much/how many); "there is/there are"; plural nouns; articles (a/an/the); basic prepositions of place and time (in/on/at); possessive adjectives (my/your/his/her); "like/want + noun".
-- FORBIDDEN at A1: modals of obligation or advice (must/should/have to/ought to); perfect tenses (present perfect, past perfect); past continuous; conditionals; passives; reported speech; relative clauses. Use past simple only if unavoidable, with common verbs the student already knows.
-- VOCABULARY: high-frequency everyday words only (roughly the 1000 most common). No abstract, academic, technical or low-frequency vocabulary.
-- TASKS: short, concrete, personal, present-focused — one idea per sentence.
-- DO (A1): "Where is the beach?" | "I can swim." | "The water is cold today." | "Is it safe here?"
-- DON'T (A1): "You should always check the flags." (modal advice) | "Have you ever been stung?" (present perfect) | "If the flag is red, you mustn't swim." (conditional + modal).`,
-  A2: null,
-  B1: null,
-  B2: null,
-  C1: null,
-  C2: null,
+  A1: {
+    allowed: [
+      "present simple", "present continuous",
+      "to be", "have got",
+      "can/can't (ability)",
+      "imperatives",
+      "basic questions (Wh- and yes/no, present tense)",
+      "there is / there are",
+      "plurals, articles (a/an/the)",
+      "basic prepositions of place and time",
+      "possessive adjectives, object pronouns, demonstratives",
+      "basic quantifiers (some, any, a lot of, much/many)",
+      "frequency adverbs (always, usually, sometimes, never)",
+      "comparatives and superlatives of short common adjectives",
+      "like/want + noun; would like as lexicalised polite request",
+      "past simple (was/were; regular -ed; defined irregular set: went, had, did, saw, came, got, made, said, took) — LATE A1 ONLY, for personal past events on familiar timeframes"
+    ],
+    forbidden: [
+      "modals of obligation, advice or deduction (must, should, might, may)",
+      "perfect tenses (present perfect, past perfect, any continuous perfect)",
+      "past continuous",
+      "conditionals (any type)",
+      "passives (any form)",
+      "reported speech",
+      "relative clauses",
+      "going to future, present continuous for future",
+      "productive verb + gerund / verb + infinitive patterns"
+    ],
+    vocab: "high-frequency only, ~top 750–1000 word families (English Vocabulary Profile A1 tier)",
+    tasks: "short, concrete, personal, predominantly present-focused; late A1 admits simple past on familiar timeframes; task length under 6 exchanges; contexts limited to self, family, home, food, shopping, work basics, transport, health basics, weather",
+    do_examples: [
+      "'What time do you finish work?' — present simple, personal, concrete",
+      "'I like coffee. I don't like tea.' — like + noun, negative",
+      "'There's a bank on the corner.' — there is, basic prepositions",
+      "'She's taller than me.' — comparative, object pronoun",
+      "'I went to Sydney last weekend.' — LATE A1 past simple, personal timeframe, defined irregular"
+    ],
+    dont_examples: [
+      "'You should try the new café.' — modal of advice, forbidden",
+      "'I've lived here for three years.' — present perfect, forbidden",
+      "'If I had more time, I'd study more.' — second conditional, forbidden",
+      "'The bill was paid at the counter.' — passive, forbidden",
+      "'He said he was tired.' — reported speech, forbidden"
+    ]
+  },
+  A2: {
+    allowed: [
+      "everything allowed at A1",
+      "past simple (full range: all forms, questions, negatives, high-frequency irregulars)",
+      "going to future (plans and predictions)",
+      "present continuous for future arrangements",
+      "should for advice (basic)",
+      "comparative and superlative adjectives (full range)",
+      "adverbs of manner (regular -ly)",
+      "verb + gerund (like doing, enjoy doing); verb + infinitive (want to do, need to do)",
+      "prepositions of time and place (wider range)",
+      "present perfect simple with ever/never/for/since — LATE A2 ONLY, for experience"
+    ],
+    forbidden: [
+      "past continuous (except as receptive input)",
+      "past perfect",
+      "present perfect continuous",
+      "conditionals other than basic first conditional (LATE A2 admits first conditional in a defined shape only: If + present simple, will + base form; single clause, present-focused consequence)",
+      "passives (any form)",
+      "reported speech (except simple lexicalised: 'He said yes')",
+      "relative clauses",
+      "modals of deduction (must be, might be, can't be)",
+      "used to for past habits"
+    ],
+    vocab: "~1500–2000 word families, English Vocabulary Profile A2 tier; concrete concepts; extended familiar-topic range (personal history, plans, routines, feelings, health, community)",
+    tasks: "short-to-medium (under 12 exchanges); routine tasks in familiar contexts; describing past experiences and future plans; simple opinions on familiar topics (I like / I don't like / because...); short narrative on a personal past event; simple comparisons; ordering, requesting, appointment-making at real Australian settings (GP, cafe, workplace, school pickup)",
+    do_examples: [
+      "'I lived in Bogotá for five years, then I moved to Sydney.' — past simple narrative, personal history",
+      "'I'm going to look for a new job next month.' — going to future, plans",
+      "'You should call the landlord.' — should for advice",
+      "'I've never eaten kangaroo.' — LATE A2 present perfect with ever/never, experience only",
+      "'This café is better than the one on George Street.' — comparative, familiar topic"
+    ],
+    dont_examples: [
+      "'By the time I arrived, they had already left.' — past perfect, forbidden",
+      "'I've been learning English for two years.' — present perfect continuous, forbidden",
+      "'If I had a car, I'd drive there.' — second conditional, forbidden",
+      "'The rent is paid on the first of the month.' — passive, forbidden",
+      "'The woman who I met yesterday works at the hospital.' — relative clause, forbidden"
+    ]
+  },
+  B1: {
+    allowed: [
+      "everything allowed at A2",
+      "present perfect simple and continuous",
+      "past perfect simple",
+      "past continuous (full range, including with past simple in narrative)",
+      "used to for past habits and states",
+      "zero, first, and second conditionals (full range)",
+      "basic passive voice (present simple, past simple, will future)",
+      "reported speech with basic tense shifts (statements and questions)",
+      "defining relative clauses (who, which, that)",
+      "modals of obligation and permission (have to, don't have to, must, can, could, may)",
+      "modals of deduction (present: must be, might be, can't be)",
+      "verb patterns (extended verb + gerund / verb + infinitive lists)",
+      "future forms range (will, going to, present continuous, present simple for schedules)",
+      "linkers (although, however, because of, so, therefore)"
+    ],
+    forbidden: [
+      "third conditional",
+      "mixed conditionals",
+      "advanced passive constructions (perfect passive, modal passive, get-passive, causative have)",
+      "reported speech with complex tense shifts or modal reporting verbs",
+      "non-defining relative clauses",
+      "reduced relative clauses",
+      "cleft sentences (It was..., What I want is...)",
+      "inversion (any form)",
+      "subjunctive",
+      "would rather, had better",
+      "wish + past / wish + would",
+      "modals of past deduction (must have done, might have done)",
+      "advanced discourse markers (nevertheless, notwithstanding, furthermore in productive use)"
+    ],
+    vocab: "~2500–3500 word families, English Vocabulary Profile B1 tier; increasing abstraction; opinions, feelings, workplace and study contexts; basic collocations",
+    tasks: "connected text (paragraph-length); opinions with reasons on familiar topics; describing experiences, events, dreams, hopes, ambitions; short narrative with orientation, complication, resolution; giving and receiving instructions; explaining simple problems; agreeing and disagreeing politely; workplace scenarios (calling in sick, requesting time off, describing a task)",
+    do_examples: [
+      "'I've been living in Melbourne since 2023, but I moved from Brisbane last year.' — present perfect continuous + past simple",
+      "'If I studied more, I'd pass the test.' — second conditional, hypothetical",
+      "'The letter was sent yesterday.' — basic past passive",
+      "'She told me she was tired.' — reported speech, basic tense shift",
+      "'The man who fixed my heater was very helpful.' — defining relative clause"
+    ],
+    dont_examples: [
+      "'If I had studied harder, I would have passed.' — third conditional, forbidden",
+      "'The report will have been finished by Friday.' — modal passive, forbidden",
+      "'He asked me whether I would have completed it by then.' — complex reported tense shift, forbidden",
+      "'My colleague, who I've known for ten years, is retiring.' — non-defining relative clause, forbidden",
+      "'It was the manager who made the decision.' — cleft sentence, forbidden"
+    ]
+  },
+  B2: {
+    allowed: [
+      "everything allowed at B1",
+      "third conditional",
+      "mixed conditionals",
+      "all passive constructions (perfect, modal, causative have)",
+      "get-passive (informal register)",
+      "reported speech, full range including modal reporting verbs (suggest, insist, deny)",
+      "non-defining relative clauses",
+      "reduced relative clauses",
+      "cleft sentences (It-cleft, What-cleft)",
+      "modals of past deduction (must have done, might have done, should have done)",
+      "would rather + past, had better",
+      "wish + past, wish + past perfect, wish + would",
+      "future perfect and future continuous",
+      "linking devices for extended argument (however, moreover, nevertheless, on the other hand)",
+      "productive idiomatic language, common phrasal verbs, everyday collocations"
+    ],
+    forbidden: [
+      "advanced inversion (Hardly had I..., Never before have I...) except as receptive input",
+      "subjunctive (except common fixed expressions: 'If I were you')",
+      "complex ellipsis and substitution beyond common patterns",
+      "fronting for emphasis in extended productive use",
+      "highly literary or archaic constructions",
+      "rare or region-specific idioms without prior teaching"
+    ],
+    vocab: "~4000–5000 word families, English Vocabulary Profile B2 tier; abstract topics; range of collocations; common idiomatic expressions; register-appropriate synonym choice (start / begin / commence)",
+    tasks: "extended contribution (multiple paragraphs); argument with counter-argument on abstract topics; hypothesising about past and present; main-idea comprehension of complex text; sustained interaction on unfamiliar topics; presenting a case with support; workplace scenarios (leading a short meeting, delivering feedback, negotiating a deadline); academic scenarios (short seminar contribution, discussion of a reading)",
+    do_examples: [
+      "'If we'd left earlier, we would've caught the train — and we wouldn't be waiting here now.' — mixed conditional",
+      "'The proposal was believed to have been drafted in haste.' — perfect passive with reporting",
+      "'What surprised me most was how quickly they responded.' — What-cleft",
+      "'She must have forgotten — she's usually so reliable.' — modal of past deduction",
+      "'The candidate, whose CV we discussed yesterday, has withdrawn.' — non-defining relative clause"
+    ],
+    dont_examples: [
+      "'Hardly had I sat down when the phone rang.' — advanced inversion, forbidden productively",
+      "'The committee recommends that he be reinstated.' — subjunctive outside fixed expressions, forbidden",
+      "'Never before had such a decision been contemplated.' — inversion + past perfect, forbidden productively",
+      "'A fine mess he's made of it.' — fronting for emphasis, forbidden productively",
+      "'She's dressed to the nines.' — rare/regional idiom without prior teaching, forbidden"
+    ]
+  },
+  C1: {
+    allowed: [
+      "everything allowed at B2",
+      "full range of inversion (Hardly had I..., Never before have I..., Only then did...)",
+      "subjunctive (I suggest he take..., It's essential that she be...)",
+      "advanced ellipsis and substitution",
+      "fronting for emphasis",
+      "cleft sentences (all forms, including all-cleft and reversed pseudo-cleft)",
+      "complex noun phrases with multiple modifiers",
+      "nuanced modality (I dare say..., Should you find..., Were it not for...)",
+      "productive idiomatic and collocational range",
+      "register shifting within a single stretch of discourse",
+      "discourse-level cohesion devices (referencing, substitution, ellipsis across a text)"
+    ],
+    forbidden: [
+      "very rare literary constructions (poetic inversion, archaic forms)",
+      "highly regional idiomatic expressions unless the region is the taught target",
+      "constructions requiring cultural knowledge the student has not been taught"
+    ],
+    vocab: "~6000–8000 word families, English Vocabulary Profile C1 tier; wide idiomatic and collocational range; register-appropriate synonym choice with subtle meaning distinctions (imply / infer, historic / historical); productive use of hedging and stance-marking language",
+    tasks: "extended contribution on demanding topics; precise expression of subtle distinctions; complex argument with hedging and stance; register control (moving between formal and informal within one discourse); presenting a nuanced case with anticipated objections; academic scenarios (extended seminar contribution, critique of a source); professional scenarios (drafting a policy note, leading a difficult conversation, negotiating with competing interests)",
+    do_examples: [
+      "'Only when the report was published did the full picture emerge.' — inversion after only when",
+      "'The committee recommends that the proposal be reconsidered.' — subjunctive in formal register",
+      "'Were the funding to be withdrawn, the entire project would collapse.' — inverted conditional",
+      "'It's not so much the cost as the timing that concerns me.' — cleft with nuanced contrast",
+      "'She's inclined to overpromise — a habit she'd do well to curb.' — hedged criticism with idiomatic collocation"
+    ],
+    dont_examples: [
+      "'Nay, 'twere better we depart.' — archaic literary form, forbidden",
+      "'Fair dinkum, mate, she'll be right.' — regional idiom without prior teaching, forbidden",
+      "Cultural allusion assuming knowledge the student has not been taught (e.g. an unglossed reference to a specific Australian political figure or historical event)"
+    ]
+  },
+  C2: {
+    allowed: [
+      "the full productive range of English — no grammatical constraint",
+      "sophisticated argumentation with multiple layers of hedging, stance and concession",
+      "precise register control across formal, academic, professional and informal contexts",
+      "nuanced use of idiomatic and figurative language",
+      "productive control of literary and rhetorical devices where appropriate to context",
+      "genre-specific conventions (academic, journalistic, legal, creative)"
+    ],
+    forbidden: [
+      "nothing constrained by level; the constraint is APPROPRIACY, not permission",
+      "constructions inappropriate to the specific target register (a slang idiom in formal writing; academic hedging in casual conversation) — flagged as appropriacy errors, not level errors"
+    ],
+    vocab: "~8000+ word families, English Vocabulary Profile C2 tier; near-complete productive control of the language, including low-frequency and specialised vocabulary; precise selection between near-synonyms; productive use of low-frequency idiomatic expressions",
+    tasks: "sophisticated argument in any register; precise expression of nuanced meaning; sustained contribution in any genre; near-native flexibility in switching between contexts; academic scenarios (extended critical analysis, publishable-quality writing); professional scenarios (high-stakes negotiation, keynote presentation, legally-sensitive drafting); creative scenarios (stylistic control across genres)",
+    do_examples: [
+      "'The report, for all its rhetorical polish, rests on assumptions that will not bear scrutiny.' — sophisticated critique with hedged confidence",
+      "'One might reasonably infer, though the author does not say so, that the omission is deliberate.' — nuanced attribution and stance",
+      "Register-shift within a single discourse: opening formally in a keynote, moving to conversational mid-way for effect, closing on a return to formal register"
+    ],
+    dont_examples: [
+      "There are no level-forbidden constructions at C2. Errors at this level are errors of APPROPRIACY (wrong register for the context), PRECISION (a near-synonym misapplied), or CULTURAL PRAGMATICS (an idiom used in a context where it lands wrong) — flagged as such, not as level-inappropriate."
+    ]
+  },
 };
-// One shared block, used by Stage 2 (needs assessment) and Stage 3 (blueprint + retry) so they cannot drift. Empty string when the level has no constraints yet.
-const cefrBlock = (lvl, c) => c ? `\n\nLEVEL CONSTRAINT — ${lvl}. Everything you choose (grammar, vocabulary, task difficulty) MUST stay within these limits:\n${c}\nIf the situation implies content above ${lvl}, SIMPLIFY it to fit — never pitch above the student.` : "";
+// One shared block, used by Stage 2 (needs assessment) and Stage 3 (blueprint + retry)
+// so they cannot drift. Formats the structured constraint into prompt text; empty
+// string when the level has no entry (graceful, non-blocking fallback).
+const cefrBlock = (lvl, c) => c ? `\n\nLEVEL CONSTRAINT — ${lvl}. This governs the PRODUCTIVE target language only — what the lesson teaches and asks the student to produce — NOT receptive reading/listening material (which may sit slightly above level). Everything you plan to teach and have the student produce MUST stay within these limits:\n- ALLOWED: ${c.allowed.join("; ")}.\n- FORBIDDEN productively at ${lvl}: ${c.forbidden.join("; ")}.\n- VOCABULARY: ${c.vocab}.\n- TASKS: ${c.tasks}.\n- DO: ${c.do_examples.join("  |  ")}\n- DON'T: ${c.dont_examples.join("  |  ")}\nIf the situation implies content above ${lvl}, SIMPLIFY it to fit — never pitch above the student.` : "";
 
 const BLUEPRINT_JSON_SHAPE = `{"teacherReflection":"summarise your thinking in 2-3 sentences","communicativeObjective":"one can-do from your needs assessment","context":"the Australian situation you chose","cefr":"the student's CEFR level","lessonRationale":"why THIS lesson TODAY from your reasoning","predictedDifficulties":["2-3 mistakes from your analysis"],"emotionalObjective":"from your needs assessment","memorableMoment":"the one thing from your assessment","authenticMaterial":"the actual Australian text you wrote in your assessment","scaffoldingStrategy":"how you will build toward the final task","explanation":"2-3 warm sentences introducing today to the student","warmUpQuestions":["5-8 progressively communicative questions specific to today's context"],"warmUpActivities":[{"type":"one of: context_discussion|prediction|finish_sentence|mini_task|mcq|best_response|true_false|is_this_correct|spot_mistake|complete_dialogue|unscramble|order_conversation","instruction":"how to do it, one line","prompt":"the question or task, contextualised to TODAY","text":"optional supporting text or dialogue","options":["choice types ONLY: 2-4 options"],"answer":"choice types ONLY: exact text of the correct option","tokens":["sequence types ONLY: the words or lines IN THE CORRECT ORDER"],"note":"the teaching point, in Leo's voice"}],"vocabulary":[{"word":"","pos":"","meaning":"simple definition","ipa":"","stress":"","syllables":"","example":"in today's situation","examples":["one more"],"related":["2-3"],"collocations":["1-2"]}],"grammar":{"point":"","meaning":"","form":"","usage":"when Australians use this","examples":["2 in today's situation"]},"pronunciation":{"focus":"","tips":["2-3 for this student's L1"]},"mainSkill":"reading or listening","finalTask":"the role-play climax from your assessment","mission":"one doable real-world task","tomorrowConnection":"how today leads to tomorrow","learningOutcome":"what they can now do"}`;
 
