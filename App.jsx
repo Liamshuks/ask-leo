@@ -2174,9 +2174,18 @@ function parseJSON(text) {
 
 /* ---------------- storage helpers ---------------- */
 
+// INTERIM: localStorage fallback for hosted (non-artifact) runtime. Per-device only — no cross-device sync. Server persistence required before public launch (Continuity Integrity constitutional ship blocker).
+const store =
+  (typeof window !== "undefined" && window.storage) ? window.storage : {
+    get:    async (k) => { const v = localStorage.getItem(k); return v == null ? null : { value: v }; },
+    set:    async (k, v) => localStorage.setItem(k, v),
+    delete: async (k) => localStorage.removeItem(k),
+    list:   async (prefix = "") => ({ keys: Object.keys(localStorage).filter((k) => k.startsWith(prefix)) }),
+  };
+
 async function loadKey(key, fallback) {
   try {
-    const r = await window.storage.get(key);
+    const r = await store.get(key);
     return r ? JSON.parse(r.value) : fallback;
   } catch {
     return fallback;
@@ -2184,7 +2193,7 @@ async function loadKey(key, fallback) {
 }
 async function saveKey(key, value) {
   try {
-    await window.storage.set(key, JSON.stringify(value));
+    await store.set(key, JSON.stringify(value));
   } catch (e) {
     console.error("Storage failed", e);
   }
