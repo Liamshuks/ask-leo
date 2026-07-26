@@ -6018,7 +6018,8 @@ const Q_HARDEST = ["Understanding fast speech", "Speaking with confidence", "Bei
 const Q_OCCUPATION = ["Working", "Studying", "Both", "Looking for work", "Neither"]; // Q4 single
 
 // ── Conditional spoken-variety question (§13.2). Options are the register's (rev 2 b8c7e066): the only L1 the register recognises with >1 spoken variety is Chinese (Mandarin vs Cantonese — country/script do not determine speech). ──
-const SPOKEN_VARIETY = { zh: [["mandarin", "Mandarin"], ["cantonese", "Cantonese"]] };
+const CHINESE_SPOKEN = [["mandarin", "Mandarin"], ["cantonese", "Cantonese"]];
+const SPOKEN_VARIETY = { zh: CHINESE_SPOKEN, "zh-Hant": CHINESE_SPOKEN }; // one array, referenced twice — zh and zh-Hant cannot drift
 // Spoken-variety label — Lessons-signed, 26 July 2026. "at home" makes this a
 // dominance question (answerable by students who speak both), and home variety is
 // the substrate pronunciation teaching needs.
