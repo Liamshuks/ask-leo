@@ -12,13 +12,13 @@ import {
    ============================================================ */
 
 const LANGS = {
-  // INTERIM. The native label must not promise more than the app delivers:
-  // offering 中文 while serving Simplified only is an equivalence failure on
-  // the one screen where a student chooses their own language.
-  // Superseded when the zh-Hans / zh-Hant split lands, at which point this
-  // becomes two entries: 简体中文 / Chinese (Simplified) and
-  // 繁體中文 / Chinese (Traditional).
+  // §13.3 (26 July 2026): the zh-Hans / zh-Hant split has landed. Script is the
+  // routing axis for Chinese per the ratified L1 Variety directive — the two are
+  // ORDINARY picker rows (no grouping, no "variants" heading): a script choice
+  // presented as an equal, not a sub-option. Existing "zh" records stay the
+  // Simplified base (key unchanged), so no record migrates or breaks.
   zh: { native: "简体中文", english: "Chinese (Simplified)", hello: "你好" },
+  "zh-Hant": { native: "繁體中文", english: "Chinese (Traditional)", hello: "你好" },
   es: { native: "Español", english: "Spanish", hello: "¡Hola" },
   pt: { native: "Português", english: "Portuguese", hello: "Olá" },
   fr: { native: "Français", english: "French", hello: "Bonjour" },
@@ -6701,8 +6701,10 @@ export default function App() {
     recentQuestions.length ? `recently they asked Leo about: ${recentQuestions.join("; ")}` : null,
   ].filter(Boolean).join("; ");
   const todayInfo = computeTodayProgress({ diaryPages, todayDone, words, heard });
-  const phrases = PHRASES[profile.lang];
-  const phraseOfDay = phrases[new Date().getDate() % phrases.length];
+  // §13.3: zh-Hant has no PHRASES entry — a Traditional reader must not receive
+  // Simplified l1 anyway. Fall back to an empty set rather than crash.
+  const phrases = PHRASES[profile.lang] || [];
+  const phraseOfDay = phrases.length ? phrases[new Date().getDate() % phrases.length] : null;
   /* Tab layer sits ABOVE page routing — every `page === "..."` check below is
      unchanged. Each tab remembers the section last used inside it, so leaving
      Words and returning lands on Word review rather than resetting.
