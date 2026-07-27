@@ -2853,7 +2853,7 @@ function DiaryPage({ profile, memory, leoMemory, pages, setPages, markActivity, 
     setBusy("feedback");
     try {
       const raw = await askClaude(
-        `You are Leo, a kind, encouraging Australian English teacher who knows this student well (${memory}). Celebrate strengths before mistakes, and only mention the mistakes that matter most. Teach like an expert: rather than only correcting, give a gentle HINT that helps them fix one thing themselves, and where their English is already good, UPGRADE it to more natural or more Australian phrasing. The student wrote this diary entry:\n\n"${notesDraft}"\n\nRespond ONLY with JSON, no markdown fences, exactly this shape:\n{"praise":"one specific, genuine thing they did well in English — name or quote the actual words you are praising, so it could not have been written about anyone else's entry","reformulation":"a natural, native-like version of their entry, keeping their meaning and first person voice","errorTypes":["up to 3 items from this list only: ${ERROR_TYPES.join(", ")}, or an empty array if none"],"tip":"one short, friendly coaching tip in simple English that either prompts them to self-correct ONE specific thing (a hint, not the full answer) or upgrades a good sentence into more natural English"}`,
+        `You are Leo, a kind, encouraging Australian English teacher who knows this student well (${memory}). Celebrate strengths before mistakes, and only mention the mistakes that matter most. Teach like an expert: rather than only correcting, give a gentle HINT that helps them fix one thing themselves, and where their English is already good, UPGRADE it to more natural or more Australian phrasing. The student wrote this diary entry:\n\n"${notesDraft}"\n\nRespond ONLY with JSON, no markdown fences, exactly this shape:\n{"praise":"one specific, genuine thing they did well in English — name or quote the actual words you are praising, so it could not have been written about anyone else's entry","reformulation":"a natural, native-like version of their entry, keeping their meaning and first person voice","errorTypes":["up to 3 items from this list only: ${ERROR_TYPES.join(", ")}, or an empty array if none"],"tip":"one short, friendly coaching tip in simple English that either prompts them to self-correct ONE specific thing (a hint, not the full answer) or upgrades a good sentence into more natural English"}${narrationGuidance(profile.level, "corrective")}`,
         { intent: "diary_feedback" }
       );
       const fb = parseJSON(raw);
@@ -4236,7 +4236,7 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
       const convo = next.map((t) => (t.role === "leo" ? "Teacher: " : "") + t.text).join("\n");
       const discussionCtx = hasDiscussion ? `\nDiscussion questions to explore: ${discussionQs.join("; ")}` : "";
       const raw = await askClaude(
-        `You are Leo, one of Australia's best ELICOS teachers, in a speaking practice about "${bp.context}" with your student (${memory}).\nObjective: ${bp.communicativeObjective}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\nFinal task they are building toward: ${bp.finalTask || bp.communicativeObjective}\nEmotional objective: ${bp.emotionalObjective || "build confidence"}${discussionCtx}\n\nBehave like a real teacher: respond to WHAT they said, sound curious and warm, ask ONE genuine follow-up question. Encourage communication over perfection. If they make a predicted mistake, gently recast it — but never interrupt the flow. Keep it to 2-3 natural sentences.\n\n${convo}\n\nThe student just said: "${said}"\n\nReply as the teacher in plain text only.`,
+        `You are Leo, one of Australia's best ELICOS teachers, in a speaking practice about "${bp.context}" with your student (${memory}).\nObjective: ${bp.communicativeObjective}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\nFinal task they are building toward: ${bp.finalTask || bp.communicativeObjective}\nEmotional objective: ${bp.emotionalObjective || "build confidence"}${discussionCtx}\n\nBehave like a real teacher: respond to WHAT they said, sound curious and warm, ask ONE genuine follow-up question. Encourage communication over perfection. If they make a predicted mistake, gently recast it — but never interrupt the flow. Keep it to 2-3 natural sentences.\n\n${convo}\n\nThe student just said: "${said}"\n\nReply as the teacher in plain text only.${narrationGuidance(bp.cefr, "corrective")}`,
         { intent: "speaking_reply" }
       );
       setTurns((t) => [...t, { role: "leo", text: raw }]);
@@ -4758,6 +4758,219 @@ const CEFR_CONSTRAINTS = {
 // string when the level has no entry (graceful, non-blocking fallback).
 const cefrBlock = (lvl, c) => c ? `\n\nLEVEL CONSTRAINT — ${lvl}. This governs the PRODUCTIVE target language only — what the lesson teaches and asks the student to produce — NOT receptive reading/listening material (which may sit slightly above level). Everything you plan to teach and have the student produce MUST stay within these limits:\n- ALLOWED: ${c.allowed.join("; ")}.\n- FORBIDDEN productively at ${lvl}: ${c.forbidden.join("; ")}.\n- VOCABULARY: ${c.vocab}.\n- TASKS: ${c.tasks}.\n- DO: ${c.do_examples.join("  |  ")}\n- DON'T: ${c.dont_examples.join("  |  ")}\nIf the situation implies content above ${lvl}, SIMPLIFY it to fit — never pitch above the student.` : "";
 
+const NARRATION_STANDARD = {
+  A1: {
+    sentence_form: "Max ~8 words per sentence. Max 1 clause per sentence. Simple statements or one-clause questions. No subordination.",
+    allowed_grammar: [
+      "present simple",
+      "to be",
+      "can/can't (ability)",
+      "imperatives for instructions",
+      "yes/no and Wh- questions in present simple",
+      "this is / that's",
+      "very basic past simple with was/were only, for brief orientation ('That was good.')"
+    ],
+    forbidden_grammar: [
+      "present continuous",
+      "modals other than can",
+      "any perfect tense",
+      "past simple with verbs other than was/were",
+      "past continuous",
+      "any conditional",
+      "reported speech",
+      "any relative clause",
+      "subordinate clauses",
+      "comparatives beyond 'good/better/best'"
+    ],
+    vocab: "Top 500 word families. No idiom. No phrasal verbs (except 'sit down', 'stand up', 'come on' as lexical chunks). No metaphor. No hedging vocabulary.",
+    register: "Warm but simple. Contractions OK (I'm, you're, don't). Short praise (Good!, Nice!, Well done!). One thought per sentence. No irony, no wordplay.",
+    function_notes: "All narration functions grade to sub-A1. Chat replies may use A1 productive grammar. Corrective feedback: point to the error in one very simple sentence, then model the correct form — never explain the rule.",
+    do_examples: [
+      "Intro: 'Hi! Today we learn café words. Are you ready?'",
+      "Instruction: 'Listen. Then choose the right word.'",
+      "Encouragement: 'Nice work! Try one more.'",
+      "Corrective feedback: 'Almost! Say: I would like a coffee.'",
+      "Chat reply: 'Hi! I am good, thank you. And you?'",
+      "Vocab framing: \"'Order' means to ask for food.\""
+    ],
+    dont_examples: [
+      "Intro (Genesis's live example): 'Today we are leaving the beach behind and going somewhere much more useful this week — you will learn the exact words baristas use every single day, so you can walk in, order your coffee, and understand what they ask you back.' — present continuous, comparative, subordination, phrasal verb, embedded clauses",
+      "Instruction: 'Now what I would like you to do is have a look at the list.' — subordinate clause, phrasal verb, hedged modal",
+      "Vocab: 'This word essentially refers to the act of requesting refreshments.' — B2+ vocabulary, formal register, abstraction",
+      "Corrective feedback: 'You almost had it, but the tense should have been past simple.' — modal past, comparative, meta-language"
+    ]
+  },
+  A2: {
+    sentence_form: "Max ~12 words per sentence. Max 2 clauses per sentence. Simple linkers (and, but, so, because) OK. No embedded clauses.",
+    allowed_grammar: [
+      "all A1 allowed",
+      "past simple full range",
+      "going to future",
+      "should for advice",
+      "basic comparatives and superlatives",
+      "there is/are, there was/were",
+      "present perfect with ever/never for experience only"
+    ],
+    forbidden_grammar: [
+      "past perfect",
+      "present perfect continuous",
+      "conditionals other than basic first",
+      "any passive",
+      "reported speech beyond 'he said X'",
+      "any relative clause",
+      "advanced modals",
+      "used to"
+    ],
+    vocab: "Top 1200 word families. Basic phrasal verbs as lexical chunks (get up, wake up, sit down). No idiom. No metaphor. Simple hedges allowed ('maybe', 'I think').",
+    register: "Warm, encouraging. Contractions natural. Short interest tokens ('Oh!', 'Really?', 'Nice!'). Simple follow-up questions.",
+    function_notes: "Framing grades to sub-A2 (A1-ish). Chat replies and corrective feedback may sit at A2 productive. Vocab explanations: framing sub-A2, explanation at A2.",
+    do_examples: [
+      "Intro: 'Today we learn about work. Can you tell me about your job?'",
+      "Instruction: 'Read the text. Then answer three questions.'",
+      "Encouragement: 'Well done! That was a good answer.'",
+      "Corrective feedback: 'Almost right. The past of go is went.'",
+      "Chat reply: 'That is interesting. Did you enjoy it?'",
+      "Vocab: \"'Colleague' means someone you work with.\""
+    ],
+    dont_examples: [
+      "Intro: 'So today what we're going to do is dive into the world of workplace vocabulary...' — subordinate clauses, phrasal verb, idiom, hedged framing",
+      "Vocab: 'Colleague — think of it as a peer in your professional environment.' — B2+ register, hedging, abstract",
+      "Corrective feedback: 'You were on the right track, though the perfect would have been better.' — comparative, hedge, meta-language"
+    ]
+  },
+  B1: {
+    sentence_form: "Max ~18 words per sentence. Max 2-3 clauses. Occasional compound-complex sentences. Natural discourse markers.",
+    allowed_grammar: [
+      "all A2 allowed",
+      "present perfect simple and continuous",
+      "past perfect simple",
+      "past continuous",
+      "zero, first, and second conditionals",
+      "basic passives (present and past simple)",
+      "defining relative clauses",
+      "basic reported speech",
+      "modals of obligation/permission/present deduction"
+    ],
+    forbidden_grammar: [
+      "third conditional",
+      "mixed conditionals",
+      "advanced passive constructions (perfect passive, modal passive, get-passive)",
+      "non-defining relative clauses",
+      "cleft sentences",
+      "any inversion",
+      "subjunctive",
+      "modals of past deduction (must have done)",
+      "advanced discourse markers (nevertheless, furthermore, notwithstanding)"
+    ],
+    vocab: "Top 2500 word families. Common phrasal verbs. Basic idiom (recognisable, no deep cultural reference). Basic collocations. Standard hedging ('might', 'I think', 'perhaps').",
+    register: "Warm, conversational. Contractions natural. Personal touches ('That's a great point.', 'I like that.'). Genuine follow-up questions.",
+    function_notes: "Chat replies and corrective feedback at B1. Framing at B1 for short items (instructions, encouragement). Extended intros graded slightly below — shorter sentences, no piled subordination, plainer vocabulary — because a wall of B1 prose at the START of a lesson lands differently from at-level exchange mid-lesson.",
+    do_examples: [
+      "Intro (extended, graded slightly below): 'Today we are looking at workplace communication. Have you ever had a tricky conversation at work? We will look at some real examples together.'",
+      "Instruction: 'Read the email. Then decide if the tone is polite or not.'",
+      "Encouragement: 'That is really well put — you have explained it clearly.'",
+      "Corrective feedback: 'Almost — since is used with a starting point. Since 2020 works, but since three years does not.'",
+      "Chat reply: 'That sounds difficult. How did you handle it?'"
+    ],
+    dont_examples: [
+      "Intro with inversion: 'Only after you have read it should you decide.' — inversion, forbidden productive at B1",
+      "Vocab with subjunctive: 'Colleague — one might think of it as a professional counterpart, were the register more formal.' — subjunctive, cleft, C1 register",
+      "Corrective feedback with modal past: 'You should have used the past perfect there.' — modal past, forbidden productive at B1"
+    ]
+  },
+  B2: {
+    sentence_form: "Max ~25 words per sentence. Multi-clause with subordination. Natural discourse-level cohesion.",
+    allowed_grammar: [
+      "all B1 allowed",
+      "third conditional",
+      "mixed conditionals",
+      "all passive forms including modal and perfect",
+      "non-defining relative clauses",
+      "modals of past deduction",
+      "reported speech full range",
+      "basic cleft sentences (It-cleft, What-cleft)",
+      "productive idiomatic language and phrasal verbs"
+    ],
+    forbidden_grammar: [
+      "advanced inversion (Hardly had I..., Never before...)",
+      "subjunctive except common fixed expressions ('If I were you')",
+      "highly literary or archaic constructions",
+      "rare or region-specific idioms without gloss"
+    ],
+    vocab: "Top 5000 word families. Common idioms. Phrasal verbs productive. Register-appropriate synonyms. Nuanced hedging.",
+    register: "Natural conversational teacher. Warm, engaged. Hedging ('I think', 'you might find'). Genuine questions and follow-ups.",
+    function_notes: "All narration functions at B2. No sub-level constraint on any function — B2 students have enough automaticity that at-level framing does not compete with content.",
+    do_examples: [
+      "Intro: 'Today we are looking at how tone shifts across professional emails — a small change in wording can completely reframe a message.'",
+      "Instruction: 'Read both emails, then work out what is off about the second one and how you would revise it.'",
+      "Encouragement: 'Nicely spotted — that shift in register is exactly what most learners miss.'",
+      "Corrective feedback: 'Nearly — the perfect passive would be has been sent, not has sent.'",
+      "Chat reply: 'That is a fair point, though I would push back on one part.'"
+    ],
+    dont_examples: [
+      "Intro with advanced inversion: 'Only when you have read both should you draw a conclusion.' — inversion, forbidden productive at B2",
+      "Regional idiom without gloss: 'She is flat out like a lizard drinking.' — Australian idiom, no gloss provided",
+      "Subjunctive outside fixed expressions: 'It is essential that the tone be softened.' — subjunctive, forbidden productive at B2"
+    ]
+  },
+  C1: {
+    sentence_form: "No length constraint. Full subordination and rhetorical range. Natural discourse.",
+    allowed_grammar: [
+      "all B2 allowed",
+      "full range of inversion (Hardly had I..., Never before have I..., Only then did...)",
+      "subjunctive (I suggest he take..., It is essential that she be...)",
+      "cleft sentences all forms",
+      "advanced ellipsis and substitution",
+      "fronting for emphasis",
+      "nuanced modality (I dare say..., Should you find..., Were it not for...)"
+    ],
+    forbidden_grammar: [
+      "very rare literary or archaic constructions",
+      "highly regional idioms without gloss unless the region is the taught target"
+    ],
+    vocab: "Top 8000 word families. Wide idiomatic and collocational range. Register shifting within a single stretch of discourse.",
+    register: "Full teacher voice. Sophisticated but warm. Hedging, stance-marking, nuanced praise. Genuine intellectual engagement.",
+    function_notes: "All narration functions at C1. No sub-level constraint. Corrective feedback may include meta-language and rule explanation because the student can process it.",
+    do_examples: [
+      "Intro: 'Today we are focusing on a subtle distinction English writers often navigate poorly: the difference between imply and infer. We will work through cases where the distinction actually matters.'",
+      "Instruction: 'Read the piece with an eye to where the writer hedges, and note down anywhere you feel the hedging carries more weight than the argument warrants.'",
+      "Corrective feedback: 'You have almost got it — the subjunctive here would be be reconsidered, not is reconsidered, since the reporting verb recommend triggers it.'"
+    ],
+    dont_examples: [
+      "Archaic form: \"Nay, twere better we discuss this later.\" — archaic",
+      "Regional idiom without gloss unless taught: 'She is fair dinkum about it.' — Australian idiom, no gloss"
+    ]
+  },
+  C2: null,
+};
+
+// Which do/dont examples belong to which narration function (by prefix in narration-standard-v1.md).
+const NARRATION_FN_PREFIX = { framing: ["Intro", "Instruction", "Encouragement", "Preview"], chat: ["Chat"], corrective: ["Corrective"], vocab: ["Vocab"] };
+// Grades LEO'S OWN speech to the student, SEPARATE from CEFR_CONSTRAINTS (which grades target language).
+// functionType picks register: framing sub-level below B1 / at-level B1+; chat + corrective always at-level; vocab framed like framing. Empty string when the level has no block (C2/unknown fallback).
+const narrationGuidance = (lvl, fn) => {
+  const b = NARRATION_STANDARD[lvl];
+  if (!b) return "";
+  const px = NARRATION_FN_PREFIX[fn] || [];
+  const pick = (arr) => { const hit = (arr || []).filter((e) => px.some((p) => e.startsWith(p))); return (hit.length ? hit : (arr || [])).join("  |  "); };
+  const head = "\n\nNARRATION REGISTER (" + fn + ") — this governs YOUR OWN speech to the student, SEPARATE from the target grammar you teach. ";
+  if (fn === "chat" || fn === "corrective") {
+    return head + "Speak AT the student's own " + lvl + " level — warm and natural, NOT a stricter sub-level register (this is where the student meets language at their level)." +
+      "\n- REGISTER: " + b.register +
+      "\n- NOTES: " + b.function_notes +
+      "\n- DO: " + pick(b.do_examples) +
+      "\n- DON'T: " + pick(b.dont_examples);
+  }
+  return head + "Grade your " + fn + " to this register (sub-level below B1; at-level from B1 up, with extended intros slightly below at B1):" +
+    "\n- SENTENCES: " + b.sentence_form +
+    "\n- FORBIDDEN in your own speech: " + b.forbidden_grammar.join("; ") + "." +
+    "\n- VOCAB: " + b.vocab +
+    "\n- REGISTER: " + b.register +
+    "\n- NOTES: " + b.function_notes +
+    "\n- DO: " + pick(b.do_examples) +
+    "\n- DON'T: " + pick(b.dont_examples);
+};
+
 const BLUEPRINT_JSON_SHAPE = `{"teacherReflection":"summarise your thinking in 2-3 sentences","communicativeObjective":"one can-do from your needs assessment","context":"the Australian situation you chose","cefr":"the student's CEFR level","lessonRationale":"why THIS lesson TODAY from your reasoning","predictedDifficulties":["2-3 mistakes from your analysis"],"emotionalObjective":"from your needs assessment","memorableMoment":"the one thing from your assessment","authenticMaterial":"the actual Australian text you wrote in your assessment","scaffoldingStrategy":"how you will build toward the final task","explanation":"2-3 warm sentences introducing today to the student","warmUpQuestions":["5-8 progressively communicative questions specific to today's context"],"warmUpActivities":[{"type":"one of: context_discussion|prediction|finish_sentence|mini_task|mcq|best_response|true_false|is_this_correct|spot_mistake|complete_dialogue|unscramble|order_conversation","instruction":"how to do it, one line","prompt":"the question or task, contextualised to TODAY","text":"optional supporting text or dialogue","options":["choice types ONLY: 2-4 options"],"answer":"choice types ONLY: exact text of the correct option","tokens":["sequence types ONLY: the words or lines IN THE CORRECT ORDER"],"note":"the teaching point, in Leo's voice"}],"vocabulary":[{"word":"","pos":"","meaning":"simple definition","ipa":"","stress":"","syllables":"","example":"in today's situation","examples":["one more"],"related":["2-3"],"collocations":["1-2"]}],"grammar":{"point":"","meaning":"","form":"","usage":"when Australians use this","examples":["2 in today's situation"]},"pronunciation":{"focus":"","tips":["2-3 for this student's L1"]},"mainSkill":"reading or listening","finalTask":"the role-play climax from your assessment","mission":"one doable real-world task","tomorrowConnection":"how today leads to tomorrow","learningOutcome":"what they can now do"}`;
 
 /* ---------- Blueprint validation (client-side, structural) ----------
@@ -5156,7 +5369,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       // Every field must come from the thinking above — not invented fresh.
       currentStage = "blueprint";
       const raw = await askClaude(
-        `You are Leo. You have analysed your student and assessed their needs. Here is your thinking:\n\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nNow convert this thinking into a structured lesson plan. Everything must come from your analysis above — do not invent new content that contradicts your reasoning. The student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)}\n\nRespond ONLY with JSON, no fences:\n${BLUEPRINT_JSON_SHAPE}\n\nExactly 8 vocabulary items from your needs assessment. Every word must justify its place.\n\nWARM-UP: give 3 activities of DIFFERENT types, all contextualised to today's situation — never generic. Choice types (mcq, best_response, true_false, is_this_correct, spot_mistake, complete_dialogue) need options + answer + note. Sequence types (unscramble, order_conversation) need tokens in the CORRECT order + note. Free types (context_discussion, prediction, finish_sentence, mini_task) need only a prompt. ${avoidFormats ? `Do NOT use these formats — the student had them last lesson: ${avoidFormats}.` : ""}`,
+        `You are Leo. You have analysed your student and assessed their needs. Here is your thinking:\n\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nNow convert this thinking into a structured lesson plan. Everything must come from your analysis above — do not invent new content that contradicts your reasoning. The student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)}${narrationGuidance(level, "framing")}\n\nRespond ONLY with JSON, no fences:\n${BLUEPRINT_JSON_SHAPE}\n\nExactly 8 vocabulary items from your needs assessment. Every word must justify its place.\n\nWARM-UP: give 3 activities of DIFFERENT types, all contextualised to today's situation — never generic. Choice types (mcq, best_response, true_false, is_this_correct, spot_mistake, complete_dialogue) need options + answer + note. Sequence types (unscramble, order_conversation) need tokens in the CORRECT order + note. Free types (context_discussion, prediction, finish_sentence, mini_task) need only a prompt. ${avoidFormats ? `Do NOT use these formats — the student had them last lesson: ${avoidFormats}.` : ""}`,
         { intent: "blueprint" }
       );
       let lastRaw = raw;
@@ -5170,7 +5383,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
         // that failed, what was wrong with it, the thinking, and the full shape.
         currentStage = "blueprint_retry";
         const raw2 = await askClaude(
-          `You are Leo. Fix your lesson plan. Your previous plan was:\n${JSON.stringify(blueprint)}\n\nIt had these problems: ${problems.join(", ")}.\n\nYour thinking was:\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nThe student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)} Produce a corrected, complete plan.\n\nRespond ONLY with JSON, no fences:\n${BLUEPRINT_JSON_SHAPE}`,
+          `You are Leo. Fix your lesson plan. Your previous plan was:\n${JSON.stringify(blueprint)}\n\nIt had these problems: ${problems.join(", ")}.\n\nYour thinking was:\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nThe student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)}${narrationGuidance(level, "framing")} Produce a corrected, complete plan.\n\nRespond ONLY with JSON, no fences:\n${BLUEPRINT_JSON_SHAPE}`,
           { intent: "blueprint" }
         );
         lastRaw = raw2;
@@ -5272,13 +5485,13 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
         data.questions = validateQuestions(data.questions);
         if (!data.passage || data.questions.length < 3) throw new Error("skill section invalid");
       } else if (stageId === "grammar") {
-        raw = await askClaude(`You are Leo, an experienced ELICOS teacher.\n\nTHE ONE GRAMMAR POINT FOR TODAY — everything must test exactly this and nothing else:\nPoint: "${bp.grammar.point}"\nMeaning: ${bp.grammar.meaning}\nForm: ${bp.grammar.form}\nExamples the student has just been shown: ${(bp.grammar.examples || []).join(" | ")}\n\nContext: ${bp.context} (CEFR ${bp.cefr})\nToday's vocabulary: ${(bp.vocabulary || []).slice(0,5).map(v=>v.word).join(", ")}\nPredicted student difficulties: ${(bp.predictedDifficulties || []).join("; ")}\n${priorCtx}\n\nWrite five practice questions that ALL drill the SAME structure shown in "Form" above. The student has just read the explanation and the examples; these questions must practise precisely that, so the explanation, the examples, the questions, the answers and the feedback are one coherent lesson.\n\nHARD RULES:\n- Every question must test the FORM above (word order, verb form, auxiliary, agreement, preposition, comparative marker — whatever that form uses).\n- Do NOT test a different grammar point. Do NOT test politeness or which sentence "sounds nicer" — that is function, not grammar.\n- Every note must NAME the rule, using the words of the point or the form, so the feedback teaches.\n- Use question types: complete the sentence, find the mistake, choose the correct word order, choose the correct verb form.\n- Set today's situation in the stems, using today's vocabulary where it fits naturally.\n- Randomise where the correct answer sits.\n\nRespond ONLY with JSON, no fences: {"grammarPoint":"copy today's grammar point EXACTLY","questions":[{"stem":"","options":["four options"],"answer":"exact text of correct option","note":"one warm teaching line that names the rule"}]}`,
+        raw = await askClaude(`You are Leo, an experienced ELICOS teacher.\n\nTHE ONE GRAMMAR POINT FOR TODAY — everything must test exactly this and nothing else:\nPoint: "${bp.grammar.point}"\nMeaning: ${bp.grammar.meaning}\nForm: ${bp.grammar.form}\nExamples the student has just been shown: ${(bp.grammar.examples || []).join(" | ")}\n\nContext: ${bp.context} (CEFR ${bp.cefr})${cefrBlock(bp.cefr, CEFR_CONSTRAINTS[bp.cefr])}\nToday's vocabulary: ${(bp.vocabulary || []).slice(0,5).map(v=>v.word).join(", ")}\nPredicted student difficulties: ${(bp.predictedDifficulties || []).join("; ")}\n${priorCtx}\n\nWrite five practice questions that ALL drill the SAME structure shown in "Form" above. The student has just read the explanation and the examples; these questions must practise precisely that, so the explanation, the examples, the questions, the answers and the feedback are one coherent lesson.\n\nHARD RULES:\n- Every question must test the FORM above (word order, verb form, auxiliary, agreement, preposition, comparative marker — whatever that form uses).\n- Do NOT test a different grammar point. Do NOT test politeness or which sentence "sounds nicer" — that is function, not grammar.\n- Every note must NAME the rule, using the words of the point or the form, so the feedback teaches.\n- Use question types: complete the sentence, find the mistake, choose the correct word order, choose the correct verb form.\n- Set today's situation in the stems, using today's vocabulary where it fits naturally.\n- Randomise where the correct answer sits.\n\nRespond ONLY with JSON, no fences: {"grammarPoint":"copy today's grammar point EXACTLY","questions":[{"stem":"","options":["four options"],"answer":"exact text of correct option","note":"one warm teaching line that names the rule"}]}`,
           { intent: "grammar_section" });
         data = parseJSON(raw);
         data.questions = validateQuestions(data.questions);
         if (data.questions.length < 3) throw new Error("grammar section invalid");
       } else {
-        raw = await askClaude(`You are Leo, an experienced ELICOS teacher, writing the closing reflection for today's lesson.\nContext: ${bp.context}\nObjective: ${bp.communicativeObjective}\nEmotional objective: ${bp.emotionalObjective || "build confidence"}\nToday's objective — what the lesson aimed at, NOT an achievement to certify: ${bp.learningOutcome}\nMemorable moment: ${bp.memorableMoment || ""}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\nTomorrow: ${bp.tomorrowConnection || ""}\nStudent: ${memory}\n${perfLine}\n${priorCtx}\n\nWrite a closing summary as a teacher who genuinely cares.\n\n${SUMMARY_HONESTY_RULES}\n\nThey should close feeling: "${bp.emotionalObjective || "more confident"}".\nRespond ONLY with JSON, no fences: {"praise":"","summary":"","strength":"","improvement":"","connection":"","tomorrowPreview":""}`,
+        raw = await askClaude(`You are Leo, an experienced ELICOS teacher, writing the closing reflection for today's lesson.\nContext: ${bp.context}\nObjective: ${bp.communicativeObjective}\nEmotional objective: ${bp.emotionalObjective || "build confidence"}\nToday's objective — what the lesson aimed at, NOT an achievement to certify: ${bp.learningOutcome}\nMemorable moment: ${bp.memorableMoment || ""}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\nTomorrow: ${bp.tomorrowConnection || ""}\nStudent: ${memory}\n${perfLine}\n${priorCtx}\n\nWrite a closing summary as a teacher who genuinely cares.\n\n${SUMMARY_HONESTY_RULES}\n\nThey should close feeling: "${bp.emotionalObjective || "more confident"}".\nRespond ONLY with JSON, no fences: {"praise":"","summary":"","strength":"","improvement":"","connection":"","tomorrowPreview":""}${narrationGuidance(bp.cefr, "framing")}`,
           { intent: "lesson_summary" });
         data = parseJSON(raw);
         if (!data.praise) throw new Error("summary invalid");
@@ -5378,7 +5591,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
     }
     if (vocabCache.current[word]) { setVocabCard({ word, data: vocabCache.current[word], loading: false }); return; }
     setVocabCard({ word, data: null, loading: true });
-    askClaude(`You are Leo, a warm Australian English teacher. A student in a lesson about "${bp ? bp.context : "English"}" tapped on the word "${word}". Give them a quick, friendly vocabulary card. Respond ONLY with JSON, no fences: {"ipa":"","pos":"","cefr":"","definition":"simple English, one sentence","lessonExample":"","examples":["",""],"related":["","",""]}`,
+    askClaude(`You are Leo, a warm Australian English teacher. A student in a lesson about "${bp ? bp.context : "English"}" tapped on the word "${word}". Give them a quick, friendly vocabulary card. Respond ONLY with JSON, no fences: {"ipa":"","pos":"","cefr":"","definition":"simple English, one sentence","lessonExample":"","examples":["",""],"related":["","",""]}${narrationGuidance(bp.cefr, "vocab")}`,
       { intent: "vocab_card" })
       .then((raw) => { const data = parseJSON(raw); vocabCache.current[word] = data; setVocabCard({ word, data, loading: false }); })
       .catch(() => setVocabCard({ word, data: { ipa: "", pos: "", cefr: level, definition: `Ask Leo in the chat to learn more about "${word}".`, examples: [], related: [] }, loading: false }));
@@ -5509,7 +5722,7 @@ async function askTutor(system, history, question) {
   const convo = history
     .map((m) => (m.role === "user" ? "" : "Tutor: ") + m.content)
     .join("\n\n");
-  const prompt = `${system}\n\n${convo ? "Conversation so far:\n" + convo + "\n\n" : ""}The student now says: "${question}"\n\nReply as the tutor, in plain text only (no JSON, no labels).`;
+  const prompt = `${system}${narrationGuidance(bp.cefr, "chat")}\n\n${convo ? "Conversation so far:\n" + convo + "\n\n" : ""}The student now says: "${question}"\n\nReply as the tutor, in plain text only (no JSON, no labels).`;
   return askClaude(prompt, { intent: "chat_reply" });
 }
 
@@ -5768,7 +5981,7 @@ function HeardPage({ profile, heard, setHeard, markActivity, onAskLeo, leoMemory
     setBusyId(item.id);
     try {
       const raw = await askClaude(
-        `An ESL student in Australia (first language: ${LANGS[profile.lang].english}) heard this English word or phrase in real life: "${item.phrase}". Explain it like a smart dictionary. Respond ONLY with JSON, no fences: {"meaning":"clear simple English explanation; note if it is Australian slang","ipa":"IPA pronunciation or empty","pos":"part of speech or empty","example":"one example sentence","collocations":["up to 3 common word partners, or empty"],"formality":"casual, neutral, or formal"}`,
+        `An ESL student in Australia (first language: ${LANGS[profile.lang].english}) heard this English word or phrase in real life: "${item.phrase}". Explain it like a smart dictionary. Respond ONLY with JSON, no fences: {"meaning":"clear simple English explanation; note if it is Australian slang","ipa":"IPA pronunciation or empty","pos":"part of speech or empty","example":"one example sentence","collocations":["up to 3 common word partners, or empty"],"formality":"casual, neutral, or formal"}${narrationGuidance(level, "vocab")}`,
         { intent: "heard_explain" }
       );
       const info = parseJSON(raw);
@@ -6647,7 +6860,7 @@ function ReviewPage({ profile, memory, leoMemory, words, heard, diaryPages, mark
       const termLines = chosenItems.map((it) => `"${it.term}" (from ${it.src}${it.meaning ? "; means: " + it.meaning : ""})`).join("; ");
       try {
         const raw = await askClaude(
-          `You are Leo, a warm Australian English teacher. Build a short, personalised vocabulary review for your student (${memory}). Use ONLY these words and phrases you have taught this student: ${termLines}. The list records what they have MET, not what they have mastered. Do not tell the student they have learned, mastered or know a word — the review exists precisely because that is still uncertain.${diaryContext ? ` Recent things they wrote in their diary: "${diaryContext}".` : ""} Build a RETRIEVAL LADDER across the set, staying multiple-choice throughout (same format, same length): the FIRST question is easy RECOGNITION (match the word to its meaning); the MIDDLE questions are RECALL (a fill-in-the-blank sentence with ___ where only the target word fits in context); the LAST question(s) test PRODUCTIVE USE (which sentence uses the word correctly and naturally in a real Australian situation). Australian context is welcome, and you may gently reference where an item came from (their diary or something they heard). ADAPT to the learner: pitch difficulty and distractors to their CEFR ${levelFor(profile)} level and recent performance (subtler distractors and richer sentences if they are strong; clearer and shorter if they are lower level). Respond ONLY with JSON, no fences: {"questions":[{"word":"the word","stem":"the question or fill-in-the-blank sentence using ___ for the gap","options":["four options"],"answer":"the exact text of the correct option","note":"one short, encouraging explanation from Leo that teaches, not just confirms"}]} Make up to 5 questions that climb from recognition to production; plausible distractors.`,
+          `You are Leo, a warm Australian English teacher. Build a short, personalised vocabulary review for your student (${memory}). Use ONLY these words and phrases you have taught this student: ${termLines}. The list records what they have MET, not what they have mastered. Do not tell the student they have learned, mastered or know a word — the review exists precisely because that is still uncertain.${diaryContext ? ` Recent things they wrote in their diary: "${diaryContext}".` : ""} Build a RETRIEVAL LADDER across the set, staying multiple-choice throughout (same format, same length): the FIRST question is easy RECOGNITION (match the word to its meaning); the MIDDLE questions are RECALL (a fill-in-the-blank sentence with ___ where only the target word fits in context); the LAST question(s) test PRODUCTIVE USE (which sentence uses the word correctly and naturally in a real Australian situation). Australian context is welcome, and you may gently reference where an item came from (their diary or something they heard). ADAPT to the learner: pitch difficulty and distractors to their CEFR ${levelFor(profile)} level and recent performance (subtler distractors and richer sentences if they are strong; clearer and shorter if they are lower level). Respond ONLY with JSON, no fences: {"questions":[{"word":"the word","stem":"the question or fill-in-the-blank sentence using ___ for the gap","options":["four options"],"answer":"the exact text of the correct option","note":"one short, encouraging explanation from Leo that teaches, not just confirms"}]} Make up to 5 questions that climb from recognition to production; plausible distractors.${narrationGuidance(level, "vocab")}`,
           { intent: "vocab_review" }
         );
         const qs = (parseJSON(raw).questions || []).filter((q) => q && q.options && q.options.includes(q.answer));
