@@ -5611,6 +5611,9 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
     const avoidFormats = Array.isArray(lastFormats) ? lastFormats.join(", ") : "";
 
     let currentStage = "init";
+    // [Perf] load-speed instrumentation (sub-pass 1) — per-stage ms + cumulative, console only, zero control-flow effect.
+    const _perf0 = performance.now(); let _perfL = _perf0;
+    const perfMark = (label) => { const n = performance.now(); console.log("[Perf] " + label + ": " + Math.round(n - _perfL) + "ms (total " + Math.round(n - _perf0) + "ms)"); _perfL = n; };
     try {
       const levelConstraint = CEFR_CONSTRAINTS[level] || null;
       if (!levelConstraint) console.warn(`[CEFR] No constraints defined for ${level} — planner running unconstrained`);
@@ -5626,6 +5629,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       // ---- STAGE 2: NEEDS ASSESSMENT ----
       // Leo decides what this student genuinely needs today. Not what would make
       // a good lesson — what THIS STUDENT needs.
+      perfMark("student_analysis");
       currentStage = "needs_assessment";
       const needsAssessment = await askClaude(
         `You are Leo. You have just analysed your student:\n\n${studentAnalysis}\n\n${reqLines ? "They have asked to work on:\n" + reqLines + "\n\n" : ""}STUDENT'S FIRST LANGUAGE: ${l1}\nCOUNTRY OF ORIGIN: ${country}\n\nVOCABULARY — STILL FRAGILE (not yet mastered): ${fragileWords}\nVOCABULARY — TO RECYCLE (taught but needs revisiting): ${recycleWords}\nRECURRING ERRORS: ${errorTally}\n\nIf several fragile words share a theme — for example, medical vocabulary, financial terms, or housing language — consider whether that theme is itself the right lesson today. A cluster of words that have been fragile for many lessons may be fragile precisely because no lesson has created a natural home for them. Teaching the situation they belong to is better than scattering them one by one across unrelated lessons where they will never stick.\n\nDo NOT repeat these recently-used contexts (choose something completely different): ${avoidCtx}.\n\nNow decide what this student genuinely needs today. Do not plan a lesson yet.\n\nIMPORTANT: You can only teach one thing well today. Choose ONE communicative objective. If this student has multiple needs — different grammar gaps, different skill weaknesses — pick the one that matters most right now and name what you are deliberately leaving for another day and why.\n\nConsider how this student's specific L1 variety affects their English — not just "Spanish" or "Chinese" but the regional variety. A Colombian Spanish speaker and a Peninsular Spanish speaker make different errors. A Cantonese speaker and a Mandarin speaker have different phonological challenges. Teach accordingly.\n\nAnswer these questions:\n\n- What ONE communicative situation would help them most RIGHT NOW in their life in Australia?\n- Why today? Why is this the right lesson for this moment in their learning?\n- What am I deliberately NOT teaching today, and why is that the right call?\n- What specific mistakes do I predict they will make, given their L1 variety?\n- What vocabulary is absolutely essential? (Name 8-10 words they genuinely need.) Include 2-3 words from the fragile or recycle lists above if any fit today's situation naturally — do not force them in if they do not belong.\n- What vocabulary should I deliberately leave out? (Name 2-3 words that are related but not essential.)\n- What grammar naturally arises from this situation?${cefrBlock(level, levelConstraint)}${singlePointBlock(level)}\n- What authentic Australian material could ground this? (A real SMS, menu, sign, notice, email — write the actual text.)\n- What is the one memorable moment I want to create?\n- How should this student feel at the end?\n- What moment of success am I building towards — what is the final thing they will DO?\n\nWrite 8-12 sentences. Be specific. This is your private educational reasoning.`,
@@ -5635,6 +5639,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       // ---- STAGE 3: LESSON BLUEPRINT ----
       // Now Leo converts his student analysis + needs assessment into a structured plan.
       // Every field must come from the thinking above — not invented fresh.
+      perfMark("needs_assessment");
       currentStage = "blueprint";
       const raw = await askClaude(
         `You are Leo. You have analysed your student and assessed their needs. Here is your thinking:\n\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nNow convert this thinking into a structured lesson plan. Everything must come from your analysis above — do not invent new content that contradicts your reasoning. The student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)}${narrationGuidance(level, "framing")}${singlePointBlock(level)}${volumeBlock(level)}${imageRuleBlock(level)}\n\nRespond ONLY with JSON, no fences:\n${BLUEPRINT_JSON_SHAPE}\n\nExactly 8 vocabulary items from your needs assessment. Every word must justify its place.\n\nWARM-UP: give 3 activities of DIFFERENT types, all contextualised to today's situation — never generic. Choice types (mcq, best_response, true_false, is_this_correct, spot_mistake, complete_dialogue) need options + answer + note. Sequence types (unscramble, order_conversation) need tokens in the CORRECT order + note. Free types (context_discussion, prediction, finish_sentence, mini_task) need only a prompt. ${avoidFormats ? `Do NOT use these formats — the student had them last lesson: ${avoidFormats}.` : ""}`,
@@ -5682,6 +5687,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       // ---- STAGE 4: EDUCATIONAL REVIEW ----
       // Leo reviews his own lesson as a senior ELICOS teacher would.
       // If anything fails, he revises the blueprint before presenting it.
+      perfMark("blueprint");
       currentStage = "educational_review";
       const review = await askClaude(
         `You are a senior ELICOS teacher reviewing a colleague's lesson plan. Be critically constructive.\n\nSTUDENT: ${studentAnalysis.slice(0, 300)}\n\nLESSON PLAN:\nContext: ${blueprint.context}\nObjective: ${blueprint.communicativeObjective}\nRationale: ${bpRationale}\n\nVocabulary:\n${blueprint.vocabulary.map(v => `${v.word} — ${v.meaning}`).join("\n")}\n\nGrammar point: ${blueprint.grammar.point}\nGrammar form: ${blueprint.grammar.form}\nGrammar examples: ${blueprint.grammar.examples.join(" / ")}\n\nWarm-up activities:\n${bpWarmUps}\n\nFinal task: ${blueprint.finalTask}\nMemorable moment: ${blueprint.memorableMoment}\nScaffolding: ${bpScaffold}\n\nAnswer YES or NO to each, then explain briefly:\n1. Would I enjoy teaching this lesson?\n2. Does every vocabulary item genuinely support the objective? Check each definition — is it clear and helpful at this level, or vague and circular?\n3. Does the grammar arise naturally from the situation?\n4. Is the authentic material believable?\n5. Does everything build toward the final task — does vocabulary prepare for reading, does reading model the grammar, does grammar support speaking?\n6. Is it memorable?\n7. Would the student leave more confident?\n8. Do the grammar examples practise the target structure and ONLY the target structure? Could a student answer any grammar example correctly without knowing the grammar rule? If so, the examples are testing something else.\n9. Do the warm-up activities feel specific to today's context, or could they appear in any lesson?\n10. Is there anything I would change?\n\nBe honest. If anything needs improving, say exactly what and why.`,
@@ -5720,6 +5726,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       const usedFormats = validateWarmUp(blueprint.warmUpActivities).map((a) => a.type);
       await saveKey("esl-lastwarmup", usedFormats);
 
+      perfMark("review+revision");
       await persist({ blueprint, sections: {}, stage: 0, perf: {}, status: { done: false } });
       setPhase("lesson");
     } catch (e) {
