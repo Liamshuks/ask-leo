@@ -2342,12 +2342,7 @@ function computeStreak(dates) {
    the SENTENCE changes and the rule redraws BECAUSE the sentence changed, so
    movement is always the consequence of something actually happening. */
 
-/* §3.3 — the escalation ladder, generic across every call site. These replace
-   five strings no student ever saw: every call site passed an explicit label. */
-const LEO_LOADER_MESSAGES = [
-  "Still working — I'd rather get this right than get it quickly.",  // at 4s
-  "This one's taking longer than usual. I haven't forgotten you.",   // at 9s
-];
+/* Loading lines now come from LOADING_MESSAGES (lesson-tightening item 4), pulled per student level by WaitIndicator. The old tool-apologising lines were retired — they failed the Toolbox Test. */
 
 /* §3.2 timing table. 0-400ms: nothing at all — a loader that flashes for a
    fifth of a second is noise. 400ms: the rule draws once. 4s and 9s: the
@@ -2380,12 +2375,15 @@ function DrawnRule({ inline }) {
    what redraws the rule when the line changes (§3.2).
    §6: the mark is always aria-hidden and the sentence always live — the motion
    is never the announcement. */
-function WaitIndicator({ label, inline, className, stage: forced }) {
+function WaitIndicator({ label, inline, className, stage: forced, level }) {
   const own = useWaitStage();
+  const set = LOADING_MESSAGES[level] || LOADING_MESSAGES.A2 || [];
+  const [offset] = useState(() => (set.length ? Math.floor(Math.random() * set.length) : 0));
   const stage = forced === undefined ? own : forced;
   if (stage === 0) return null;
-  const text = stage >= 3 ? LEO_LOADER_MESSAGES[1]
-    : stage === 2 ? LEO_LOADER_MESSAGES[0]
+  // Leo preparing (lesson-tightening item 4): rotate the level's set; stages 2 and 3 never repeat the same line.
+  const text = stage >= 2 && set.length
+    ? set[(offset + (stage - 2)) % set.length]
     : label;
   const cls = (inline ? "wait-inline" : "wait-block") + (className ? " " + className : "");
   return (
@@ -2396,8 +2394,8 @@ function WaitIndicator({ label, inline, className, stage: forced }) {
   );
 }
 
-function LeoLoader({ label }) {
-  return <WaitIndicator label={label} />;
+function LeoLoader({ label, level }) {
+  return <WaitIndicator label={label} level={level} />;
 }
 
 /* The whole row is gated, not just the rule: an empty padded bubble with an
@@ -4959,7 +4957,7 @@ const narrationGuidance = (lvl, fn) => {
       "\n- REGISTER: " + b.register +
       "\n- NOTES: " + b.function_notes +
       "\n- DO: " + pick(b.do_examples) +
-      "\n- DON'T: " + pick(b.dont_examples);
+      "\n- DON'T: " + pick(b.dont_examples) + NO_META_VOCAB;
   }
   return head + "Grade your " + fn + " to this register (sub-level below B1; at-level from B1 up, with extended intros slightly below at B1):" +
     "\n- SENTENCES: " + b.sentence_form +
@@ -4968,8 +4966,244 @@ const narrationGuidance = (lvl, fn) => {
     "\n- REGISTER: " + b.register +
     "\n- NOTES: " + b.function_notes +
     "\n- DO: " + pick(b.do_examples) +
-    "\n- DON'T: " + pick(b.dont_examples);
+    "\n- DON'T: " + pick(b.dont_examples) + NO_META_VOCAB;
 };
+
+const TEXT_VOLUME_STANDARD = {
+  A1: {
+    max_words_per_leo_turn: 20,
+    max_sentences_per_leo_turn: 3,
+    max_words_per_stage_teaching: 60,
+    max_words_per_reading_passage: 80,
+    whitespace_directive: "One sentence per line where possible. Blank line between Leo-turns. Never a prose paragraph — always separated statements. Substitution tables and boxes over sentences where content permits.",
+    density_notes: "SPARSE by design. Every word must earn its place. If an image can carry the meaning, cut the words. Prefer 30 on-screen words over 60. White space is a feature.",
+    do_examples: [
+      "Intro: 'Hi! Today we learn café words. Ready?' — 8 words, 3 sentences",
+      "Instruction: 'Look at picture 1. What is it?' — 8 words, image-anchored",
+      "Grammar stage showing 'I'm + [name]' + example 'I'm Ana.' — under 20 on-screen words total"
+    ],
+    dont_examples: [
+      "Any prose paragraph — even A1-graded prose fails at A1 volume",
+      "Grammar page structured as 'What it means / The form / When to use / notes' — the pattern itself fails regardless of word difficulty",
+      "Intro of 40+ words even if perfectly A1-graded (Genesis's café example was ~50 words)"
+    ]
+  },
+  A2: {
+    max_words_per_leo_turn: 30,
+    max_sentences_per_leo_turn: 4,
+    max_words_per_stage_teaching: 100,
+    max_words_per_reading_passage: 150,
+    whitespace_directive: "One idea per line still preferred. Short paragraphs (max 2 sentences) permitted where the linker justifies the join.",
+    density_notes: "Still sparse. Occasional two-clause sentences OK. Volume rises from A1 but the visual breathing space stays.",
+    do_examples: [
+      "Intro: 'Today we learn about work. Can you tell me about your job? We have three activities.' — 18 words, 3 sentences",
+      "Instruction: 'Read the text. Then answer three questions. Take your time.' — 11 words"
+    ],
+    dont_examples: [
+      "Extended reasoning in a single turn ('So today what we want to do is...')",
+      "Reading passage exceeding 150 words even at A2 vocab tier"
+    ]
+  },
+  B1: {
+    max_words_per_leo_turn: 45,
+    max_sentences_per_leo_turn: 5,
+    max_words_per_stage_teaching: 180,
+    max_words_per_reading_passage: 300,
+    whitespace_directive: "Natural paragraphs, breaks every 2-3 sentences. Boxes/tables still preferred for grammar form.",
+    density_notes: "Density rises meaningfully — students have enough automaticity to process a fuller Leo-turn. The whiteboard aesthetic still applies at grammar stages specifically.",
+    do_examples: [
+      "Intro: 'Today we're looking at workplace communication. Have you ever had a tricky conversation at work? We'll look at some real examples together.' — 26 words, 3 sentences"
+    ],
+    dont_examples: [
+      "Reading passage over 300 words even where the content sits at B1",
+      "Extended monologue teaching (>5 sentences without a student response point)"
+    ]
+  },
+  B2: {
+    max_words_per_leo_turn: 70,
+    max_sentences_per_leo_turn: 7,
+    max_words_per_stage_teaching: 300,
+    max_words_per_reading_passage: 500,
+    whitespace_directive: "Natural paragraphs. Cohesion devices doing real work.",
+    density_notes: "Full teacher discourse. The volume constraint is about pacing and student processing rhythm, not about protecting comprehension.",
+    do_examples: [
+      "Extended intro of 3-4 sentences with subordination and hedging is now natural"
+    ],
+    dont_examples: [
+      "Wall-of-text stages (>300 on-screen words) — still fails Toolbox Test at B2"
+    ]
+  },
+  C1: {
+    max_words_per_leo_turn: null,
+    max_sentences_per_leo_turn: null,
+    max_words_per_stage_teaching: null,
+    max_words_per_reading_passage: null,
+    whitespace_directive: "Natural discourse.",
+    density_notes: "No numeric constraint. The constraint at C1 is coherence and pacing, not volume. If a C1 stage feels dense, it is a coherence problem, not a length problem.",
+    do_examples: [],
+    dont_examples: []
+  },
+  C2: null,
+};
+
+const SINGLE_POINT_DIRECTIVE = {
+  A1: "ONE communicative objective. ONE target grammar point per lesson. No exceptions. If a topic seems to require a second structure to work (e.g. 'ordering coffee' seems to need both 'I want' AND 'would like'), IT IS TWO LESSONS. Cut, do not compress. Above-level structures that appear naturally in the topic are CUT — never taught as 'memorise this formula'. If it cannot be UNDERSTOOD at A1, it cannot be TAUGHT at A1.",
+  A2: "ONE main new grammar point per lesson. Consolidation of a previously-taught A1 point may occur alongside as recycling, but not a second NEW point. Above-level structures still cut, not compressed.",
+  B1: "One or two integrated grammar points MAX. Integration must be genuine — the points must be pedagogically inseparable (present perfect + since/for; past simple + past continuous in narrative). Unrelated points are two lessons. B1 students have enough automaticity to hold two integrated ideas; not two unrelated ones.",
+  B2: "Up to two integrated grammar points, as B1. Integration criterion unchanged.",
+  C1: "Up to three integrated points if the lesson theme genuinely warrants (e.g. inversion + fronting + cleft as related emphasis devices; reduced relative clauses + participle clauses as related cohesion devices). If any of the three is unrelated, split.",
+  enforcement_examples_A1: {
+    valid: [
+      "Topic 'café ordering' → target 'I want [drink]' (single structure: want + noun)",
+      "Topic 'meeting people' → target 'I'm from [country]' (single structure: to be + prepositional phrase)"
+    ],
+    invalid: [
+      "Topic 'café ordering' → target 'I want / I would like [drink]' — TWO structures; 'would like' is B1 productive. Cut 'would like'; teach it at A2/B1 as the polite form.",
+      "Topic 'meeting people' → target 'Hi, I'm [name]. Can I have [drink]?' — THREE structures. Split into first-meeting and café lessons.",
+      "Any target described as 'a formula to memorise' — this phrasing is the anti-pattern. Rewrite the lesson."
+    ]
+  }
+};
+
+const LOADING_MESSAGES = {
+  A1: [
+    "One moment — nearly ready for you.",
+    "Just a moment. I want to make it good.",
+    "Nearly ready! One moment.",
+    "One moment. Your next part is nearly ready.",
+    "Just a moment for you.",
+    "One moment. I'm getting your lesson ready."
+  ],
+  A2: [
+    "One moment — I'm getting your lesson ready.",
+    "Just a moment. I'm choosing a good example for you.",
+    "Nearly ready. I want it to be good.",
+    "One moment. I'm putting your next part together.",
+    "Just a moment — I want to get this right for you."
+  ],
+  B1: [
+    "One moment — I'm getting things ready for you.",
+    "Just a moment while I put your next section together.",
+    "Nearly there — I'm choosing the best example for what we're working on.",
+    "One moment — I want this next part to fit what we've been doing.",
+    "Just a moment. I'm thinking about the best way to explain this."
+  ],
+  B2: [
+    "Just a moment — I'm working out the best way to approach this next bit.",
+    "One moment while I put together something specific to what we discussed.",
+    "Nearly ready — I'm choosing an example that will actually push your writing.",
+    "Just a moment. I want to give you something specific rather than generic."
+  ],
+  C1: [
+    "One moment — I'm working out the best angle for this.",
+    "Just a moment while I put together something worth your time.",
+    "Nearly ready — matching this to the direction we've taken so far.",
+    "One moment. I want this to build on what we did, not just repeat it."
+  ],
+  C2: null,
+};
+
+const IMAGE_VS_WORD = {
+  A1: {
+    image_taught: [
+      "concrete nouns — food, drink, household objects, vehicles, body parts, clothing, common places (café, shop, home, hospital), people-roles with visible indicator, numbers, colours",
+      "concrete verbs — showable actions taught with image + one example sentence",
+      "adjectives — CONTRAST-taught with two images (big/small, hot/cold); never single-image with a label"
+    ],
+    word_taught: [
+      "function words (the, a, in, on, and, but, of) — sentence context, no image possible",
+      "abstract nouns — NOT TAUGHT at A1 per SINGLE_POINT_DIRECTIVE + narration rules; cut, don't teach",
+      "logical connectors, question words — sentence context only"
+    ],
+    hybrid: [
+      "verbs — image of the action + one example carrying the target grammar; image alone leaves tense ambiguous"
+    ],
+    rule: "At A1, ask before writing a definition: 'Could an image do this?' If yes, use the image. Text at A1 is fallback, not default. Definitions are for what pictures can't show."
+  },
+  A2: {
+    image_taught: [
+      "concrete nouns as A1 — extended range (workplace items, food varieties, situations)",
+      "simple contrast adjectives (comfortable/uncomfortable, safe/dangerous)",
+      "concrete verbs (drive, cook, deliver, repair) with example sentence"
+    ],
+    word_taught: [
+      "function words as A1",
+      "abstract nouns that ARE A2 target (job, weather, family) — word-taught in sentence context; image optional if it aids without dominating",
+      "logical connectors, discourse markers"
+    ],
+    hybrid: [
+      "verbs still hybrid",
+      "simple abstract nouns (health, work, home as concept) — word-taught, image if a scene can illustrate"
+    ],
+    rule: "Image-first for concrete, word-first for abstract, hybrid where a scene can illustrate an abstract concept. Same test as A1 — can an image do this? — but the answer shifts to 'no' more often at A2."
+  },
+  B1: {
+    image_taught: [
+      "unfamiliar concrete nouns (toolbox, shift, receipt, invoice) — student may not know despite being at B1",
+      "specific setting/situation images to anchor a topic (a meeting room, a shop counter)"
+    ],
+    word_taught: [
+      "abstract vocabulary that IS B1 target (opinion, experience, decision, plan, opportunity) — word-taught with rich sentence context and collocation",
+      "phrasal verbs — sentence context with common collocates",
+      "connectors, discourse markers"
+    ],
+    hybrid: [
+      "diagrams for abstract concepts where a visual genuinely aids (a timeline for tense sequence; a chart for cause/effect)"
+    ],
+    rule: "Image is a supplement at B1, not the primary teaching mode. Use images for unfamiliar concrete nouns and to anchor topics; text for the abstract vocabulary that is now the target."
+  },
+  B2: {
+    image_taught: [
+      "specialist or unfamiliar concrete terms in a topic (technical vocabulary a student meets in a text)",
+      "occasional scene-anchor for a new topic"
+    ],
+    word_taught: [
+      "the majority of B2 vocabulary — abstract, register-varied, collocation-rich",
+      "idioms, phrasal verbs, collocations — always in sentence context"
+    ],
+    hybrid: [
+      "diagrams for genuinely visual concepts (data trends, process flows)"
+    ],
+    rule: "Image is occasional at B2, used only where a concrete referent genuinely aids. The teaching mode is text-in-context, and the constraint that used to be about protecting comprehension has become about register and precision."
+  },
+  C1: {
+    image_taught: [
+      "rare unfamiliar concrete terms in specialist texts",
+      "process/system diagrams where visual representation actually aids"
+    ],
+    word_taught: [
+      "the overwhelming majority of C1 target — register, collocation, nuance, appropriacy — no image benefit",
+      "subtle meaning distinctions between near-synonyms"
+    ],
+    hybrid: [
+      "occasional visual for a specialist domain the student is engaging"
+    ],
+    rule: "Image is rare at C1, used only where a concrete referent or a genuinely visual concept aids. The teaching work at C1 is textual, contextual, and register-oriented."
+  },
+  C2: null,
+};
+
+
+// ── Lesson-tightening v1 helpers (lesson-tightening-v1.md). Density, single-point, image rule — injected alongside cefrBlock + narrationGuidance. ──
+const volumeBlock = (lvl) => {
+  const v = TEXT_VOLUME_STANDARD[lvl];
+  if (!v) return "";
+  if (v.max_words_per_leo_turn == null) return "\n\nTEXT VOLUME (density, separate from difficulty): " + v.density_notes;
+  return "\n\nTEXT VOLUME — how MUCH text is on screen, SEPARATE from difficulty: max " + v.max_words_per_leo_turn + " words / " + v.max_sentences_per_leo_turn + " sentences per Leo turn; max " + v.max_words_per_stage_teaching + " on-screen teaching words per stage; max " + v.max_words_per_reading_passage + " words per reading passage. LAYOUT: " + v.whitespace_directive + " " + v.density_notes;
+};
+const singlePointBlock = (lvl) => {
+  const d = SINGLE_POINT_DIRECTIVE[lvl];
+  if (!d) return "";
+  return "\n\nSINGLE GRAMMAR POINT (one target per lesson; cut, do not compress; never 'a formula to memorise'): " + d;
+};
+const imageRuleBlock = (lvl) => {
+  const r = IMAGE_VS_WORD[lvl];
+  if (!r) return "";
+  return "\n\nIMAGE-VS-WORD (guidance only — which vocab teaches by image vs word; ask 'can an image do this?'): IMAGE-taught: " + r.image_taught.join("; ") + ". WORD-taught: " + r.word_taught.join("; ") + ". HYBRID: " + r.hybrid.join("; ") + ". RULE: " + r.rule;
+};
+// Level-independent (ruling b, Genesis 27 Jul): meta-vocabulary frames Leo as an LMS and fails the Toolbox Test at EVERY level. Stated ONCE, not per-level.
+const NO_META_VOCAB = "\n- NO META-VOCABULARY about the lesson itself (never: topic, objective, structure, aspect, learning outcome, unit). It frames Leo as a system, not a teacher, and fails the Toolbox Test at EVERY level (A1-C1). Level-independent.";
+
 
 const BLUEPRINT_JSON_SHAPE = `{"teacherReflection":"summarise your thinking in 2-3 sentences","communicativeObjective":"one can-do from your needs assessment","context":"the Australian situation you chose","cefr":"the student's CEFR level","lessonRationale":"why THIS lesson TODAY from your reasoning","predictedDifficulties":["2-3 mistakes from your analysis"],"emotionalObjective":"from your needs assessment","memorableMoment":"the one thing from your assessment","authenticMaterial":"the actual Australian text you wrote in your assessment","scaffoldingStrategy":"how you will build toward the final task","explanation":"2-3 warm sentences introducing today to the student","warmUpQuestions":["5-8 progressively communicative questions specific to today's context"],"warmUpActivities":[{"type":"one of: context_discussion|prediction|finish_sentence|mini_task|mcq|best_response|true_false|is_this_correct|spot_mistake|complete_dialogue|unscramble|order_conversation","instruction":"how to do it, one line","prompt":"the question or task, contextualised to TODAY","text":"optional supporting text or dialogue","options":["choice types ONLY: 2-4 options"],"answer":"choice types ONLY: exact text of the correct option","tokens":["sequence types ONLY: the words or lines IN THE CORRECT ORDER"],"note":"the teaching point, in Leo's voice"}],"vocabulary":[{"word":"","pos":"","meaning":"simple definition","ipa":"","stress":"","syllables":"","example":"in today's situation","examples":["one more"],"related":["2-3"],"collocations":["1-2"]}],"grammar":{"point":"","meaning":"","form":"","usage":"when Australians use this","examples":["2 in today's situation"]},"pronunciation":{"focus":"","tips":["2-3 for this student's L1"]},"mainSkill":"reading or listening","finalTask":"the role-play climax from your assessment","mission":"one doable real-world task","tomorrowConnection":"how today leads to tomorrow","learningOutcome":"what they can now do"}`;
 
@@ -5360,7 +5594,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       // a good lesson — what THIS STUDENT needs.
       currentStage = "needs_assessment";
       const needsAssessment = await askClaude(
-        `You are Leo. You have just analysed your student:\n\n${studentAnalysis}\n\n${reqLines ? "They have asked to work on:\n" + reqLines + "\n\n" : ""}STUDENT'S FIRST LANGUAGE: ${l1}\nCOUNTRY OF ORIGIN: ${country}\n\nVOCABULARY — STILL FRAGILE (not yet mastered): ${fragileWords}\nVOCABULARY — TO RECYCLE (taught but needs revisiting): ${recycleWords}\nRECURRING ERRORS: ${errorTally}\n\nIf several fragile words share a theme — for example, medical vocabulary, financial terms, or housing language — consider whether that theme is itself the right lesson today. A cluster of words that have been fragile for many lessons may be fragile precisely because no lesson has created a natural home for them. Teaching the situation they belong to is better than scattering them one by one across unrelated lessons where they will never stick.\n\nDo NOT repeat these recently-used contexts (choose something completely different): ${avoidCtx}.\n\nNow decide what this student genuinely needs today. Do not plan a lesson yet.\n\nIMPORTANT: You can only teach one thing well today. Choose ONE communicative objective. If this student has multiple needs — different grammar gaps, different skill weaknesses — pick the one that matters most right now and name what you are deliberately leaving for another day and why.\n\nConsider how this student's specific L1 variety affects their English — not just "Spanish" or "Chinese" but the regional variety. A Colombian Spanish speaker and a Peninsular Spanish speaker make different errors. A Cantonese speaker and a Mandarin speaker have different phonological challenges. Teach accordingly.\n\nAnswer these questions:\n\n- What ONE communicative situation would help them most RIGHT NOW in their life in Australia?\n- Why today? Why is this the right lesson for this moment in their learning?\n- What am I deliberately NOT teaching today, and why is that the right call?\n- What specific mistakes do I predict they will make, given their L1 variety?\n- What vocabulary is absolutely essential? (Name 8-10 words they genuinely need.) Include 2-3 words from the fragile or recycle lists above if any fit today's situation naturally — do not force them in if they do not belong.\n- What vocabulary should I deliberately leave out? (Name 2-3 words that are related but not essential.)\n- What grammar naturally arises from this situation?${cefrBlock(level, levelConstraint)}\n- What authentic Australian material could ground this? (A real SMS, menu, sign, notice, email — write the actual text.)\n- What is the one memorable moment I want to create?\n- How should this student feel at the end?\n- What moment of success am I building towards — what is the final thing they will DO?\n\nWrite 8-12 sentences. Be specific. This is your private educational reasoning.`,
+        `You are Leo. You have just analysed your student:\n\n${studentAnalysis}\n\n${reqLines ? "They have asked to work on:\n" + reqLines + "\n\n" : ""}STUDENT'S FIRST LANGUAGE: ${l1}\nCOUNTRY OF ORIGIN: ${country}\n\nVOCABULARY — STILL FRAGILE (not yet mastered): ${fragileWords}\nVOCABULARY — TO RECYCLE (taught but needs revisiting): ${recycleWords}\nRECURRING ERRORS: ${errorTally}\n\nIf several fragile words share a theme — for example, medical vocabulary, financial terms, or housing language — consider whether that theme is itself the right lesson today. A cluster of words that have been fragile for many lessons may be fragile precisely because no lesson has created a natural home for them. Teaching the situation they belong to is better than scattering them one by one across unrelated lessons where they will never stick.\n\nDo NOT repeat these recently-used contexts (choose something completely different): ${avoidCtx}.\n\nNow decide what this student genuinely needs today. Do not plan a lesson yet.\n\nIMPORTANT: You can only teach one thing well today. Choose ONE communicative objective. If this student has multiple needs — different grammar gaps, different skill weaknesses — pick the one that matters most right now and name what you are deliberately leaving for another day and why.\n\nConsider how this student's specific L1 variety affects their English — not just "Spanish" or "Chinese" but the regional variety. A Colombian Spanish speaker and a Peninsular Spanish speaker make different errors. A Cantonese speaker and a Mandarin speaker have different phonological challenges. Teach accordingly.\n\nAnswer these questions:\n\n- What ONE communicative situation would help them most RIGHT NOW in their life in Australia?\n- Why today? Why is this the right lesson for this moment in their learning?\n- What am I deliberately NOT teaching today, and why is that the right call?\n- What specific mistakes do I predict they will make, given their L1 variety?\n- What vocabulary is absolutely essential? (Name 8-10 words they genuinely need.) Include 2-3 words from the fragile or recycle lists above if any fit today's situation naturally — do not force them in if they do not belong.\n- What vocabulary should I deliberately leave out? (Name 2-3 words that are related but not essential.)\n- What grammar naturally arises from this situation?${cefrBlock(level, levelConstraint)}${singlePointBlock(level)}\n- What authentic Australian material could ground this? (A real SMS, menu, sign, notice, email — write the actual text.)\n- What is the one memorable moment I want to create?\n- How should this student feel at the end?\n- What moment of success am I building towards — what is the final thing they will DO?\n\nWrite 8-12 sentences. Be specific. This is your private educational reasoning.`,
         { intent: "needs_assessment" }
       );
 
@@ -5369,7 +5603,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       // Every field must come from the thinking above — not invented fresh.
       currentStage = "blueprint";
       const raw = await askClaude(
-        `You are Leo. You have analysed your student and assessed their needs. Here is your thinking:\n\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nNow convert this thinking into a structured lesson plan. Everything must come from your analysis above — do not invent new content that contradicts your reasoning. The student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)}${narrationGuidance(level, "framing")}\n\nRespond ONLY with JSON, no fences:\n${BLUEPRINT_JSON_SHAPE}\n\nExactly 8 vocabulary items from your needs assessment. Every word must justify its place.\n\nWARM-UP: give 3 activities of DIFFERENT types, all contextualised to today's situation — never generic. Choice types (mcq, best_response, true_false, is_this_correct, spot_mistake, complete_dialogue) need options + answer + note. Sequence types (unscramble, order_conversation) need tokens in the CORRECT order + note. Free types (context_discussion, prediction, finish_sentence, mini_task) need only a prompt. ${avoidFormats ? `Do NOT use these formats — the student had them last lesson: ${avoidFormats}.` : ""}`,
+        `You are Leo. You have analysed your student and assessed their needs. Here is your thinking:\n\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nNow convert this thinking into a structured lesson plan. Everything must come from your analysis above — do not invent new content that contradicts your reasoning. The student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)}${narrationGuidance(level, "framing")}${singlePointBlock(level)}${volumeBlock(level)}${imageRuleBlock(level)}\n\nRespond ONLY with JSON, no fences:\n${BLUEPRINT_JSON_SHAPE}\n\nExactly 8 vocabulary items from your needs assessment. Every word must justify its place.\n\nWARM-UP: give 3 activities of DIFFERENT types, all contextualised to today's situation — never generic. Choice types (mcq, best_response, true_false, is_this_correct, spot_mistake, complete_dialogue) need options + answer + note. Sequence types (unscramble, order_conversation) need tokens in the CORRECT order + note. Free types (context_discussion, prediction, finish_sentence, mini_task) need only a prompt. ${avoidFormats ? `Do NOT use these formats — the student had them last lesson: ${avoidFormats}.` : ""}`,
         { intent: "blueprint" }
       );
       let lastRaw = raw;
@@ -5383,7 +5617,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
         // that failed, what was wrong with it, the thinking, and the full shape.
         currentStage = "blueprint_retry";
         const raw2 = await askClaude(
-          `You are Leo. Fix your lesson plan. Your previous plan was:\n${JSON.stringify(blueprint)}\n\nIt had these problems: ${problems.join(", ")}.\n\nYour thinking was:\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nThe student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)}${narrationGuidance(level, "framing")} Produce a corrected, complete plan.\n\nRespond ONLY with JSON, no fences:\n${BLUEPRINT_JSON_SHAPE}`,
+          `You are Leo. Fix your lesson plan. Your previous plan was:\n${JSON.stringify(blueprint)}\n\nIt had these problems: ${problems.join(", ")}.\n\nYour thinking was:\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nThe student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)}${narrationGuidance(level, "framing")}${singlePointBlock(level)}${volumeBlock(level)}${imageRuleBlock(level)} Produce a corrected, complete plan.\n\nRespond ONLY with JSON, no fences:\n${BLUEPRINT_JSON_SHAPE}`,
           { intent: "blueprint" }
         );
         lastRaw = raw2;
@@ -5479,13 +5713,13 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       let raw, data;
       if (stageId === "skill") {
         const notes = bp._teacherNotes ? `Leo's teaching notes: ${bp._teacherNotes.slice(0, 300)}` : "";
-        raw = await askClaude(`You are Leo, an experienced ELICOS teacher. ${notes}\nToday's lesson: "${bp.context}" (CEFR ${bp.cefr}).\nCommunicative objective: ${bp.communicativeObjective}\nToday's key vocabulary: ${(bp.vocabulary || []).slice(0,4).map(v=>v.word).join(", ")}\nGrammar focus: ${bp.grammar.point}\n${bp.authenticMaterial ? "Authentic material to base this on: " + bp.authenticMaterial : ""}\nFinal task students are preparing for: ${bp.finalTask || bp.communicativeObjective}\n\nWrite a short ${bp.mainSkill === "listening" ? "listening transcript — a natural conversation between real Australians with hesitations, natural responses. Do NOT label speakers (no 'Tourist:', 'Barista:' etc.) — just present the lines naturally as they would sound" : "reading text — something the student would genuinely encounter in Australia (a message, notice, menu, email, form)"} of 80-150 words. It MUST use at least 3 of today's vocabulary items and model the grammar point naturally. It should prepare students for the final communicative task.\nThen write five comprehension questions moving from gist to detail, each with four options.\nRespond ONLY with JSON, no fences: {"passage":"the text","questions":[{"stem":"","options":["four options"],"answer":"exact text of correct option","note":"one warm teaching line"}]}`,
+        raw = await askClaude(`You are Leo, an experienced ELICOS teacher. ${notes}\nToday's lesson: "${bp.context}" (CEFR ${bp.cefr})${volumeBlock(bp.cefr)}.\nCommunicative objective: ${bp.communicativeObjective}\nToday's key vocabulary: ${(bp.vocabulary || []).slice(0,4).map(v=>v.word).join(", ")}\nGrammar focus: ${bp.grammar.point}\n${bp.authenticMaterial ? "Authentic material to base this on: " + bp.authenticMaterial : ""}\nFinal task students are preparing for: ${bp.finalTask || bp.communicativeObjective}\n\nWrite a short ${bp.mainSkill === "listening" ? "listening transcript — a natural conversation between real Australians with hesitations, natural responses. Do NOT label speakers (no 'Tourist:', 'Barista:' etc.) — just present the lines naturally as they would sound" : "reading text — something the student would genuinely encounter in Australia (a message, notice, menu, email, form)"} of 80-150 words. It MUST use at least 3 of today's vocabulary items and model the grammar point naturally. It should prepare students for the final communicative task.\nThen write five comprehension questions moving from gist to detail, each with four options.\nRespond ONLY with JSON, no fences: {"passage":"the text","questions":[{"stem":"","options":["four options"],"answer":"exact text of correct option","note":"one warm teaching line"}]}`,
           { intent: "skill_section" });
         data = parseJSON(raw);
         data.questions = validateQuestions(data.questions);
         if (!data.passage || data.questions.length < 3) throw new Error("skill section invalid");
       } else if (stageId === "grammar") {
-        raw = await askClaude(`You are Leo, an experienced ELICOS teacher.\n\nTHE ONE GRAMMAR POINT FOR TODAY — everything must test exactly this and nothing else:\nPoint: "${bp.grammar.point}"\nMeaning: ${bp.grammar.meaning}\nForm: ${bp.grammar.form}\nExamples the student has just been shown: ${(bp.grammar.examples || []).join(" | ")}\n\nContext: ${bp.context} (CEFR ${bp.cefr})${cefrBlock(bp.cefr, CEFR_CONSTRAINTS[bp.cefr])}\nToday's vocabulary: ${(bp.vocabulary || []).slice(0,5).map(v=>v.word).join(", ")}\nPredicted student difficulties: ${(bp.predictedDifficulties || []).join("; ")}\n${priorCtx}\n\nWrite five practice questions that ALL drill the SAME structure shown in "Form" above. The student has just read the explanation and the examples; these questions must practise precisely that, so the explanation, the examples, the questions, the answers and the feedback are one coherent lesson.\n\nHARD RULES:\n- Every question must test the FORM above (word order, verb form, auxiliary, agreement, preposition, comparative marker — whatever that form uses).\n- Do NOT test a different grammar point. Do NOT test politeness or which sentence "sounds nicer" — that is function, not grammar.\n- Every note must NAME the rule, using the words of the point or the form, so the feedback teaches.\n- Use question types: complete the sentence, find the mistake, choose the correct word order, choose the correct verb form.\n- Set today's situation in the stems, using today's vocabulary where it fits naturally.\n- Randomise where the correct answer sits.\n\nRespond ONLY with JSON, no fences: {"grammarPoint":"copy today's grammar point EXACTLY","questions":[{"stem":"","options":["four options"],"answer":"exact text of correct option","note":"one warm teaching line that names the rule"}]}`,
+        raw = await askClaude(`You are Leo, an experienced ELICOS teacher.\n\nTHE ONE GRAMMAR POINT FOR TODAY — everything must test exactly this and nothing else:\nPoint: "${bp.grammar.point}"\nMeaning: ${bp.grammar.meaning}\nForm: ${bp.grammar.form}\nExamples the student has just been shown: ${(bp.grammar.examples || []).join(" | ")}\n\nContext: ${bp.context} (CEFR ${bp.cefr})${cefrBlock(bp.cefr, CEFR_CONSTRAINTS[bp.cefr])}${volumeBlock(bp.cefr)}\nToday's vocabulary: ${(bp.vocabulary || []).slice(0,5).map(v=>v.word).join(", ")}\nPredicted student difficulties: ${(bp.predictedDifficulties || []).join("; ")}\n${priorCtx}\n\nWrite five practice questions that ALL drill the SAME structure shown in "Form" above. The student has just read the explanation and the examples; these questions must practise precisely that, so the explanation, the examples, the questions, the answers and the feedback are one coherent lesson.\n\nHARD RULES:\n- Every question must test the FORM above (word order, verb form, auxiliary, agreement, preposition, comparative marker — whatever that form uses).\n- Do NOT test a different grammar point. Do NOT test politeness or which sentence "sounds nicer" — that is function, not grammar.\n- Every note must NAME the rule, using the words of the point or the form, so the feedback teaches.\n- Use question types: complete the sentence, find the mistake, choose the correct word order, choose the correct verb form.\n- Set today's situation in the stems, using today's vocabulary where it fits naturally.\n- Randomise where the correct answer sits.\n\nRespond ONLY with JSON, no fences: {"grammarPoint":"copy today's grammar point EXACTLY","questions":[{"stem":"","options":["four options"],"answer":"exact text of correct option","note":"one warm teaching line that names the rule"}]}`,
           { intent: "grammar_section" });
         data = parseJSON(raw);
         data.questions = validateQuestions(data.questions);
@@ -5610,8 +5844,8 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       </div>
     </div>
   );
-  if (phase === "loading") return <LeoLoader label="I'm opening today's lesson…" />;
-  if (phase === "planning") return (<div><SectionTitle>Leo's Lesson</SectionTitle><LeoLoader label="I'm planning today's lesson for you…" /></div>);
+  if (phase === "loading") return <LeoLoader label="I'm opening today's lesson…" level={profile.level} />;
+  if (phase === "planning") return (<div><SectionTitle>Leo's Lesson</SectionTitle><LeoLoader label="I'm planning today's lesson for you…" level={profile.level} /></div>);
 
   if (phase === "chooser") {
     // Authored lessons available to this student (future: filter by cefr, completion)
@@ -5684,7 +5918,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       <div className="progress-bar"><span style={{ width: `${((lesson.stage + 1) / LESSON_STAGES.length) * 100}%` }} /></div>
       {STAGE_BRIDGE_TEXT[stage.id] && <p className="leo-accent text-leo" style={{ marginTop: "var(--space-5)", marginBottom: "var(--space-3)" }}>{STAGE_BRIDGE_TEXT[stage.id]}</p>}
 
-      {needsAI && (!section || sectionLoading || section.skipped) && <LeoLoader label="I'm preparing this part…" />}
+      {needsAI && (!section || sectionLoading || section.skipped) && <LeoLoader label="I'm preparing this part…" level={profile.level} />}
 
       {stage.id === "intro" && <IntroductionSection {...stageProps} onDone={(n) => advance({ intro: n })} />}
       {stage.id === "vocab" && <VocabularySection {...stageProps} leoMemory={leoMemory} onDone={(c, t) => advance({ vocab: `${c}/${t}` })} />}
