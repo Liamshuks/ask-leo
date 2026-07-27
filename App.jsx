@@ -3501,7 +3501,7 @@ function warmUpFallback(bp) {
 }
 
 /* ---------- Renderer 1: FREE — communicative, never string-matched ---------- */
-function WarmUpFree({ activity, vocab, onVocabTap, onDone, context }) {
+function WarmUpFree({ activity, vocab, onVocabTap, onDone, context, cefr }) {
   const [answer, setAnswer] = useState("");
   const [sent, setSent] = useState(false);
   const [reply, setReply] = useState(null);      // { category, line }
@@ -3543,14 +3543,14 @@ First, classify the answer:
 - "minimal": a real answer, but only one or two words, or a short phrase with no detail.
 - "attempt": real communicative content — the student actually said something.
 
-Then write ONE reply line, maximum 35 words, B1 English, warm Australian teacher's voice:
+Then write ONE reply line, maximum 35 words, ${cefr} English, warm Australian teacher's voice:
 - skip: reply with exactly this and nothing more: No problem — let's move on.
 - minimal: acknowledge the short answer warmly, connect it to today's lesson context, and ask ONE follow-up question that is EASIER than the original prompt (a choice question or yes/no question works well).
 - attempt: respond to something SPECIFIC the student said — name it in your reply — then connect it to today's lesson.
 
 The generic-praise test: if your line would make equal sense no matter what the student typed, rewrite it. Never invent details the student did not give you. Never praise a skip.
 
-Respond ONLY with JSON, no fences: {"category":"skip|minimal|attempt","line":"your one reply line"}`,
+${narrationGuidance(cefr, "chat")}\n\nRespond ONLY with JSON, no fences: {"category":"skip|minimal|attempt","line":"your one reply line"}`,
         { intent: "warmup_free_response" }
       );
       const d = parseJSON(raw);
@@ -3667,11 +3667,11 @@ function WarmUpSequence({ activity, onDone }) {
   );
 }
 
-function WarmUpActivity({ activity, vocab, onVocabTap, onDone, context }) {
+function WarmUpActivity({ activity, vocab, onVocabTap, onDone, context, cefr }) {
   const fam = warmUpFamily(activity.type);
   if (fam === "choice") return <WarmUpChoice activity={activity} vocab={vocab} onVocabTap={onVocabTap} onDone={onDone} />;
   if (fam === "sequence") return <WarmUpSequence activity={activity} onDone={onDone} />;
-  return <WarmUpFree activity={activity} vocab={vocab} onVocabTap={onVocabTap} onDone={onDone} context={context} />;
+  return <WarmUpFree activity={activity} vocab={vocab} onVocabTap={onVocabTap} onDone={onDone} context={context} cefr={cefr} />;
 }
 
 /* ---------- Stage 1: Introduction — context, objective, varied warm-up ---------- */
@@ -3716,7 +3716,7 @@ function IntroductionSection({ bp, vocab, onVocabTap, onSkip, onDone }) {
         <span className="wu-badge">{meta.label}</span>
         <span className="muted small">{idx + 1} of {activities.length}</span>
       </div>
-      <WarmUpActivity key={idx} activity={a} vocab={vocab} onVocabTap={onVocabTap} onDone={complete} context={bp.context} />
+      <WarmUpActivity key={idx} activity={a} vocab={vocab} onVocabTap={onVocabTap} onDone={complete} context={bp.context} cefr={bp.cefr} />
     </SectionShell>
   );
 }
