@@ -4778,10 +4778,11 @@ const NARRATION_STANDARD = {
       "reported speech",
       "any relative clause",
       "subordinate clauses",
-      "comparatives beyond 'good/better/best'"
+      "comparatives beyond 'good/better/best'",
+      "tenseless framing ('we learn X' without a time anchor — always 'today we learn X')"
     ],
-    vocab: "Top 500 word families. No idiom. No phrasal verbs (except 'sit down', 'stand up', 'come on' as lexical chunks). No metaphor. No hedging vocabulary.",
-    register: "Warm but simple. Contractions OK (I'm, you're, don't). Short praise (Good!, Nice!, Well done!). One thought per sentence. No irony, no wordplay.",
+    vocab: "Top 500 word families. Every noun concrete and imaginable — no abstract nouns (origins, exchange, aspect, context). No idiom. No phrasal verbs (except 'sit down', 'stand up', 'come on' as chunks). No metaphor. No hedging vocabulary. NO COMPOUND NOUN PHRASES where either element is above A1 ('workplace greeting' FAILS).",
+    register: "Warm but simple. Contractions OK (I'm, you're, don't). Short praise (Good!, Nice!, Well done!). One thought per sentence. No irony, no wordplay. Every time reference explicit. 'Today' at the start of Leo's session-openers is required, not optional.",
     function_notes: "All narration functions grade to sub-A1. Chat replies may use A1 productive grammar. Corrective feedback: point to the error in one very simple sentence, then model the correct form — never explain the rule.",
     do_examples: [
       "Intro: 'Hi! Today we learn café words. Are you ready?'",
@@ -4789,13 +4790,21 @@ const NARRATION_STANDARD = {
       "Encouragement: 'Nice work! Try one more.'",
       "Corrective feedback: 'Almost! Say: I would like a coffee.'",
       "Chat reply: 'Hi! I am good, thank you. And you?'",
-      "Vocab framing: \"'Order' means to ask for food.\""
+      "Vocab framing: \"'Order' means to ask for food.\"",
+      "Framing (rewrite): 'How to say hello at work.' — all top-500, concrete verb.",
+      "Objective (rewrite): 'Today we learn about your country.' — time anchor, personal, no meta-vocabulary.",
+      "Explanation (rewrite): 'Two people talk. It's the same every day.' — two short sentences, top-500, concrete.",
+      "Objective (rewrite): 'Today we learn café words.' — time anchor added, everything else unchanged."
     ],
     dont_examples: [
       "Intro (Genesis's live example): 'Today we are leaving the beach behind and going somewhere much more useful this week — you will learn the exact words baristas use every single day, so you can walk in, order your coffee, and understand what they ask you back.' — present continuous, comparative, subordination, phrasal verb, embedded clauses",
       "Instruction: 'Now what I would like you to do is have a look at the list.' — subordinate clause, phrasal verb, hedged modal",
       "Vocab: 'This word essentially refers to the act of requesting refreshments.' — B2+ vocabulary, formal register, abstraction",
-      "Corrective feedback: 'You almost had it, but the tense should have been past simple.' — modal past, comparative, meta-language"
+      "Corrective feedback: 'You almost had it, but the tense should have been past simple.' — modal past, comparative, meta-language",
+      "Framing: 'A workplace greeting.' — 'workplace' above top 500; compound noun phrase.",
+      "Objective: 'Today's topic is origins.' — 'origins' abstract; 'topic' meta-vocabulary.",
+      "Explanation: 'A predictable exchange between two speakers.' — both content words above A1; abstract; formal.",
+      "Objective: 'We learn café words.' — tenseless framing; missing time anchor."
     ]
   },
   A2: {
@@ -4817,9 +4826,10 @@ const NARRATION_STANDARD = {
       "reported speech beyond 'he said X'",
       "any relative clause",
       "advanced modals",
-      "used to"
+      "used to",
+      "tenseless framing (still forbidden at A2 — students still benefit from time anchors)"
     ],
-    vocab: "Top 1200 word families. Basic phrasal verbs as lexical chunks (get up, wake up, sit down). No idiom. No metaphor. Simple hedges allowed ('maybe', 'I think').",
+    vocab: "Top 1200 word families. Basic phrasal verbs as lexical chunks (get up, wake up, sit down). No idiom. No metaphor. Simple hedges allowed ('maybe', 'I think'). No above-A2 abstract nouns (professional, environment, communication as noun, adjustment). NO COMPOUND NOUN PHRASES where either element is above A2.",
     register: "Warm, encouraging. Contractions natural. Short interest tokens ('Oh!', 'Really?', 'Nice!'). Simple follow-up questions.",
     function_notes: "Framing grades to sub-A2 (A1-ish). Chat replies and corrective feedback may sit at A2 productive. Vocab explanations: framing sub-A2, explanation at A2.",
     do_examples: [
@@ -4828,12 +4838,19 @@ const NARRATION_STANDARD = {
       "Encouragement: 'Well done! That was a good answer.'",
       "Corrective feedback: 'Almost right. The past of go is went.'",
       "Chat reply: 'That is interesting. Did you enjoy it?'",
-      "Vocab: \"'Colleague' means someone you work with.\""
+      "Vocab: \"'Colleague' means someone you work with.\"",
+      "'The professional environment' → 'Your workplace' or 'At work'.",
+      "'Communication styles at work' → 'How people talk at work.'",
+      "'Cultural adjustment can be difficult' → 'Sometimes it's hard to feel at home in a new country.'"
     ],
     dont_examples: [
       "Intro: 'So today what we're going to do is dive into the world of workplace vocabulary...' — subordinate clauses, phrasal verb, idiom, hedged framing",
       "Vocab: 'Colleague — think of it as a peer in your professional environment.' — B2+ register, hedging, abstract",
-      "Corrective feedback: 'You were on the right track, though the perfect would have been better.' — comparative, hedge, meta-language"
+      "Corrective feedback: 'You were on the right track, though the perfect would have been better.' — comparative, hedge, meta-language",
+      // PREDICTED instance, not live-tested at this level — awaiting real-instance evidence per lesson-tightening-v1.md
+      "Framing: 'The professional environment.' — 'professional' is B1; both content words above A2.",
+      "Objective: 'Communication styles at work.' — 'styles' is B1 abstract; compound noun.",
+      "Explanation: 'Cultural adjustment can be difficult.' — 'adjustment' abstract; register above A2."
     ]
   },
   B1: {
@@ -4860,7 +4877,7 @@ const NARRATION_STANDARD = {
       "modals of past deduction (must have done)",
       "advanced discourse markers (nevertheless, furthermore, notwithstanding)"
     ],
-    vocab: "Top 2500 word families. Common phrasal verbs. Basic idiom (recognisable, no deep cultural reference). Basic collocations. Standard hedging ('might', 'I think', 'perhaps').",
+    vocab: "Top 2500 word families. Common phrasal verbs. Basic idiom (recognisable, no deep cultural reference). Basic collocations. Standard hedging ('might', 'I think', 'perhaps'). No above-B1 abstract nouns (interpersonal, discourse, notwithstanding). NO COMPOUND NOUN PHRASES where either element is above B1.",
     register: "Warm, conversational. Contractions natural. Personal touches ('That's a great point.', 'I like that.'). Genuine follow-up questions.",
     function_notes: "Chat replies and corrective feedback at B1. Framing at B1 for short items (instructions, encouragement). Extended intros graded slightly below — shorter sentences, no piled subordination, plainer vocabulary — because a wall of B1 prose at the START of a lesson lands differently from at-level exchange mid-lesson.",
     do_examples: [
@@ -4868,12 +4885,19 @@ const NARRATION_STANDARD = {
       "Instruction: 'Read the email. Then decide if the tone is polite or not.'",
       "Encouragement: 'That is really well put — you have explained it clearly.'",
       "Corrective feedback: 'Almost — since is used with a starting point. Since 2020 works, but since three years does not.'",
-      "Chat reply: 'That sounds difficult. How did you handle it?'"
+      "Chat reply: 'That sounds difficult. How did you handle it?'",
+      "'Interpersonal dynamics at work' → 'How people work together at work.'",
+      "'Discourse strategies for meetings' → 'Ways to speak in meetings.'",
+      "'Notwithstanding cultural differences...' → 'Even though every culture is different...'"
     ],
     dont_examples: [
       "Intro with inversion: 'Only after you have read it should you decide.' — inversion, forbidden productive at B1",
       "Vocab with subjunctive: 'Colleague — one might think of it as a professional counterpart, were the register more formal.' — subjunctive, cleft, C1 register",
-      "Corrective feedback with modal past: 'You should have used the past perfect there.' — modal past, forbidden productive at B1"
+      "Corrective feedback with modal past: 'You should have used the past perfect there.' — modal past, forbidden productive at B1",
+      // PREDICTED instance, not live-tested at this level — awaiting real-instance evidence per lesson-tightening-v1.md
+      "Framing: 'Interpersonal dynamics at work.' — 'interpersonal' is C1; abstract.",
+      "Objective: 'Discourse strategies for meetings.' — 'discourse' is meta-language about language; formal.",
+      "Explanation: 'Notwithstanding cultural differences...' — 'notwithstanding' is C1 formal."
     ]
   },
   B2: {
@@ -4895,7 +4919,7 @@ const NARRATION_STANDARD = {
       "highly literary or archaic constructions",
       "rare or region-specific idioms without gloss"
     ],
-    vocab: "Top 5000 word families. Common idioms. Phrasal verbs productive. Register-appropriate synonyms. Nuanced hedging.",
+    vocab: "Top 5000 word families. Common idioms. Phrasal verbs productive. Register-appropriate synonyms. Nuanced hedging. No above-B2 vocabulary (which is a small set at this level).",
     register: "Natural conversational teacher. Warm, engaged. Hedging ('I think', 'you might find'). Genuine questions and follow-ups.",
     function_notes: "All narration functions at B2. No sub-level constraint on any function — B2 students have enough automaticity that at-level framing does not compete with content.",
     do_examples: [
@@ -4903,12 +4927,17 @@ const NARRATION_STANDARD = {
       "Instruction: 'Read both emails, then work out what is off about the second one and how you would revise it.'",
       "Encouragement: 'Nicely spotted — that shift in register is exactly what most learners miss.'",
       "Corrective feedback: 'Nearly — the perfect passive would be has been sent, not has sent.'",
-      "Chat reply: 'That is a fair point, though I would push back on one part.'"
+      "Chat reply: 'That is a fair point, though I would push back on one part.'",
+      "'The overarching objective of this unit' → 'What we're focusing on this week.'",
+      "'Notwithstanding pedagogical considerations...' → 'Even though this is a lesson...'"
     ],
     dont_examples: [
       "Intro with advanced inversion: 'Only when you have read both should you draw a conclusion.' — inversion, forbidden productive at B2",
       "Regional idiom without gloss: 'She is flat out like a lizard drinking.' — Australian idiom, no gloss provided",
-      "Subjunctive outside fixed expressions: 'It is essential that the tone be softened.' — subjunctive, forbidden productive at B2"
+      "Subjunctive outside fixed expressions: 'It is essential that the tone be softened.' — subjunctive, forbidden productive at B2",
+      // PREDICTED instance, not live-tested at this level — awaiting real-instance evidence per lesson-tightening-v1.md
+      "Framing: 'The overarching objective of this unit.' — 'overarching' is C1; 'objective' and 'unit' are meta-vocabulary; LMS register.",
+      "Explanation: 'Notwithstanding pedagogical considerations...' — 'pedagogical considerations' is meta-vocabulary about teaching."
     ]
   },
   C1: {
@@ -4926,17 +4955,22 @@ const NARRATION_STANDARD = {
       "very rare literary or archaic constructions",
       "highly regional idioms without gloss unless the region is the taught target"
     ],
-    vocab: "Top 8000 word families. Wide idiomatic and collocational range. Register shifting within a single stretch of discourse.",
+    vocab: "Top 8000 word families. Wide idiomatic and collocational range. Register shifting within a single stretch of discourse. Vocabulary constraint minimal at C1 — the student can handle almost anything appropriately produced.",
     register: "Full teacher voice. Sophisticated but warm. Hedging, stance-marking, nuanced praise. Genuine intellectual engagement.",
     function_notes: "All narration functions at C1. No sub-level constraint. Corrective feedback may include meta-language and rule explanation because the student can process it.",
     do_examples: [
       "Intro: 'Today we are focusing on a subtle distinction English writers often navigate poorly: the difference between imply and infer. We will work through cases where the distinction actually matters.'",
       "Instruction: 'Read the piece with an eye to where the writer hedges, and note down anywhere you feel the hedging carries more weight than the argument warrants.'",
-      "Corrective feedback: 'You have almost got it — the subjunctive here would be be reconsidered, not is reconsidered, since the reporting verb recommend triggers it.'"
+      "Corrective feedback: 'You have almost got it — the subjunctive here would be be reconsidered, not is reconsidered, since the reporting verb recommend triggers it.'",
+      "'The pedagogical trajectory of this session' → 'How today's session builds on what we've done.'",
+      "'Our learning outcomes for today are...' → 'What I want to get across today is...' or 'By the end of this you should feel confident with...'"
     ],
     dont_examples: [
       "Archaic form: \"Nay, twere better we discuss this later.\" — archaic",
-      "Regional idiom without gloss unless taught: 'She is fair dinkum about it.' — Australian idiom, no gloss"
+      "Regional idiom without gloss unless taught: 'She is fair dinkum about it.' — Australian idiom, no gloss",
+      // PREDICTED instance, not live-tested at this level — awaiting real-instance evidence per lesson-tightening-v1.md
+      "Framing: 'The pedagogical trajectory of this session.' — meta-vocabulary; LMS register regardless of level.",
+      "Objective: 'Our learning outcomes for today are...' — meta-vocabulary; frames Leo as a system, not a teacher."
     ]
   },
   C2: null,
