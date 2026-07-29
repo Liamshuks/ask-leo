@@ -5530,20 +5530,40 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
   const bp = lesson && lesson.blueprint;
   const vocabWords = bp ? (bp.vocabulary || []).map((v) => v.word) : [];
 
-  const persist = async (next) => { setLesson(next); await saveKey("esl-task:" + todayStr(), next); };
-
-  /* -- Sub-pass 2b (progressive render). The educational review no longer sits
-        between the student and their lesson; it runs behind the intro. Three
+  /* -- Sub-pass 2b (progressive render) + sub-pass 3 (section prefetch).
+        Background work now writes into the lesson while the student is using
+        it, so `lesson` from a closure is not a safe base for a write. Four
         pieces make that safe:
-          lessonRef  — advance() must never write a stale lesson object back
-                       over a blueprint the background review has just revised.
-          reviewRef  — holds the in-flight review promise so advance() can await
-                       the same run rather than starting a second one.
-          reviewWait — true only while a student is genuinely waiting at the
-                       intro boundary, so we can show a loader instead of a
-                       silent dead button. -- */
+          lessonRef   — the single source of truth for background writers.
+                        persist() updates it SYNCHRONOUSLY, before the React
+                        state update, which is what makes concurrent merges
+                        safe: read-ref → build → persist happens with no await
+                        in between, so a later writer always sees the earlier
+                        writer's result instead of clobbering it.
+          reviewRef   — holds the in-flight review promise so advance() can
+                        await the same run rather than starting a second one.
+          inFlightRef — one generation per section, ever. The prefetch and the
+                        lazy path share it, so a student who outruns the
+                        prefetch waits for the call already running instead of
+                        triggering a duplicate that could swap the passage
+                        underneath them mid-stage.
+          reviewWait  — true only while a student is genuinely waiting at the
+                        intro boundary, so we can show a loader instead of a
+                        silent dead button. -- */
   const lessonRef = React.useRef(lesson);
+  const persist = async (next) => { lessonRef.current = next; setLesson(next); await saveKey("esl-task:" + todayStr(), next); };
   useEffect(() => { lessonRef.current = lesson; }, [lesson]);
+
+  /* Every background write into sections goes through here. It reads the ref
+     and hands the result straight to persist with no await between the two, so
+     two sections resolving milliseconds apart cannot lose each other. */
+  const mergeSection = async (stageId, data) => {
+    const base = lessonRef.current;
+    if (!base) return;
+    await persist({ ...base, sections: { ...base.sections, [stageId]: data } });
+  };
+
+  const inFlightRef = React.useRef({});
   const reviewRef = React.useRef(null);
   const [reviewWait, setReviewWait] = useState(false);
   /* A lesson counts as reviewed when this session's background review has landed
@@ -5802,6 +5822,24 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       reviewRef.current = runReview(blueprint)
         .then((r) => { perfMark("review+revision"); return r; })
         .catch((e) => { console.error("[Review] background review rejected", { error: e }); return blueprint; });
+
+      // ---- SECTION PREFETCH (sub-pass 3) ----
+      // Ordered, not concurrent, and behind the review rather than beside it.
+      // Two reasons, both educational rather than technical:
+      //   1. The review exists to fix a weak grammar point or a vague
+      //      vocabulary set. A grammar exercise generated from the PRE-review
+      //      blueprint would drill the version the reviewer just rejected —
+      //      which is exactly what 2b's "no un-reviewed stage" rule forbids.
+      //   2. Grammar reads the reading passage (priorCtx) so its questions sit
+      //      in today's text. Generating both at once takes that away and the
+      //      two halves of the lesson stop talking to each other.
+      // The student is still minutes from these stages, so the ordering costs
+      // them nothing and keeps the lesson coherent.
+      reviewRef.current
+        .then(() => prefetchSection("skill"))
+        .then(() => { perfMark("skill-prefetch"); return prefetchSection("grammar"); })
+        .then(() => { perfMark("grammar-prefetch"); })
+        .catch((e) => { console.error("[Prefetch] chain ended early", { error: e }); });
     } catch (e) {
       console.error("[Planner] stage failed", { stage: currentStage, error: e });
       setPlanFailCount((c) => c + 1);
@@ -5811,17 +5849,35 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
 
   /* -- Lazy per-section generation: each stage consumes the blueprint; a failed
         section regenerates alone without touching the rest of the lesson. -- */
-  const ensureSection = async (stageId) => {
-    if (!bp || lesson.sections[stageId] || sectionLoading) return;
-    const needsAI = stageId === "skill" || stageId === "grammar" || stageId === "summary";
-    if (!needsAI) return; // intro/vocab/pron/speak consume the blueprint directly
-    setSectionLoading(true);
+  /* ================================================================
+     SECTION GENERATION — one shared path (sub-pass 3).
+     Both the background prefetch and the student's own arrival call this.
+     inFlightRef guarantees a section is only ever generated once at a
+     time: whoever asks second waits for the call already running.
+       writeFallback = true   the student is standing here now, so a failure
+                              must still leave something teachable on screen.
+       writeFallback = false  a prefetch failed with the student nowhere near
+                              this stage. It writes NOTHING and rethrows, so
+                              the slot stays empty and the lazy path gets a
+                              real second attempt when they arrive. Writing a
+                              fallback here would silently cancel a section
+                              minutes before anyone reached it.
+     Everything reads the blueprint from lessonRef, never from the `bp`
+     closure, so a section generated after the 2b review is built from the
+     REVISED lesson plan rather than the pre-review draft.
+     ================================================================ */
+  const generateSection = (stageId, writeFallback) => {
+    if (inFlightRef.current[stageId]) return inFlightRef.current[stageId];
+    const run = (async () => {
+    const base = lessonRef.current;
+    const bp = base && base.blueprint;
+    if (!bp) throw new Error("no blueprint");
     // Build context from earlier sections so builders reference what came before
-    const prior = lesson.sections || {};
+    const prior = base.sections || {};
     const priorCtx = [
       prior.skill && prior.skill.passage ? `The reading/listening passage used today was: "${prior.skill.passage.slice(0, 250)}"` : "",
     ].filter(Boolean).join("\n");
-    const perf = lesson.perf || {};
+    const perf = base.perf || {};
     const perfLine = `Performance: vocab ${perf.vocab || "not attempted"}, comprehension ${perf.skill || "not attempted"}, grammar ${perf.grammar || "not attempted"}, speaking turns ${perf.speak || 0}`;
     try {
       let raw, data;
@@ -5870,8 +5926,15 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
           }
         } catch { /* keep the original if retry fails */ }
       }
-      await persist({ ...lesson, sections: { ...lesson.sections, [stageId]: data } });
-    } catch {
+      await mergeSection(stageId, data);
+      return data;
+    } catch (e) {
+      // Never silent, and the stage is always named.
+      console.error(`[Section] ${stageId} generation failed`, { stage: stageId, prefetch: !writeFallback, error: e });
+      // A failed PREFETCH writes nothing and rethrows: the student is not here
+      // yet, so they get a genuine second attempt on arrival rather than a
+      // section that was quietly cancelled on their behalf.
+      if (!writeFallback) throw e;
       // Graceful fallback per section — the lesson never breaks.
       // Grammar: the explanation lives on the blueprint and is ALWAYS available.
       // Losing the practice questions must never lose the teaching itself —
@@ -5881,11 +5944,43 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
         : stageId === "summary"
           ? { praise: "You showed up and did the work today — that's what progress is made of.", summary: `Today you practised ${bp.context.toLowerCase()}.`, strength: "Your persistence.", improvement: "Keep using today's phrases out loud.", connection: "Today's language belongs outside this app — use one line of it the next time you're in that situation.", tomorrowPreview: "Tomorrow we'll build on this again." }
           : null;
-      if (fallback) await persist({ ...lesson, sections: { ...lesson.sections, [stageId]: fallback } });
-      else await persist({ ...lesson, sections: { ...lesson.sections, [stageId]: { skipped: true } } });
+      await mergeSection(stageId, fallback || { skipped: true });
+      return fallback || { skipped: true };
     }
-    setSectionLoading(false);
+    })();
+    inFlightRef.current[stageId] = run;
+    const clear = () => { if (inFlightRef.current[stageId] === run) delete inFlightRef.current[stageId]; };
+    run.then(clear, clear);
+    return run;
   };
+
+  /* The student has arrived at this stage. Unchanged in effect from before
+     sub-pass 3 — except that if a prefetch is already generating this section,
+     we wait for that call instead of starting a second one. */
+  const ensureSection = async (stageId) => {
+    const base = lessonRef.current;
+    if (!base || !base.blueprint || base.sections[stageId] || sectionLoading) return;
+    const needsAI = stageId === "skill" || stageId === "grammar" || stageId === "summary";
+    if (!needsAI) return; // intro/vocab/pron/speak consume the blueprint directly
+    setSectionLoading(true);
+    try {
+      const inFlight = inFlightRef.current[stageId];
+      if (inFlight) { try { await inFlight; } catch { /* prefetch failed — fall through and generate properly */ } }
+      // Still empty? Either nothing was prefetched, or the prefetch failed and
+      // deliberately left the slot open. Generate it now, with the fallback
+      // enabled, because this time the student is actually waiting.
+      if (!(lessonRef.current && lessonRef.current.sections[stageId])) await generateSection(stageId, true);
+    } finally { setSectionLoading(false); }
+  };
+
+  /* Background head start. Never gates first render and never gates advance():
+     if the student gets there first, ensureSection takes over. A failure here
+     is logged and dropped — the lazy path is the safety net. */
+  const prefetchSection = (stageId) =>
+    generateSection(stageId, false).catch((e) => {
+      console.error(`[Prefetch] ${stageId} prefetch failed — the lazy path will regenerate it when the student arrives`, { stage: stageId, error: e });
+      return null;
+    });
 
   useEffect(() => {
     if (phase !== "lesson" || !lesson) return;
