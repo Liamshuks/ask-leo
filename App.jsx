@@ -341,7 +341,7 @@ async function liveAskClaude(prompt, opts) {
     res = await fetch("https://ask-leo-proxy.vercel.app/api/claude", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt }),
+body: JSON.stringify({ prompt, intent }),
     });
   } catch (networkErr) {
     throw _aiError("network", "Could not reach the AI service: " + ((networkErr && networkErr.message) || String(networkErr)),
