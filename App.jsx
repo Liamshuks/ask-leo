@@ -2218,7 +2218,27 @@ async function mockAskClaude(prompt, opts) {
       ],
       warmUpActivities: _mockWarmUp(pack, _mockPick(p, /Do NOT use these formats[^:]*: ([^.\n]+)/)),
       vocabulary: vocab8,
-      grammar: { point: pack.grammar.point, meaning: pack.grammar.meaning, form: pack.grammar.form, usage: pack.grammar.usage, examples: pack.grammar.examples },
+      grammar: { point: pack.grammar.point, meaning: pack.grammar.meaning, form: pack.grammar.form, usage: pack.grammar.usage, examples: pack.grammar.examples,
+        boards: [{ elements: [
+          { type: "title", text: pack.grammar.point },
+          pack.grammar.practice && pack.grammar.practice.length >= 2
+            ? { type: "subTable", slots: [
+                { label: "subject", items: ["I", "you", "we"] },
+                { label: pack.grammar.point.toLowerCase().includes("question") ? "auxiliary" : "verb",
+                  items: pack.grammar.examples.slice(0, 2).map(ex => (ex.match(/\b\w+\b/g) || [])[1] || "use"), target: true },
+                { label: "object", items: ["it", "this", "that"] },
+              ]}
+            : { type: "formula", boxes: [
+                { text: pack.grammar.form.split("+")[0] || "subject", role: "structure" },
+                { text: pack.grammar.form.split("+")[1] || pack.grammar.point, role: "target" },
+              ], joiner: "+" },
+          { type: "example", spans: [
+            { text: (pack.grammar.examples[0] || "").split(" ").slice(0, 2).join(" "), role: "plain" },
+            { text: (pack.grammar.examples[0] || "").split(" ").slice(2).join(" "), role: "target" },
+          ], mark: "tick" },
+          { type: "note", text: "Watch for this one." },
+        ]}],
+      },
       pronunciation: { focus: "polite intonation and word stress", tips: ["Stress the important content words.", "Let your voice rise gently on requests — it sounds friendlier.", "Say it slowly first, then at natural speed."] },
       mainSkill,
       mission: `Today, use one phrase from this lesson in a real "${pack.ctx.toLowerCase()}" moment.`,
@@ -5727,6 +5747,64 @@ const imageRuleBlock = (lvl) => {
 };
 /* §5's prompt text, verbatim. Returns "" for any level other than A1 until
    A2-C1 are authored — the same shape as its peer helpers. */
+/* ================================================================
+   BOARD_TITLE_STANDARD and BOARD_NOTE_STANDARD (v2 §2, §3)
+   Peer to CEFR_CONSTRAINTS, NARRATION_STANDARD, etc.
+   A1 only; A2-C1 follow when A1 is proven live.
+   ================================================================ */
+const BOARD_TITLE_STANDARD = {
+  A1: {
+    max_words: 7,
+    constraints: [
+      "Names the grammar, not the lesson",
+      "Student-facing language only",
+      "Never a question, never an instruction",
+      "Lowercase except the first word",
+      "The grammar point itself, not a description of it",
+    ],
+    continuation: "Same title text, no '(continued)' or numbering",
+  },
+};
+
+const BOARD_NOTE_STANDARD = {
+  A1: {
+    max_words: 12,
+    max_per_board: 1,
+    register: "Sub-A1: top-500 words, one clause, no subordination, no grammar meta-language",
+    preference_order: [
+      "L1-transfer warning matched to this student's language",
+      "Pronunciation trap",
+      "Memory aid",
+      "Real-world anchor",
+      "Link to previously taught point",
+    ],
+    never: [
+      "Encouragement (belongs in chat voice)",
+      "Restatement of the rule the table shows",
+      "An example sentence (use the example element)",
+      "A definition (use the vocabulary card)",
+      "Meta-commentary ('This is important')",
+      "Hedges or caveats",
+    ],
+    l1_cases: {
+      case1: "L1 matched and known: name the language and the error, then the correct form",
+      case2: "L1 unmatched or unknown: drop the language name, flag the error generically",
+      case3: "Corrective form only: when the wrong form itself carries the pattern",
+    },
+  },
+};
+
+/* §5.1 and §5.2 prompt text, verbatim from the wording standards v2. */
+const boardTitleBlock = (lvl) => {
+  if (!BOARD_TITLE_STANDARD[lvl]) return "";
+  return "\n\nBOARD TITLE — the heading at the top of each board (A1). Maximum SEVEN WORDS. Name the grammar, not the lesson: 'Present simple', not 'Talking about your daily routine'. Use the words you would say aloud when naming this grammar to an A1 class. Never a question. Never an instruction. Lowercase except the first word. On continuation boards, use the same title text — no '(continued)' or numbering.\n\nDO: 'Present simple' · 'there is / there are' · 'was and were' · 'do and does' · 'can and can't'\nDON'T: 'How to talk about your daily routine' (lesson topic, not grammar) · 'The present simple tense and how we use it' (too long, meta-language) · 'Do you like coffee?' (a question) · 'Learn the present simple' (an instruction) · 'Existential constructions with there' (meta-language)";
+};
+
+const boardNoteBlock = (lvl) => {
+  if (!BOARD_NOTE_STANDARD[lvl]) return "";
+  return "\n\nBOARD NOTE — Leo's margin voice (A1). TWELVE WORDS MAXIMUM. At most one per board. Sub-A1 register (top-500 words, one clause, no subordination, no grammar meta-language). Address the student directly (you/imperative). The note COMMENTS on the teaching — it never restates the rule the table already shows, never gives an example (use the example element), never defines a word (use the vocabulary card), never encourages ('You can do it!' belongs in your chat voice, not on the board).\n\nBest uses: a common mistake to watch for (especially L1-transfer errors matched to THIS student's language), a pronunciation trap, a memory shortcut, a real-world anchor, a link to something previously taught.\n\nDO: 'Add -s for he, she, it.' · 'Spanish speakers say \"there have\". It's \"there is/are\".' · '\"Were\" sounds like \"wer\", not \"weer\".'\nDON'T: 'The present simple is used for habitual actions.' (restates the rule; 'habitual' above A1) · 'For example, \"She likes coffee.\"' (an example, not a note) · 'You're doing great!' (encouragement, not teaching) · 'This is very important.' (meta-commentary, tells the student nothing)";
+};
+
 const vocabSelectionBlock = (lvl) => {
   if (!VOCAB_SELECTION_STANDARD[lvl]) return "";
   return "\n\nVOCABULARY SELECTION — which words earn a slot (A1). Choose FOUR TO EIGHT items. Eight is a ceiling, not a target: if this situation honestly holds five words worth teaching, teach five. Never add a word to reach eight.\n\nEVERY item must be ALL of these: a content word (noun, verb, adjective, or a high-frequency adverb); new to the student but inside the A1 band; useful beyond today's situation; something an adult migrant in Australia could need within a fortnight; definable in one A1 sentence; and produced by the student in today's final task or mission.\n\nNEVER give a slot to: proper nouns (countries, cities, suburbs, names, brands — use them freely in your text and dialogue, but never as a vocabulary item); function words (from, the, a, in, my, is — these belong to the grammar point); greetings and day-one chunks (hello, please, thank you, sorry); numbers, days, months or colours unless the objective IS that set; the target grammar dressed as a word; or anything the student has already mastered.\n\nSHAPE OF THE SET: 4-5 nouns, 2-3 verbs, 1-2 adjectives, at most 1 fixed chunk. Zero function words. Zero proper nouns. A set with no verbs describes a scene instead of teaching an action.\n\nRECYCLING: at most 2 of the set may come from the fragile or recycle lists, chosen where today's situation gives them a natural home. The rest are new.\n\nWRITE THE DEFINITION FIRST, THEN DECIDE. Each meaning is one sentence of A1 English that does not use the word itself, does not name the student, and does not refer to today's lesson. If the only definition you can write is \"the country the student is in now\" or \"the word we use to say hello\", the word has failed — remove it and choose another. A definition that would not still be true tomorrow, in a different lesson, for a different student, is not a definition.";
@@ -5755,7 +5833,7 @@ const PLAN_FAIL_LINE = (fail) => {
     : "I could not finish today's lesson.";
 };
 
-const BLUEPRINT_JSON_SHAPE = `{"teacherReflection":"summarise your thinking in 2-3 sentences","communicativeObjective":"one can-do from your needs assessment","context":"the Australian situation you chose","cefr":"the student's CEFR level","lessonRationale":"why THIS lesson TODAY from your reasoning","predictedDifficulties":["2-3 mistakes from your analysis"],"emotionalObjective":"from your needs assessment","memorableMoment":"the one thing from your assessment","authenticMaterial":"the actual Australian text you wrote in your assessment","scaffoldingStrategy":"how you will build toward the final task","explanation":"2-3 warm sentences introducing today to the student","warmUpQuestions":["5-8 progressively communicative questions specific to today's context"],"warmUpActivities":[{"type":"one of: context_discussion|prediction|finish_sentence|mini_task|mcq|best_response|true_false|is_this_correct|spot_mistake|complete_dialogue|unscramble|order_conversation","instruction":"how to do it, one line","prompt":"the question or task, contextualised to TODAY","text":"optional supporting text or dialogue","options":["choice types ONLY: 2-4 options"],"answer":"choice types ONLY: exact text of the correct option","tokens":["sequence types ONLY: the words or lines IN THE CORRECT ORDER"],"note":"the teaching point, in Leo's voice"}],"vocabulary":[{"word":"","pos":"","meaning":"simple definition","ipa":"","stress":"","syllables":"","example":"in today's situation","examples":["one more"],"related":["2-3"],"collocations":["1-2"]}],"grammar":{"point":"","meaning":"","form":"","usage":"when Australians use this","examples":["2 in today's situation"]},"pronunciation":{"focus":"","tips":["2-3 for this student's L1"]},"mainSkill":"reading or listening","finalTask":"the role-play climax from your assessment","mission":"one doable real-world task","tomorrowConnection":"how today leads to tomorrow","learningOutcome":"what they can now do"}`;
+const BLUEPRINT_JSON_SHAPE = `{"teacherReflection":"summarise your thinking in 2-3 sentences","communicativeObjective":"one can-do from your needs assessment","context":"the Australian situation you chose","cefr":"the student's CEFR level","lessonRationale":"why THIS lesson TODAY from your reasoning","predictedDifficulties":["2-3 mistakes from your analysis"],"emotionalObjective":"from your needs assessment","memorableMoment":"the one thing from your assessment","authenticMaterial":"the actual Australian text you wrote in your assessment","scaffoldingStrategy":"how you will build toward the final task","explanation":"2-3 warm sentences introducing today to the student","warmUpQuestions":["5-8 progressively communicative questions specific to today's context"],"warmUpActivities":[{"type":"one of: context_discussion|prediction|finish_sentence|mini_task|mcq|best_response|true_false|is_this_correct|spot_mistake|complete_dialogue|unscramble|order_conversation","instruction":"how to do it, one line","prompt":"the question or task, contextualised to TODAY","text":"optional supporting text or dialogue","options":["choice types ONLY: 2-4 options"],"answer":"choice types ONLY: exact text of the correct option","tokens":["sequence types ONLY: the words or lines IN THE CORRECT ORDER"],"note":"the teaching point, in Leo's voice"}],"vocabulary":[{"word":"","pos":"","meaning":"simple definition","ipa":"","stress":"","syllables":"","example":"in today's situation","examples":["one more"],"related":["2-3"],"collocations":["1-2"]}],"grammar":{"point":"","meaning":"","form":"","usage":"when Australians use this","examples":["2 in today's situation"],"boards":[{"elements":[{"type":"title","text":"the grammar point name (max 7 words, lowercase except first word, not a question)"},{"type":"subTable or rule or formula or example or contrast — choose the device that teaches this point best","slots or pieces or boxes or spans":"see the structural device definitions"},{"type":"note","text":"max 12 words — the teacher's aside, not a rule restatement"}]}]},"pronunciation":{"focus":"","tips":["2-3 for this student's L1"]},"mainSkill":"reading or listening","finalTask":"the role-play climax from your assessment","mission":"one doable real-world task","tomorrowConnection":"how today leads to tomorrow","learningOutcome":"what they can now do"}`;
 
 /* Proper-noun helpers for the vocabulary selection standard.
    The country set is built from COUNTRIES — the same 200-plus entry list the
@@ -6062,14 +6140,32 @@ function validateBlueprint(bp) {
     });
   }
 
-  // Board validation (§6.2) — at both enforcement points via validateBlueprint.
-  // Silent when the planner does not emit boards (validateBoards returns null).
-  // When boards arrive, invalid ones fall back to the prose surface automatically —
-  // the problem message never reaches the outer catch; the renderer checks validity
-  // independently and falls back, so this is advisory for the retry prompt.
+  // Board validation (§6.2 + v2 §6) — at both enforcement points.
+  // Structural bounds from validateBoards, plus the wording-standard mechanical
+  // checks from v2 §6 (title ≤7 words, title not a question, note ≤12 words,
+  // note count ≤1 per board). On failure, the retry prompt gets the specific
+  // rejection reason; the renderer independently falls back to prose.
   if (bp.grammar && bp.grammar.boards) {
     const boardErr = validateBoards(bp.grammar.boards, bp.cefr);
     if (boardErr) problems.push("grammar boards invalid: " + boardErr);
+    else {
+      // v2 §6 mechanical checks — finer than validateBoards' structural bounds
+      for (let bi = 0; bi < bp.grammar.boards.length; bi++) {
+        const b = bp.grammar.boards[bi];
+        for (const el of (b.elements || [])) {
+          if (el.type === "title") {
+            const tw = (String(el.text || "").match(/\S+/g) || []).length;
+            if (tw > 7) problems.push(`board ${bi+1} title exceeds 7 words (has ${tw}): "${el.text}"`);
+            if (String(el.text || "").trim().endsWith("?"))
+              problems.push(`board ${bi+1} title is a question — a board title is a label, not a prompt`);
+          }
+          if (el.type === "note") {
+            const nw = (String(el.text || "").match(/\S+/g) || []).length;
+            if (nw > 12) problems.push(`board ${bi+1} note exceeds 12 words (has ${nw}): "${el.text}"`);
+          }
+        }
+      }
+    }
   }
 
   // Vocabulary: duplicate detection (case-insensitive)
@@ -6529,7 +6625,13 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       // Every field must come from the thinking above — not invented fresh.
       currentStage = "blueprint";
       const raw = await askClaude(
-        `You are Leo. You have analysed your student and assessed their needs. Here is your thinking:\n\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nNow convert this thinking into a structured lesson plan. Everything must come from your analysis above — do not invent new content that contradicts your reasoning. The needs assessment above has ALREADY decided the ONE communicative objective, what to defer, and the L1-variety mistakes to address: build EXACTLY that objective (do not re-pick, broaden, or swap it), do not teach anything it set aside to defer, and target the predicted L1-variety mistakes. The student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)}${narrationGuidance(level, "framing")}${singlePointBlock(level)}${volumeBlock(level)}${imageRuleBlock(level)}${vocabSelectionBlock(level)}\n\nRespond ONLY with JSON, no fences:\n${BLUEPRINT_JSON_SHAPE}\n\nFour to eight vocabulary items from your needs assessment. Every word must justify its place.\n\nWARM-UP: give 3 activities of DIFFERENT types, all contextualised to today's situation — never generic. Choice types (mcq, best_response, true_false, is_this_correct, spot_mistake, complete_dialogue) need options + answer + note. Sequence types (unscramble, order_conversation) need tokens in the CORRECT order + note. Free types (context_discussion, prediction, finish_sentence, mini_task) need only a prompt. ${avoidFormats ? `Do NOT use these formats — the student had them last lesson: ${avoidFormats}.` : ""}`,
+        `You are Leo. You have analysed your student and assessed their needs. Here is your thinking:\n\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nNow convert this thinking into a structured lesson plan. Everything must come from your analysis above — do not invent new content that contradicts your reasoning. The needs assessment above has ALREADY decided the ONE communicative objective, what to defer, and the L1-variety mistakes to address: build EXACTLY that objective (do not re-pick, broaden, or swap it), do not teach anything it set aside to defer, and target the predicted L1-variety mistakes. The student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)}${narrationGuidance(level, "framing")}${singlePointBlock(level)}${volumeBlock(level)}${imageRuleBlock(level)}${vocabSelectionBlock(level)}${boardTitleBlock(level)}${boardNoteBlock(level)}\n\nGRAMMAR BOARD: alongside your prose grammar fields (point, meaning, form, usage, examples — keep all of these), also produce a boards array inside grammar. Each board has elements: start with a title (the grammar point name), then use structural devices (subTable for paradigms with swappable slots, formula for form patterns as joined boxes, rule for short statements, example for sentences with role-coloured spans and optional tick/cross marks, contrast for transformation pairs with an arrow). At most one note per board (your aside to the student). Roles for spans: "plain" (black), "structure" (blue labels), "target" (red — the form under focus), "model" (green — example sentences). Maximum 3 boards, 5 elements + title per board.${
+  // L1-transfer state for the note preference order (v2 §3.5).
+  // Three signals: is a transfer error known, is the student's L1 known,
+  // what is the corrective form. The model receives these and selects
+  // the note case: Case 1 (L1 matched), Case 2 (generic), Case 3 (correction only).
+  "\n\nNOTE PREFERENCE: when writing a board note, prefer in this order: (1) an L1-transfer warning matched to this student's specific language — if their L1 is known (it is: ${l1}) and a transfer error exists for this grammar point in ${l1}, name the language and the error ('${l1} speakers say X. It's Y.'); (2) a pronunciation trap; (3) a memory aid; (4) a real-world anchor; (5) a link to something previously taught. If no L1-specific error is known for this structure, use the best note from any category rather than forcing a generic warning."
+}\n\nRespond ONLY with JSON, no fences:\n${BLUEPRINT_JSON_SHAPE}\n\nFour to eight vocabulary items from your needs assessment. Every word must justify its place.\n\nWARM-UP: give 3 activities of DIFFERENT types, all contextualised to today's situation — never generic. Choice types (mcq, best_response, true_false, is_this_correct, spot_mistake, complete_dialogue) need options + answer + note. Sequence types (unscramble, order_conversation) need tokens in the CORRECT order + note. Free types (context_discussion, prediction, finish_sentence, mini_task) need only a prompt. ${avoidFormats ? `Do NOT use these formats — the student had them last lesson: ${avoidFormats}.` : ""}`,
         { intent: "blueprint" }
       );
       let lastRaw = raw;
@@ -6543,7 +6645,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
         // that failed, what was wrong with it, the thinking, and the full shape.
         currentStage = "blueprint_retry";
         const raw2 = await askClaude(
-          `You are Leo. Fix your lesson plan. Your previous plan was:\n${JSON.stringify(blueprint)}\n\nIt had these problems: ${problems.join(", ")}.\n\nYour thinking was:\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nThe student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)}${narrationGuidance(level, "framing")}${singlePointBlock(level)}${volumeBlock(level)}${imageRuleBlock(level)}${vocabSelectionBlock(level)} Produce a corrected, complete plan.\n\nRespond ONLY with JSON, no fences:\n${BLUEPRINT_JSON_SHAPE}`,
+          `You are Leo. Fix your lesson plan. Your previous plan was:\n${JSON.stringify(blueprint)}\n\nIt had these problems: ${problems.join(", ")}.\n\nYour thinking was:\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nThe student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)}${narrationGuidance(level, "framing")}${singlePointBlock(level)}${volumeBlock(level)}${imageRuleBlock(level)}${vocabSelectionBlock(level)}${boardTitleBlock(level)}${boardNoteBlock(level)} Produce a corrected, complete plan.\n\nRespond ONLY with JSON, no fences:\n${BLUEPRINT_JSON_SHAPE}`,
           { intent: "blueprint" }
         );
         lastRaw = raw2;
