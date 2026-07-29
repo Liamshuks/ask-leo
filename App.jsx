@@ -375,22 +375,22 @@ async function liveAskClaude(prompt, opts) {
       { intent, status: res.status, apiType: type, bodyTail });
   }
   const text = (data && data.content ? data.content : []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
-  if (!text) throw _aiError("empty", "The AI service returned no text.",
-    { intent, stop_reason: data && data.stop_reason, bodyTail });
-  // The proxy owns max_tokens, so the client cannot know the ceiling — but it
-  // can see when the ceiling was hit. A truncated response is the failure mode
-  // the merged student_and_needs call is most exposed to (the cut lands on the
-  // needs assessment, the half Stage 3 depends on most), and this is direct
-  // evidence rather than the word-count heuristic inferring it.
-  // BEHAVIOUR CHANGE, deliberate: truncation now throws rather than warning.
-  // A response cut at the ceiling is incomplete by definition. Every JSON
-  // intent would fail on it anyway, but as a misleading parse error with the
-  // real cause hidden — which is exactly the class of silence this build
-  // exists to end. The planner and section paths both already retry.
+  // ORDER MATTERS — same principle as the timeout-before-parse fix above.
+  // A max_tokens response may have extractable text (truncated mid-sentence)
+  // or may not (truncated mid-JSON-structure, leaving no complete text block).
+  // Either way, stop_reason is the DIRECT evidence of truncation. Checking
+  // empty first misclassifies the second case as "no text" when the real
+  // cause is "ran out of tokens". The diagnostic run confirmed this: the
+  // blueprint response hit max_tokens, the content was truncated mid-JSON,
+  // text extraction returned empty, and the error surfaced as type "empty"
+  // instead of "truncated" — hiding the cause behind the symptom, which is
+  // exactly the failure class the honesty fix exists to end.
   if (data && data.stop_reason === "max_tokens") {
     throw _aiError("truncated", "The AI response was cut off at the token ceiling.",
-      { intent, chars: text.length, stop_reason: data.stop_reason, textTail: text.slice(-500) });
+      { intent, chars: (text || "").length, stop_reason: data.stop_reason, textTail: (text || "").slice(-500) });
   }
+  if (!text) throw _aiError("empty", "The AI service returned no text.",
+    { intent, stop_reason: data && data.stop_reason, bodyTail });
   return text;
 }
 
