@@ -2094,6 +2094,12 @@ const _MOCK_INTENT_HANDLERS = {
      ?mockfailintent=blueprint     (optional — target one intent only)
    Mock mode only: this must never be reachable in production. */
 function _mockFailure(intent) {
+  // USE_MOCK_AI is the OUTER condition, not a parallel check. Today this
+  // function is only reachable through mockAskClaude, so the ternary in
+  // askClaude already gates it — but that is a property of the call graph,
+  // and call graphs get refactored. This makes the gate a property of the
+  // function itself: production cannot trigger ?mockfail even by accident.
+  if (!USE_MOCK_AI) return null;
   if (typeof window === "undefined" || !window.location) return null;
   let params;
   try { params = new URLSearchParams(window.location.search); } catch (e) { return null; }
@@ -6020,12 +6026,17 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       );
 
       let reviewed = planned;
+      // Carried into the failure log so the console says not just that the
+      // review failed but how far it got — a review that never fetched and a
+      // review whose revision was rejected are different defects.
+      let revisionOutcome = "not_needed";
       // Revise only when the reviewer explicitly answered NO to a checklist
       // question. The prompt demands uppercase YES/NO answers, so a
       // case-sensitive match is deliberate: a lowercase "no" in prose
       // ("no worries") or the echoed question text ("anything I would
       // change?") must not trigger an unnecessary revision pass.
       if (/\bNO\b/.test(review)) {
+        revisionOutcome = "attempted";
         // Revision failure must never kill a lesson that already passed
         // validation — the reviewed blueprint is a good lesson; the revision
         // is an improvement pass, not a requirement.
@@ -6041,9 +6052,16 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
             const merged = { ...planned };
             Object.keys(revisedBp).forEach((k) => { if (revisedBp[k]) merged[k] = revisedBp[k]; });
             merged.vocabulary = (merged.vocabulary || []).slice(0, 8);
-            if (validateBlueprint(merged).length === 0) reviewed = merged;
-          }
-        } catch (e) { console.error("[Review] revision failed — keeping the validated plan", e); }
+            if (validateBlueprint(merged).length === 0) { reviewed = merged; revisionOutcome = "succeeded"; }
+            else revisionOutcome = "rejected_by_validation";
+          } else revisionOutcome = "unusable_response";
+        } catch (e) {
+          revisionOutcome = "failed";
+          console.warn("[Review] revision failed — keeping the validated plan", {
+            stage: "background_revision_failed", type: (e && e.aiErrorType) || "unknown",
+            name: (e && e.name) || typeof e, message: (e && e.message) || String(e), error: e,
+          });
+        }
       }
 
       // The student is on the intro RIGHT NOW. These are the fields the intro
@@ -6067,9 +6085,24 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       await persist({ ...lessonRef.current, blueprint: reviewed, reviewed: true });
       return reviewed;
     } catch (e) {
-      // Never silent. The lesson survives: the blueprint already passed
-      // validation, so the student gets a good lesson without the polish pass.
-      console.error("[Review] background educational review failed", { error: e });
+      // Never silent — silent to the STUDENT, loud to the console. The lesson
+      // survives: the blueprint already passed validation, so the student gets
+      // a good lesson without the polish pass and is told nothing, because
+      // nothing about their lesson has changed. But this is where a review
+      // FETCH failure lands, which is a different defect from a revision
+      // failure, and it has been indistinguishable from it until now.
+      const _d = (e && e.detail) || {};
+      console.warn("[Review] background educational review failed", {
+        stage: "background_review_failed",
+        type: (e && e.aiErrorType) || "unknown",
+        name: (e && e.name) || typeof e,
+        message: (e && e.message) || String(e),
+        revisionOutcome,
+        status: _d.status != null ? _d.status : null,
+        bodyTail: _d.bodyTail || _d.textTail || null,
+        intent: _d.intent || null,
+        error: e,
+      });
       await persist({ ...lessonRef.current, reviewed: true });
       return planned;
     }
@@ -6214,7 +6247,17 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       // diagnosed. It logs and resolves; advance() handles the real failure path.
       reviewRef.current = runReview(blueprint)
         .then((r) => { perfMark("review+revision"); return r; })
-        .catch((e) => { console.error("[Review] background review rejected", { error: e }); return blueprint; });
+        .catch((e) => {
+          // Belt and braces. runReview owns its own catch, so reaching here
+          // means the failure escaped it — the promise itself rejected. Named
+          // with the same stage so one grep finds every review failure.
+          console.warn("[Review] background review rejected", {
+            stage: "background_review_failed", outcome: "promise_rejected",
+            type: (e && e.aiErrorType) || "unknown",
+            name: (e && e.name) || typeof e, message: (e && e.message) || String(e), error: e,
+          });
+          return blueprint;
+        });
 
       // ---- SECTION PREFETCH (sub-pass 3) ----
       // Ordered, not concurrent, and behind the review rather than beside it.
