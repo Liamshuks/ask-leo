@@ -276,12 +276,66 @@ const ERROR_TYPES = ["articles", "verb tense", "prepositions", "word order", "sp
    ============================================================ */
 const USE_MOCK_AI = false;
 
+/* ================================================================
+   AI FAILURE TAXONOMY — so the next failure names itself.
+   The silent-lesson defect survived every debugging attempt because the
+   catch could say a lesson failed but never why. A 504 gateway timeout, a
+   truncated response and a genuine parse error all arrived as the same
+   shapeless throw. These types are what separate them.
+     network        the request never reached the proxy at all
+     proxy_timeout  the serverless function ran out of time (Vercel 504)
+     proxy_error    the proxy or the API answered with an error
+     parse_failure  a response arrived but was not the JSON we expect
+     truncated      the model was cut off at the token ceiling
+     empty          a well-formed response carrying no text
+   Every one carries a detail object with the evidence, so the planner's
+   catch can report the cause rather than the symptom.
+   ================================================================ */
+const AI_ERROR_TYPES = ["network", "proxy_timeout", "proxy_error", "parse_failure", "truncated", "empty", "unknown"];
+function _aiError(type, message, detail) {
+  const err = new Error(message);
+  err.name = "AskClaudeError";
+  err.aiErrorType = AI_ERROR_TYPES.includes(type) ? type : "unknown";
+  err.detail = detail || {};
+  return err;
+}
+
 async function askClaude(prompt, opts) {
-  return USE_MOCK_AI ? mockAskClaude(prompt, opts) : liveAskClaude(prompt);
+  const intent = (opts && opts.intent) || "untagged";
+  const t0 = (typeof performance !== "undefined" ? performance.now() : Date.now());
+  const ms = () => Math.round((typeof performance !== "undefined" ? performance.now() : Date.now()) - t0);
+  try {
+    const out = await (USE_MOCK_AI ? mockAskClaude(prompt, opts) : liveAskClaude(prompt, opts));
+    // Completion mark for EVERY intent, not just the planner's own stages. A
+    // stage that never marks completion is how we find where the pipeline died
+    // even when the error itself was swallowed further up.
+    console.log(`[Perf] ai:${intent}: ${ms()}ms`);
+    return out;
+  } catch (e) {
+    // Anything thrown from below is already typed; anything else is classified
+    // here so nothing reaches the planner as an anonymous failure.
+    const err = e && e.aiErrorType ? e : _aiError("unknown", (e && e.message) || String(e), { original: String(e) });
+    err.detail = { ...err.detail, intent, ms: ms() };
+    console.error(`[Perf] ai:${intent}: ${ms()}ms FAILED (${err.aiErrorType})`, {
+      intent, type: err.aiErrorType, name: err.name, message: err.message, detail: err.detail, error: err,
+    });
+    throw err;
+  }
 }
 
 /* ---- LIVE backend (inactive while USE_MOCK_AI is true) ---- */
-async function liveAskClaude(prompt) {
+/* Gateway statuses that mean "the function did not finish in time" rather
+   than "the function answered with an error". Vercel returns 504 with
+   FUNCTION_INVOCATION_TIMEOUT when a serverless function exceeds its limit —
+   10s on Hobby, 60s on Pro — and the body is usually an HTML error page. */
+const _TIMEOUT_STATUSES = [408, 502, 503, 504, 524];
+function _looksLikeTimeout(status, body) {
+  if (_TIMEOUT_STATUSES.includes(status)) return true;
+  return /FUNCTION_INVOCATION_TIMEOUT|gateway ?time-?out|timed out|ETIMEDOUT/i.test(String(body || ""));
+}
+
+async function liveAskClaude(prompt, opts) {
+  const intent = (opts && opts.intent) || "untagged";
   let res;
   try {
     res = await fetch("https://ask-leo-proxy.vercel.app/api/claude", {
@@ -290,33 +344,52 @@ async function liveAskClaude(prompt) {
       body: JSON.stringify({ prompt }),
     });
   } catch (networkErr) {
-    console.error("[liveAskClaude] fetch rejected before any response (CORS/offline/DNS):", networkErr);
-    throw new Error("Could not reach the AI service (CORS/offline): " + (networkErr && networkErr.message ? networkErr.message : String(networkErr)));
+    throw _aiError("network", "Could not reach the AI service: " + ((networkErr && networkErr.message) || String(networkErr)),
+      { intent, cause: String(networkErr) });
   }
   const rawBody = await res.text();
+  const bodyTail = String(rawBody || "").slice(-500);
+
+  // ORDER MATTERS. A Vercel timeout returns 504 with an HTML body, so parsing
+  // first reported every gateway timeout as "server did not return JSON" — the
+  // symptom, with the cause hidden. Status is checked BEFORE the body is parsed.
+  if (_looksLikeTimeout(res.status, rawBody)) {
+    throw _aiError("proxy_timeout",
+      `The AI service did not finish in time (HTTP ${res.status}).`,
+      { intent, status: res.status, statusText: res.statusText, bodyTail });
+  }
+
   let data = null;
   if (rawBody) {
     try { data = JSON.parse(rawBody); }
     catch (parseErr) {
-      console.error("[liveAskClaude] response was not valid JSON:", { status: res.status, statusText: res.statusText, body: rawBody.slice(0, 800) });
-      throw new Error(`HTTP ${res.status}: server did not return JSON — ${rawBody.slice(0, 160)}`);
+      throw _aiError("parse_failure",
+        `HTTP ${res.status}: the service did not return JSON.`,
+        { intent, status: res.status, statusText: res.statusText, bodyTail, cause: String(parseErr) });
     }
   }
   if (!res.ok || (data && data.error)) {
     const type = (data && data.error && data.error.type) || "http_" + res.status;
     const message = (data && data.error && data.error.message) || res.statusText || "Unknown error";
-    console.error("[liveAskClaude] AI request failed:", { status: res.status, type, message, body: data || rawBody.slice(0, 800) });
-    throw new Error(`${res.status} ${type}: ${message}`);
+    throw _aiError("proxy_error", `${res.status} ${type}: ${message}`,
+      { intent, status: res.status, apiType: type, bodyTail });
   }
   const text = (data && data.content ? data.content : []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
-  if (!text) throw new Error("liveAskClaude: response contained no text content (stop_reason=" + (data && data.stop_reason) + ")");
+  if (!text) throw _aiError("empty", "The AI service returned no text.",
+    { intent, stop_reason: data && data.stop_reason, bodyTail });
   // The proxy owns max_tokens, so the client cannot know the ceiling — but it
   // can see when the ceiling was hit. A truncated response is the failure mode
   // the merged student_and_needs call is most exposed to (the cut lands on the
   // needs assessment, the half Stage 3 depends on most), and this is direct
   // evidence rather than the word-count heuristic inferring it.
+  // BEHAVIOUR CHANGE, deliberate: truncation now throws rather than warning.
+  // A response cut at the ceiling is incomplete by definition. Every JSON
+  // intent would fail on it anyway, but as a misleading parse error with the
+  // real cause hidden — which is exactly the class of silence this build
+  // exists to end. The planner and section paths both already retry.
   if (data && data.stop_reason === "max_tokens") {
-    console.warn("[liveAskClaude] response hit the token ceiling and was truncated", { chars: text.length });
+    throw _aiError("truncated", "The AI response was cut off at the token ceiling.",
+      { intent, chars: text.length, stop_reason: data.stop_reason, textTail: text.slice(-500) });
   }
   return text;
 }
@@ -2015,8 +2088,37 @@ const _MOCK_INTENT_HANDLERS = {
   },
 };
 
+/* Development failure injection. Every logged path must be walkable before it
+   is deployed, otherwise the diagnostics are themselves untested.
+     ?mockfail=proxy_timeout|parse_failure|truncated|network|proxy_error|empty
+     ?mockfailintent=blueprint     (optional — target one intent only)
+   Mock mode only: this must never be reachable in production. */
+function _mockFailure(intent) {
+  if (typeof window === "undefined" || !window.location) return null;
+  let params;
+  try { params = new URLSearchParams(window.location.search); } catch (e) { return null; }
+  const type = params.get("mockfail");
+  if (!type) return null;
+  const only = params.get("mockfailintent");
+  if (only && only !== intent) return null;
+  const detail = { intent, injected: true };
+  switch (type) {
+    case "network":       return _aiError("network", "Could not reach the AI service: simulated network failure.", detail);
+    case "proxy_timeout": return _aiError("proxy_timeout", "The AI service did not finish in time (HTTP 504).", { ...detail, status: 504, bodyTail: "FUNCTION_INVOCATION_TIMEOUT" });
+    case "parse_failure": return _aiError("parse_failure", "HTTP 200: the service did not return JSON.", { ...detail, status: 200, bodyTail: "<!DOCTYPE html><html>simulated non-JSON body</html>" });
+    case "proxy_error":   return _aiError("proxy_error", "429 rate_limit_error: simulated proxy error.", { ...detail, status: 429, apiType: "rate_limit_error" });
+    case "truncated":     return _aiError("truncated", "The AI response was cut off at the token ceiling.", { ...detail, stop_reason: "max_tokens", chars: 120 });
+    case "empty":         return _aiError("empty", "The AI service returned no text.", { ...detail, stop_reason: "end_turn" });
+    default:
+      console.warn(`[mockAskClaude] unknown mockfail type "${type}" — ignoring`);
+      return null;
+  }
+}
+
 async function mockAskClaude(prompt, opts) {
   await new Promise((r) => setTimeout(r, 450 + Math.random() * 500)); // realistic latency so loading states show
+  const injected = _mockFailure((opts && opts.intent) || "untagged");
+  if (injected) throw injected;
   const J = (o) => JSON.stringify(o);
   const p = prompt;
 
@@ -5397,6 +5499,25 @@ const vocabSelectionBlock = (lvl) => {
 const NO_META_VOCAB = "\n- NO META-VOCABULARY about the lesson itself (never: topic, objective, structure, aspect, learning outcome, unit). It frames Leo as a system, not a teacher, and fails the Toolbox Test at EVERY level (A1-C1). Level-independent.";
 
 
+/* Student-facing names for the planner's stages. The console gets the intent
+   string; the student gets the step in words they can read. Leo says what he
+   observed — which step he reached — and nothing about why it stopped, because
+   the code does not know why and Leo does not guess. */
+const PLAN_STAGE_WORDS = {
+  init: "getting today's lesson started",
+  student_and_needs: "thinking about what you need today",
+  student_and_needs_retry: "thinking about what you need today",
+  blueprint: "putting today's lesson together",
+  blueprint_retry: "putting today's lesson together",
+  handover_to_background: "opening today's lesson",
+};
+const PLAN_FAIL_LINE = (fail) => {
+  const step = (fail && PLAN_STAGE_WORDS[fail.stage]) || null;
+  return step
+    ? `I could not finish today's lesson. I got as far as ${step}, and then it stopped.`
+    : "I could not finish today's lesson.";
+};
+
 const BLUEPRINT_JSON_SHAPE = `{"teacherReflection":"summarise your thinking in 2-3 sentences","communicativeObjective":"one can-do from your needs assessment","context":"the Australian situation you chose","cefr":"the student's CEFR level","lessonRationale":"why THIS lesson TODAY from your reasoning","predictedDifficulties":["2-3 mistakes from your analysis"],"emotionalObjective":"from your needs assessment","memorableMoment":"the one thing from your assessment","authenticMaterial":"the actual Australian text you wrote in your assessment","scaffoldingStrategy":"how you will build toward the final task","explanation":"2-3 warm sentences introducing today to the student","warmUpQuestions":["5-8 progressively communicative questions specific to today's context"],"warmUpActivities":[{"type":"one of: context_discussion|prediction|finish_sentence|mini_task|mcq|best_response|true_false|is_this_correct|spot_mistake|complete_dialogue|unscramble|order_conversation","instruction":"how to do it, one line","prompt":"the question or task, contextualised to TODAY","text":"optional supporting text or dialogue","options":["choice types ONLY: 2-4 options"],"answer":"choice types ONLY: exact text of the correct option","tokens":["sequence types ONLY: the words or lines IN THE CORRECT ORDER"],"note":"the teaching point, in Leo's voice"}],"vocabulary":[{"word":"","pos":"","meaning":"simple definition","ipa":"","stress":"","syllables":"","example":"in today's situation","examples":["one more"],"related":["2-3"],"collocations":["1-2"]}],"grammar":{"point":"","meaning":"","form":"","usage":"when Australians use this","examples":["2 in today's situation"]},"pronunciation":{"focus":"","tips":["2-3 for this student's L1"]},"mainSkill":"reading or listening","finalTask":"the role-play climax from your assessment","mission":"one doable real-world task","tomorrowConnection":"how today leads to tomorrow","learningOutcome":"what they can now do"}`;
 
 /* Proper-noun helpers for the vocabulary selection standard.
@@ -5769,6 +5890,9 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
 
   const [phase, setPhase] = useState("loading");   // loading | chooser | planning | lesson | done
   const [planFailCount, setPlanFailCount] = useState(0);
+  // What Leo actually observed when planning stopped. Observed and Forward:
+  // the closing surface may name only this, and must point somewhere next.
+  const [planFail, setPlanFail] = useState(null);
   const [lesson, setLesson] = useState(null);      // { blueprint, sections:{}, stage, perf:{}, status }
   const [reviewOpen, setReviewOpen] = useState(false);
   const [req, setReq] = useState({ context: "", grammar: "", vocabulary: "", skill: "", pronunciation: "" });
@@ -6011,6 +6135,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
         console.warn("[Planner] student_and_needs could not be split — retrying once", {
           stage: currentStage, chars: (mergedThinking || "").length, tail: (mergedThinking || "").slice(-300),
         });
+        currentStage = "student_and_needs_retry";
         mergedThinking = await askClaude(mergedPrompt(SPLIT_REMINDER), { intent: "student_and_needs" });
         split = splitStudentAndNeeds(mergedThinking);
       }
@@ -6078,7 +6203,11 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       perfMark("first-render");
 
       // ---- STAGE 4: EDUCATIONAL REVIEW (background) ----
-      currentStage = "educational_review";
+      // The stage name stays honest: from here plan() has already handed the
+      // student a lesson, and the review runs on its own promise with its own
+      // catch. Labelling this "educational_review" would make plan()'s outer
+      // catch blame a call it never awaited.
+      currentStage = "handover_to_background";
       // .catch is not belt-and-braces: nothing awaits this promise until the
       // student leaves the intro, and if they never do, an unhandled rejection
       // would surface as console noise while an unrelated defect is being
@@ -6105,7 +6234,22 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
         .then(() => { perfMark("grammar-prefetch"); })
         .catch((e) => { console.error("[Prefetch] chain ended early", { error: e }); });
     } catch (e) {
-      console.error("[Planner] stage failed", { stage: currentStage, error: e });
+      // Everything the next person needs, in one structured object. Not a
+      // concatenated string: the raw error must stay inspectable in the console.
+      const type = (e && e.aiErrorType) || "unknown";
+      const detail = (e && e.detail) || {};
+      console.error("[Planner] stage failed", {
+        stage: currentStage,
+        type,
+        name: (e && e.name) || typeof e,
+        message: (e && e.message) || String(e),
+        bodyTail: detail.bodyTail || detail.textTail || null,
+        status: detail.status != null ? detail.status : null,
+        intent: detail.intent || null,
+        elapsedMs: detail.ms != null ? detail.ms : null,
+        error: e,
+      });
+      setPlanFail({ stage: currentStage, type });
       setPlanFailCount((c) => c + 1);
       setPhase("error");
     }
@@ -6330,10 +6474,21 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
     <div>
       <SectionTitle>Leo's Lesson</SectionTitle>
       <div className="leo-accent text-leo" style={{ padding: "var(--space-4)", marginTop: "var(--space-5)" }}>
+        {/* Observed and Forward. Leo names the step he got to — which the code
+            genuinely holds — and never guesses at a cause. "Something went
+            wrong" is backward-looking and tells the student nothing; "the AI
+            failed" invents a cause the code has not established. Every branch
+            ends with something to do next. */}
+        <p>{PLAN_FAIL_LINE(planFail)}</p>
         {planFailCount < 2
-          ? <><p>I'm having trouble with that one — let me try again.</p>
-              <button className="primary-btn" style={{ marginTop: "var(--space-3)" }} onClick={() => { setPhase("chooser"); }}>Try again</button></>
-          : <p>Something's not working on my end. Your progress is saved — come back in a moment and we'll pick up right where we left off.</p>}
+          ? <>
+              <p>Nothing you have done is lost.</p>
+              <button className="primary-btn" style={{ marginTop: "var(--space-3)" }} onClick={() => { setPlanFail(null); setPhase("chooser"); }}>Try again</button>
+            </>
+          : <>
+              <p>Your progress is saved. You can try again in a moment, or start one of the lessons I have already written for you.</p>
+              <button className="primary-btn" style={{ marginTop: "var(--space-3)" }} onClick={() => { setPlanFail(null); setPhase("chooser"); }}>Choose a lesson</button>
+            </>}
       </div>
     </div>
   );
