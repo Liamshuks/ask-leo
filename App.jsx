@@ -5282,6 +5282,94 @@ const IMAGE_VS_WORD = {
 
 
 // ── Lesson-tightening v1 helpers (lesson-tightening-v1.md). Density, single-point, image rule — injected alongside cefrBlock + narrationGuidance. ──
+/* ---------------------------------------------------------------
+   VOCAB_SELECTION_STANDARD — which words earn a slot.
+   Peer to CEFR_CONSTRAINTS, NARRATION_STANDARD, TEXT_VOLUME_STANDARD,
+   SINGLE_POINT_DIRECTIVE, LOADING_MESSAGES and IMAGE_VS_WORD.
+   CEFR_CONSTRAINTS governs whether a word is at the right LEVEL.
+   This governs whether it is worth a SLOT. Different judgements:
+   "Australia" passes the first and fails the second.
+   A1 only. A2-C1 follow the same shape once A1 is proven live, so the
+   object is keyed by level and the helper returns "" for the rest.
+   --------------------------------------------------------------- */
+const VOCAB_SELECTION_STANDARD = {
+  A1: {
+    must_satisfy_all: [
+      "CONTENT WORD — noun, verb, adjective, or a high-frequency adverb of time/manner/place.",
+      "NEW BUT REACHABLE — plausibly not held yet, inside the A1 band (roughly top 750-1000 word families).",
+      "TRANSFERS BEYOND TODAY — does work in situations other than this lesson's.",
+      "SURVIVAL VALUE — an adult migrant in Australia could need it in real life within a fortnight.",
+      "DEFINABLE AT A1 — one sentence of A1 words, without the word itself, the student's name, or today's lesson.",
+      "PRODUCIBLE — the student says or writes it in today's final task or mission.",
+    ],
+    never_occupies_a_slot: [
+      "PROPER NOUNS — countries, cities, suburbs, people, brands, institutions. Free in the text; never a slot.",
+      "FUNCTION WORDS — prepositions, articles, pronouns, conjunctions, auxiliaries, determiners. Taught by grammar.",
+      "GREETINGS AND DAY-ONE CHUNKS — assumed present on arrival. One register exception.",
+      "NUMBERS, DAYS, MONTHS, COLOURS — closed sets, assumed known, unless the objective IS that set.",
+      "THE TARGET GRAMMAR IN LEXICAL DISGUISE — the grammar point is taught once, as grammar.",
+      "WORDS ALREADY MASTERED — anything the record shows as mastered rather than fragile or due for recycling.",
+    ],
+    composition_of_the_set: {
+      nouns: "4-5 — concrete and imageable", verbs: "2-3 — base form", adjectives: "1-2",
+      adverbs: "0-1 — high-frequency only", fixed_chunks: "maximum 1",
+      function_words: 0, proper_nouns: 0,
+      note: "A set with no verbs describes a scene rather than teaching an action.",
+    },
+    recycling_allowance: "At most 2 from the fragile or recycle lists, where today's situation gives them a natural home.",
+    count: "FOUR TO EIGHT. Eight is a CEILING, not a quota. Never invent a word to reach eight — padding is what produces proper nouns.",
+  },
+};
+
+/* The mechanical half of the standard (§7.3). Instruction reduces the failure
+   rate; enforcement removes it. Four of the six observed failures — from,
+   hello, Australia, Spain — are caught by these two lists and the country
+   check alone. The judgement half (transfer, survival value, definition
+   quality) stays prompt-side and is checked at review. */
+const VOCAB_POS_ALLOWED = ["noun", "verb", "adjective", "adverb", "phrase"];
+// Tolerated abbreviations. The five categories above are what the standard
+// requires; punishing a model for writing "adj" would spend a retry on
+// formatting rather than on pedagogy.
+const VOCAB_POS_ALIASES = {
+  n: "noun", v: "verb", adj: "adjective", adv: "adverb", ph: "phrase",
+  nouns: "noun", verbs: "verb", adjectives: "adjective", adverbs: "adverb", phrases: "phrase",
+  "noun phrase": "phrase", chunk: "phrase", expression: "phrase", "fixed phrase": "phrase",
+};
+const VOCAB_FUNCTION_WORDS = new Set([
+  // articles
+  "a", "an", "the",
+  // prepositions
+  "about", "above", "across", "after", "against", "along", "among", "around", "at",
+  "before", "behind", "below", "beneath", "beside", "between", "beyond", "by",
+  "down", "during", "except", "for", "from", "in", "inside", "into", "near",
+  "of", "off", "on", "onto", "out", "outside", "over", "past", "since",
+  "through", "to", "toward", "towards", "under", "until", "up", "upon", "with",
+  "within", "without",
+  // pronouns
+  "i", "you", "he", "she", "it", "we", "they", "me", "him", "her", "us", "them",
+  "my", "your", "his", "its", "our", "their", "mine", "yours", "hers", "ours", "theirs",
+  "myself", "yourself", "himself", "herself", "itself", "ourselves", "themselves",
+  "who", "whom", "whose", "which", "what",
+  // conjunctions
+  "and", "but", "or", "nor", "so", "yet", "because", "although", "though",
+  "while", "if", "unless", "whether", "than", "as",
+  // auxiliaries and modals
+  "is", "am", "are", "was", "were", "be", "been", "being",
+  "do", "does", "did", "done", "have", "has", "had", "having",
+  "will", "would", "shall", "should", "can", "could", "may", "might", "must",
+  // determiners and quantifiers
+  "this", "that", "these", "those", "some", "any", "no", "every", "each",
+  "all", "both", "few", "many", "much", "more", "most", "other", "another",
+  "such", "own", "not",
+]);
+const VOCAB_GREETING_WORDS = new Set([
+  "hello", "hi", "hey", "goodbye", "bye", "please", "thank you", "thanks",
+  "yes", "no", "sorry", "excuse me",
+]);
+// §3: greetings may take ONE slot, and only where the objective is the
+// register distinction rather than the greeting itself.
+const VOCAB_REGISTER_OBJECTIVE = /\b(register|formal|informal|politeness|greeting|greetings|greet)\b/i;
+
 const volumeBlock = (lvl) => {
   const v = TEXT_VOLUME_STANDARD[lvl];
   if (!v) return "";
@@ -5298,11 +5386,57 @@ const imageRuleBlock = (lvl) => {
   if (!r) return "";
   return "\n\nIMAGE-VS-WORD (guidance only — which vocab teaches by image vs word; ask 'can an image do this?'): IMAGE-taught: " + r.image_taught.join("; ") + ". WORD-taught: " + r.word_taught.join("; ") + ". HYBRID: " + r.hybrid.join("; ") + ". RULE: " + r.rule;
 };
+/* §5's prompt text, verbatim. Returns "" for any level other than A1 until
+   A2-C1 are authored — the same shape as its peer helpers. */
+const vocabSelectionBlock = (lvl) => {
+  if (!VOCAB_SELECTION_STANDARD[lvl]) return "";
+  return "\n\nVOCABULARY SELECTION — which words earn a slot (A1). Choose FOUR TO EIGHT items. Eight is a ceiling, not a target: if this situation honestly holds five words worth teaching, teach five. Never add a word to reach eight.\n\nEVERY item must be ALL of these: a content word (noun, verb, adjective, or a high-frequency adverb); new to the student but inside the A1 band; useful beyond today's situation; something an adult migrant in Australia could need within a fortnight; definable in one A1 sentence; and produced by the student in today's final task or mission.\n\nNEVER give a slot to: proper nouns (countries, cities, suburbs, names, brands — use them freely in your text and dialogue, but never as a vocabulary item); function words (from, the, a, in, my, is — these belong to the grammar point); greetings and day-one chunks (hello, please, thank you, sorry); numbers, days, months or colours unless the objective IS that set; the target grammar dressed as a word; or anything the student has already mastered.\n\nSHAPE OF THE SET: 4-5 nouns, 2-3 verbs, 1-2 adjectives, at most 1 fixed chunk. Zero function words. Zero proper nouns. A set with no verbs describes a scene instead of teaching an action.\n\nRECYCLING: at most 2 of the set may come from the fragile or recycle lists, chosen where today's situation gives them a natural home. The rest are new.\n\nWRITE THE DEFINITION FIRST, THEN DECIDE. Each meaning is one sentence of A1 English that does not use the word itself, does not name the student, and does not refer to today's lesson. If the only definition you can write is \"the country the student is in now\" or \"the word we use to say hello\", the word has failed — remove it and choose another. A definition that would not still be true tomorrow, in a different lesson, for a different student, is not a definition.";
+};
+
 // Level-independent (ruling b, Genesis 27 Jul): meta-vocabulary frames Leo as an LMS and fails the Toolbox Test at EVERY level. Stated ONCE, not per-level.
 const NO_META_VOCAB = "\n- NO META-VOCABULARY about the lesson itself (never: topic, objective, structure, aspect, learning outcome, unit). It frames Leo as a system, not a teacher, and fails the Toolbox Test at EVERY level (A1-C1). Level-independent.";
 
 
 const BLUEPRINT_JSON_SHAPE = `{"teacherReflection":"summarise your thinking in 2-3 sentences","communicativeObjective":"one can-do from your needs assessment","context":"the Australian situation you chose","cefr":"the student's CEFR level","lessonRationale":"why THIS lesson TODAY from your reasoning","predictedDifficulties":["2-3 mistakes from your analysis"],"emotionalObjective":"from your needs assessment","memorableMoment":"the one thing from your assessment","authenticMaterial":"the actual Australian text you wrote in your assessment","scaffoldingStrategy":"how you will build toward the final task","explanation":"2-3 warm sentences introducing today to the student","warmUpQuestions":["5-8 progressively communicative questions specific to today's context"],"warmUpActivities":[{"type":"one of: context_discussion|prediction|finish_sentence|mini_task|mcq|best_response|true_false|is_this_correct|spot_mistake|complete_dialogue|unscramble|order_conversation","instruction":"how to do it, one line","prompt":"the question or task, contextualised to TODAY","text":"optional supporting text or dialogue","options":["choice types ONLY: 2-4 options"],"answer":"choice types ONLY: exact text of the correct option","tokens":["sequence types ONLY: the words or lines IN THE CORRECT ORDER"],"note":"the teaching point, in Leo's voice"}],"vocabulary":[{"word":"","pos":"","meaning":"simple definition","ipa":"","stress":"","syllables":"","example":"in today's situation","examples":["one more"],"related":["2-3"],"collocations":["1-2"]}],"grammar":{"point":"","meaning":"","form":"","usage":"when Australians use this","examples":["2 in today's situation"]},"pronunciation":{"focus":"","tips":["2-3 for this student's L1"]},"mainSkill":"reading or listening","finalTask":"the role-play climax from your assessment","mission":"one doable real-world task","tomorrowConnection":"how today leads to tomorrow","learningOutcome":"what they can now do"}`;
+
+/* Proper-noun helpers for the vocabulary selection standard.
+   The country set is built from COUNTRIES — the same 200-plus entry list the
+   onboarding country select uses, which is country-list-v1.md already in
+   machine-readable form. Built lazily because COUNTRIES is declared further
+   down the module; validateBlueprint only ever runs after load. */
+let _countryNameSet = null;
+function _isCountryName(lowercasedWord) {
+  if (!lowercasedWord) return false;
+  if (_countryNameSet === null) {
+    _countryNameSet = new Set();
+    try {
+      COUNTRIES.forEach(([key, name, aliases]) => {
+        if (key === "prefer-not-to-say") return;
+        _countryNameSet.add(String(name).toLowerCase());
+        (aliases || []).forEach((a) => _countryNameSet.add(String(a).toLowerCase()));
+      });
+    } catch (e) { console.warn("[Vocab] country list unavailable for the proper-noun check", e); }
+  }
+  return _countryNameSet.has(lowercasedWord);
+}
+
+/* Capitalised where it is not sentence-initial — the clearest mechanical
+   signal of a proper noun that is not a country (Sydney, Woolworths, Medicare).
+   Reads the item's own example sentence. */
+function _capitalisedMidSentence(word, example) {
+  const w = String(word || "").trim();
+  const ex = String(example || "");
+  if (!w || !ex || w.toLowerCase() === "i") return false;
+  const re = new RegExp("(^|[^\\w])(" + w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")(?![\\w])", "gi");
+  let m;
+  while ((m = re.exec(ex)) !== null) {
+    if (!/^[A-Z]/.test(m[2])) continue;
+    const before = ex.slice(0, m.index + m[1].length).replace(/\s+$/, "");
+    if (before === "" || /[.!?:;"'\u2018\u2019\u201c\u201d]$/.test(before)) continue; // sentence-initial
+    return true;
+  }
+  return false;
+}
 
 /* ---------- Blueprint validation (client-side, structural) ----------
    The blueprint is the UNIVERSAL LESSON FORMAT. Every lesson — AI-generated,
@@ -5394,7 +5528,12 @@ function validateBlueprint(bp) {
     if (!bp[k]) problems.push(k + " missing");
   });
   if (!Array.isArray(bp.warmUpQuestions) || bp.warmUpQuestions.length < 4) problems.push("warmUpQuestions too short");
-  if (!Array.isArray(bp.vocabulary) || bp.vocabulary.length < 5) problems.push("vocabulary too small");
+  // Count: 4-8. Eight was always a ceiling for the mobile matching UI; the old
+  // floor of 5 pre-dates the selection standard, which rules that some honest
+  // A1 objectives (introducing yourself, greeting a neighbour) hold only four
+  // teachable words. Padding to a quota is what produced proper nouns.
+  if (!Array.isArray(bp.vocabulary) || bp.vocabulary.length < 4) problems.push("vocabulary too small — give at least 4 items");
+  else if (bp.vocabulary.length > 8) problems.push("vocabulary too large — 8 items is the ceiling, not a target");
   if (!bp.grammar || !bp.grammar.point || !bp.grammar.form) problems.push("grammar incomplete");
   if (!bp.grammar || !Array.isArray(bp.grammar.examples) || !bp.grammar.examples.length) problems.push("grammar.examples missing");
   if (bp.mainSkill !== "reading" && bp.mainSkill !== "listening" && bp.mainSkill !== "both") problems.push("mainSkill invalid");
@@ -5419,6 +5558,53 @@ function validateBlueprint(bp) {
   if (bp.matchVocab) {
     if (!Array.isArray(bp.matchVocab)) problems.push("matchVocab must be an array");
     else if (bp.matchVocab.length > 8) problems.push("matchVocab exceeds 8 items");
+  }
+
+  // ---- A1 VOCABULARY SELECTION STANDARD — mechanical half (§7.3) ----
+  // Gated to the levels the standard actually covers, which is the same gate
+  // vocabSelectionBlock uses. Enforcing a rule the prompt never stated would
+  // spend retries at B1+ on a standard that has not been authored for it.
+  if (Array.isArray(bp.vocabulary) && VOCAB_SELECTION_STANDARD[bp.cefr]) {
+    const items = bp.vocabulary.filter((v) => v && typeof v === "object");
+    // A model that title-cases its whole list is using a formatting convention,
+    // not naming countries. Capitalisation is only evidence of a proper noun
+    // when SOME items are capitalised and others are not.
+    const capped = items.filter((v) => /^[A-Z]/.test(String(v.word || "").trim()));
+    const uniformlyCapitalised = items.length > 1 && capped.length === items.length;
+    const registerObjective = VOCAB_REGISTER_OBJECTIVE.test(String(bp.communicativeObjective || ""));
+    let greetingsAllowed = registerObjective ? 1 : 0;
+
+    items.forEach((v) => {
+      const rawWord = String(v.word || "").trim();
+      const word = rawWord.toLowerCase();
+      if (!rawWord) { problems.push("a vocabulary item has no word"); return; }
+
+      // pos present and one of the five categories
+      const rawPos = String(v.pos || "").trim().toLowerCase();
+      const pos = VOCAB_POS_ALIASES[rawPos] || rawPos;
+      if (!VOCAB_POS_ALLOWED.includes(pos)) {
+        problems.push(`vocabulary item "${rawWord}" has pos "${v.pos || ""}" — must be one of noun, verb, adjective, adverb, phrase`);
+      }
+
+      // Function words are taught by the grammar point, never by a card
+      if (VOCAB_FUNCTION_WORDS.has(word)) {
+        problems.push(`vocabulary item "${rawWord}" is a function word — it belongs to the grammar point, not to a vocabulary slot; replace it with a content word`);
+      }
+
+      // Greetings and day-one chunks, with the §3 register exception
+      if (VOCAB_GREETING_WORDS.has(word)) {
+        if (greetingsAllowed > 0) greetingsAllowed -= 1;
+        else if (registerObjective) problems.push(`vocabulary item "${rawWord}" — only ONE greeting may take a slot even when the objective is register`);
+        else problems.push(`vocabulary item "${rawWord}" is a day-one chunk every A1 student already has — replace it with a word that teaches something`);
+      }
+
+      // Proper nouns: the country list, then capitalisation evidence
+      if (_isCountryName(word)) {
+        problems.push(`vocabulary item "${rawWord}" is a proper noun (a country) — use it freely in your text and dialogue, but never as a vocabulary item`);
+      } else if ((!uniformlyCapitalised && /^[A-Z]/.test(rawWord)) || _capitalisedMidSentence(rawWord, v.example)) {
+        problems.push(`vocabulary item "${rawWord}" looks like a proper noun — proper nouns may appear in your text but may never take a vocabulary slot`);
+      }
+    });
   }
 
   // Vocabulary: duplicate detection (case-insensitive)
@@ -5705,7 +5891,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
         .map(a => `${a.type} — ${a.prompt || a.instruction || "(no prompt)"}`).join("\n") || "none given";
 
       const review = await askClaude(
-        `You are a senior ELICOS teacher reviewing a colleague's lesson plan. Be critically constructive.\n\nSTUDENT: ${notes.slice(0, 300)}\n\nLESSON PLAN:\nContext: ${planned.context}\nObjective: ${planned.communicativeObjective}\nRationale: ${bpRationale}\n\nVocabulary:\n${planned.vocabulary.map(v => `${v.word} — ${v.meaning}`).join("\n")}\n\nGrammar point: ${planned.grammar.point}\nGrammar form: ${planned.grammar.form}\nGrammar examples: ${planned.grammar.examples.join(" / ")}\n\nWarm-up activities:\n${bpWarmUps}\n\nFinal task: ${planned.finalTask}\nMemorable moment: ${planned.memorableMoment}\nScaffolding: ${bpScaffold}\n\nAnswer YES or NO to each, then explain briefly:\n1. Would I enjoy teaching this lesson?\n2. Does every vocabulary item genuinely support the objective? Check each definition — is it clear and helpful at this level, or vague and circular?\n3. Does the grammar arise naturally from the situation?\n4. Is the authentic material believable?\n5. Does everything build toward the final task — does vocabulary prepare for reading, does reading model the grammar, does grammar support speaking?\n6. Is it memorable?\n7. Would the student leave more confident?\n8. Do the grammar examples practise the target structure and ONLY the target structure? Could a student answer any grammar example correctly without knowing the grammar rule? If so, the examples are testing something else.\n9. Do the warm-up activities feel specific to today's context, or could they appear in any lesson?\n10. Is there anything I would change?\n\nBe honest. If anything needs improving, say exactly what and why.`,
+        `You are a senior ELICOS teacher reviewing a colleague's lesson plan. Be critically constructive.\n\nSTUDENT: ${notes.slice(0, 300)}\n\nLESSON PLAN:\nContext: ${planned.context}\nObjective: ${planned.communicativeObjective}\nRationale: ${bpRationale}\n\nVocabulary:\n${planned.vocabulary.map(v => `${v.word} — ${v.meaning}`).join("\n")}\n\nGrammar point: ${planned.grammar.point}\nGrammar form: ${planned.grammar.form}\nGrammar examples: ${planned.grammar.examples.join(" / ")}\n\nWarm-up activities:\n${bpWarmUps}\n\nFinal task: ${planned.finalTask}\nMemorable moment: ${planned.memorableMoment}\nScaffolding: ${bpScaffold}\n\nAnswer YES or NO to each, then explain briefly:\n1. Would I enjoy teaching this lesson?\n2. Does every vocabulary item genuinely support the objective? Check each definition — is it clear and helpful at this level, or vague and circular?\n3. Does the grammar arise naturally from the situation?\n4. Is the authentic material believable?\n5. Does everything build toward the final task — does vocabulary prepare for reading, does reading model the grammar, does grammar support speaking?\n6. Is it memorable?\n7. Would the student leave more confident?\n8. Do the grammar examples practise the target structure and ONLY the target structure? Could a student answer any grammar example correctly without knowing the grammar rule? If so, the examples are testing something else.\n9. Do the warm-up activities feel specific to today's context, or could they appear in any lesson?\n\nDEFINITIONS — check every vocabulary meaning against all five of these, and name any that fail so they can be rewritten: (1) ONE sentence, using only words at or below the student's level; (2) does NOT use the target word or a form of it; (3) does NOT name the student and does NOT refer to today's lesson or situation — "the country the student is in now" fails on both counts, it is a caption for one student on one day; (4) DISTINGUISHES the word from its near neighbours — "a kind of food" fails for "tomato" because it is equally true of everything on the shelf; (5) would still be TRUE TOMORROW, in a different lesson, for a different student. The fifth is the strongest. A meaning that fails these is usually telling you the word should not have had a slot — say so if that is what you find.\n10. Is there anything I would change?\n\nBe honest. If anything needs improving, say exactly what and why.`,
         { intent: "educational_review" }
       );
 
@@ -5847,7 +6033,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       // Every field must come from the thinking above — not invented fresh.
       currentStage = "blueprint";
       const raw = await askClaude(
-        `You are Leo. You have analysed your student and assessed their needs. Here is your thinking:\n\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nNow convert this thinking into a structured lesson plan. Everything must come from your analysis above — do not invent new content that contradicts your reasoning. The needs assessment above has ALREADY decided the ONE communicative objective, what to defer, and the L1-variety mistakes to address: build EXACTLY that objective (do not re-pick, broaden, or swap it), do not teach anything it set aside to defer, and target the predicted L1-variety mistakes. The student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)}${narrationGuidance(level, "framing")}${singlePointBlock(level)}${volumeBlock(level)}${imageRuleBlock(level)}\n\nRespond ONLY with JSON, no fences:\n${BLUEPRINT_JSON_SHAPE}\n\nExactly 8 vocabulary items from your needs assessment. Every word must justify its place.\n\nWARM-UP: give 3 activities of DIFFERENT types, all contextualised to today's situation — never generic. Choice types (mcq, best_response, true_false, is_this_correct, spot_mistake, complete_dialogue) need options + answer + note. Sequence types (unscramble, order_conversation) need tokens in the CORRECT order + note. Free types (context_discussion, prediction, finish_sentence, mini_task) need only a prompt. ${avoidFormats ? `Do NOT use these formats — the student had them last lesson: ${avoidFormats}.` : ""}`,
+        `You are Leo. You have analysed your student and assessed their needs. Here is your thinking:\n\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nNow convert this thinking into a structured lesson plan. Everything must come from your analysis above — do not invent new content that contradicts your reasoning. The needs assessment above has ALREADY decided the ONE communicative objective, what to defer, and the L1-variety mistakes to address: build EXACTLY that objective (do not re-pick, broaden, or swap it), do not teach anything it set aside to defer, and target the predicted L1-variety mistakes. The student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)}${narrationGuidance(level, "framing")}${singlePointBlock(level)}${volumeBlock(level)}${imageRuleBlock(level)}${vocabSelectionBlock(level)}\n\nRespond ONLY with JSON, no fences:\n${BLUEPRINT_JSON_SHAPE}\n\nFour to eight vocabulary items from your needs assessment. Every word must justify its place.\n\nWARM-UP: give 3 activities of DIFFERENT types, all contextualised to today's situation — never generic. Choice types (mcq, best_response, true_false, is_this_correct, spot_mistake, complete_dialogue) need options + answer + note. Sequence types (unscramble, order_conversation) need tokens in the CORRECT order + note. Free types (context_discussion, prediction, finish_sentence, mini_task) need only a prompt. ${avoidFormats ? `Do NOT use these formats — the student had them last lesson: ${avoidFormats}.` : ""}`,
         { intent: "blueprint" }
       );
       let lastRaw = raw;
@@ -5861,7 +6047,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
         // that failed, what was wrong with it, the thinking, and the full shape.
         currentStage = "blueprint_retry";
         const raw2 = await askClaude(
-          `You are Leo. Fix your lesson plan. Your previous plan was:\n${JSON.stringify(blueprint)}\n\nIt had these problems: ${problems.join(", ")}.\n\nYour thinking was:\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nThe student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)}${narrationGuidance(level, "framing")}${singlePointBlock(level)}${volumeBlock(level)}${imageRuleBlock(level)} Produce a corrected, complete plan.\n\nRespond ONLY with JSON, no fences:\n${BLUEPRINT_JSON_SHAPE}`,
+          `You are Leo. Fix your lesson plan. Your previous plan was:\n${JSON.stringify(blueprint)}\n\nIt had these problems: ${problems.join(", ")}.\n\nYour thinking was:\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nThe student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)}${narrationGuidance(level, "framing")}${singlePointBlock(level)}${volumeBlock(level)}${imageRuleBlock(level)}${vocabSelectionBlock(level)} Produce a corrected, complete plan.\n\nRespond ONLY with JSON, no fences:\n${BLUEPRINT_JSON_SHAPE}`,
           { intent: "blueprint" }
         );
         lastRaw = raw2;
