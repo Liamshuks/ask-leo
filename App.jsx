@@ -4614,12 +4614,21 @@ function GrammarSection({ bp, section, vocab, onVocabTap, onSkip, onDone }) {
   const g = bp.grammar || {};
   const hasPractice = section.questions && section.questions.length >= 3 && !section.explanationOnly;
   const [practising, setPractising] = useState(false);
+  // W-01 fallback wiring (§2). When valid boards are present, the whiteboard
+  // surface renders. Otherwise the existing prose triplet serves the lesson
+  // exactly as it does today — no lesson can render broken during the
+  // transition, and no student sees a malformed board.
+  const hasBoards = Array.isArray(g.boards) && g.boards.length > 0 && !validateBoards(g.boards, bp.cefr);
   if (!practising) return (
     <SectionShell title={`Grammar: ${g.point}`} blurb="One point, straight from today's situation — never grammar for its own sake." onSkip={onSkip}>
-      <p><strong>What it means:</strong> <VocabText text={g.meaning} vocab={vocab} onTap={onVocabTap} /></p>
-      <p><strong>The form:</strong> <span className="gram-form">{g.form}</span></p>
-      <p><strong>When to use it:</strong> <VocabText text={g.usage} vocab={vocab} onTap={onVocabTap} /></p>
-      {(g.examples || []).map((ex, i) => <p key={i} className="vocab-example"><VocabText text={ex} vocab={vocab} onTap={onVocabTap} /></p>)}
+      {hasBoards
+        ? <GrammarBoard boards={g.boards} grammar={g} vocab={vocab} onVocabTap={onVocabTap} />
+        : <>
+            <p><strong>What it means:</strong> <VocabText text={g.meaning} vocab={vocab} onTap={onVocabTap} /></p>
+            <p><strong>The form:</strong> <span className="gram-form">{g.form}</span></p>
+            <p><strong>When to use it:</strong> <VocabText text={g.usage} vocab={vocab} onTap={onVocabTap} /></p>
+            {(g.examples || []).map((ex, i) => <p key={i} className="vocab-example"><VocabText text={ex} vocab={vocab} onTap={onVocabTap} /></p>)}
+          </>}
       {/* Capability: grammar reference table when available */}
       {g.reference && g.reference.length > 0 && (
         <div className="gram-ref-table" style={{ overflowX: "auto", marginTop: 12 }}>
@@ -4652,6 +4661,228 @@ function GrammarSection({ bp, section, vocab, onVocabTap, onSkip, onDone }) {
     <SectionShell title={`Grammar: ${g.point}`} onSkip={onSkip}>
       <McqQuiz questions={section.questions} vocab={vocab} onVocabTap={onVocabTap} onDone={onDone} />
     </SectionShell>
+  );
+}
+
+/* ================================================================
+   W-01 WHITEBOARD GRAMMAR — BoardFrame + GrammarBoard
+   Phase 1 partial build. Renderer only; planner does not emit boards yet.
+   Every current lesson renders on the existing prose fallback (unchanged).
+   When the planner starts emitting valid boards, this surface takes over.
+   ================================================================ */
+
+/* BoardFrame — the frozen logo frame, reused verbatim as a whiteboard.
+   Imports FRAME_PATH (line 7125), the same constant WhiteboardLogo uses.
+   Zero changes to frozen coordinates. Uniform scaling only. */
+function BoardFrame({ children, width }) {
+  const vb = "-3 -3 802 590";
+  const aspect = 590 / 802;
+  const w = width || "100%";
+  return (
+    <div className="wb-board" style={{ width: w }}>
+      <svg viewBox={vb} className="wb-board-svg" role="presentation" aria-hidden="true"
+        style={{ width: "100%", height: "auto", display: "block" }}>
+        <rect x="0" y="0" width="796" height="548" rx="0" fill="var(--board-face)" />
+        <path d={FRAME_PATH} className="wb-board-frame" vectorEffect="non-scaling-stroke" />
+      </svg>
+      <div className="wb-board-content">{children}</div>
+    </div>
+  );
+}
+
+/* Hand imperfection (§4.3). Block-level, deterministic, subtle.
+   Each element gets ±1.2° rotation and ±1px baseline offset, derived from
+   textSeed() of its own text. Same board, same seed, same render — a board
+   that shimmers between sessions is a Continuity Integrity defect. */
+function _boardImperfection(text) {
+  const seed = textSeed(String(text || ""));
+  const rot = ((seed % 240) - 120) / 100; // ±1.2°
+  const yOff = ((seed >> 8) % 200 - 100) / 100; // ±1px
+  return { transform: `rotate(${rot.toFixed(2)}deg) translateY(${yOff.toFixed(1)}px)` };
+}
+
+/* Hand-drawn wavering line. 2-3 shallow curve segments approximating a
+   straight line — never ruler-straight, never scribble. Deterministic. */
+function _waverPath(x1, y1, x2, y2, seed) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const s = textSeed(String(seed || "") + x1);
+  const mid1x = x1 + dx * 0.33, mid2x = x1 + dx * 0.66;
+  const wobble = 2.5;
+  const w1 = ((s % 100) - 50) / 50 * wobble;
+  const w2 = (((s >> 7) % 100) - 50) / 50 * wobble;
+  return `M ${x1} ${y1} Q ${mid1x} ${y1 + dy * 0.33 + w1}, ${x1 + dx * 0.5} ${y1 + dy * 0.5} Q ${mid2x} ${y1 + dy * 0.66 + w2}, ${x2} ${y2}`;
+}
+
+/* Role → CSS class mapping (§5.1) */
+const _ROLE_CLASS = { plain: "wb-plain", structure: "wb-structure", target: "wb-target", model: "wb-model" };
+function _roleClass(role) { return _ROLE_CLASS[role] || "wb-plain"; }
+
+/* RoleSpan — a span of text with a grammar role, rendered through VocabText
+   so tap-to-learn survives onto the board (§5.6). */
+function RoleSpan({ text, role, vocab, onVocabTap }) {
+  return <span className={_roleClass(role)}><VocabText text={text} vocab={vocab || []} onTap={onVocabTap} /></span>;
+}
+
+/* ---- Element renderers, one per §6.1 type ---- */
+
+function BoardTitle({ el, idx }) {
+  const imp = _boardImperfection(el.text);
+  return (
+    <div className="wb-el wb-title" style={{ ...imp, animationDelay: (idx * 130) + "ms" }}>
+      <span className="wb-title-text">{el.text}</span>
+      <svg className="wb-title-underline" height="6" aria-hidden="true">
+        <path d={_waverPath(0, 3, 200, 3, el.text)} stroke="var(--marker-blue)" strokeWidth="2.5" fill="none" />
+      </svg>
+    </div>
+  );
+}
+
+function BoardRule({ el, idx, vocab, onVocabTap }) {
+  const imp = _boardImperfection((el.pieces || []).map(p => p.text).join(" "));
+  return (
+    <div className="wb-el wb-rule" style={{ ...imp, animationDelay: (idx * 130) + "ms" }}>
+      {(el.pieces || []).map((p, i) => <RoleSpan key={i} text={p.text} role={p.role} vocab={vocab} onVocabTap={onVocabTap} />)}
+    </div>
+  );
+}
+
+function BoardFormula({ el, idx, vocab, onVocabTap }) {
+  const imp = _boardImperfection((el.boxes || []).map(b => b.text).join("+"));
+  const joiner = el.joiner || "+";
+  return (
+    <div className="wb-el wb-formula" style={{ ...imp, animationDelay: (idx * 130) + "ms" }}>
+      {(el.boxes || []).map((box, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && <span className="wb-formula-join">{joiner}</span>}
+          <span className={`wb-formula-box ${_roleClass(box.role)}`}>
+            <RoleSpan text={box.text} role={box.role} vocab={vocab} onVocabTap={onVocabTap} />
+          </span>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+function BoardSubTable({ el, idx, vocab, onVocabTap }) {
+  const imp = _boardImperfection((el.slots || []).map(s => s.label).join(" "));
+  return (
+    <div className="wb-el wb-subtable" style={{ ...imp, animationDelay: (idx * 130) + "ms" }}>
+      <div className="wb-subtable-grid" style={{ gridTemplateColumns: `repeat(${(el.slots || []).length}, 1fr)` }}>
+        {(el.slots || []).map((slot, si) => (
+          <div key={si} className={`wb-slot ${slot.target ? "wb-slot-target" : ""}`}>
+            {el.numbered && <span className="wb-slot-num">{si + 1}</span>}
+            <span className="wb-slot-label">{slot.label}</span>
+            <div className="wb-slot-items">
+              {(slot.items || []).map((item, ii) => (
+                <div key={ii} className="wb-slot-item">
+                  <RoleSpan text={item} role={slot.target ? "target" : "plain"} vocab={vocab} onVocabTap={onVocabTap} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      {el.example && (
+        <div className="wb-subtable-example wb-model">
+          <VocabText text={el.example} vocab={vocab || []} onTap={onVocabTap} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BoardExample({ el, idx, vocab, onVocabTap }) {
+  const imp = _boardImperfection((el.spans || []).map(sp => sp.text).join(" "));
+  return (
+    <div className="wb-el wb-example" style={{ ...imp, animationDelay: (idx * 130) + "ms" }}>
+      <span className="wb-example-text">
+        {(el.spans || []).map((sp, i) => <RoleSpan key={i} text={sp.text} role={sp.role} vocab={vocab} onVocabTap={onVocabTap} />)}
+      </span>
+      {el.mark === "tick" && <span className="wb-mark wb-mark-tick" aria-label="correct">✓</span>}
+      {el.mark === "cross" && <span className="wb-mark wb-mark-cross" aria-label="incorrect">✗</span>}
+    </div>
+  );
+}
+
+function BoardContrast({ el, idx, vocab, onVocabTap }) {
+  const fromText = (el.from && el.from.spans || []).map(sp => sp.text).join(" ");
+  const toText = (el.to && el.to.spans || []).map(sp => sp.text).join(" ");
+  const imp = _boardImperfection(fromText + toText);
+  return (
+    <div className="wb-el wb-contrast" style={{ ...imp, animationDelay: (idx * 130) + "ms" }}>
+      <div className="wb-contrast-from">
+        {(el.from && el.from.spans || []).map((sp, i) => <RoleSpan key={i} text={sp.text} role={sp.role} vocab={vocab} onVocabTap={onVocabTap} />)}
+      </div>
+      <svg className="wb-contrast-arrow" width="40" height="24" aria-hidden="true">
+        <path d={_waverPath(4, 12, 32, 12, fromText)} stroke="var(--marker-orange)" strokeWidth="2" fill="none" />
+        <polygon points="30,6 38,12 30,18" fill="var(--marker-orange)" />
+      </svg>
+      <div className="wb-contrast-to">
+        {(el.to && el.to.spans || []).map((sp, i) => <RoleSpan key={i} text={sp.text} role={sp.role} vocab={vocab} onVocabTap={onVocabTap} />)}
+      </div>
+    </div>
+  );
+}
+
+function BoardNote({ el, idx }) {
+  const imp = _boardImperfection(el.text);
+  return (
+    <div className="wb-el wb-note" style={{ ...imp, animationDelay: (idx * 130) + "ms" }}>
+      <svg className="wb-note-bubble" viewBox="0 0 200 50" aria-hidden="true">
+        <path d={_waverPath(10, 5, 190, 5, el.text + "top")} stroke="var(--marker-orange)" strokeWidth="1.5" fill="none" />
+        <path d={_waverPath(190, 5, 190, 40, el.text + "right")} stroke="var(--marker-orange)" strokeWidth="1.5" fill="none" />
+        <path d={_waverPath(190, 40, 10, 40, el.text + "bottom")} stroke="var(--marker-orange)" strokeWidth="1.5" fill="none" />
+        <path d={_waverPath(10, 40, 10, 5, el.text + "left")} stroke="var(--marker-orange)" strokeWidth="1.5" fill="none" />
+      </svg>
+      <span className="wb-note-text">{el.text}</span>
+    </div>
+  );
+}
+
+const _BOARD_RENDERERS = {
+  title: BoardTitle, rule: BoardRule, formula: BoardFormula,
+  subTable: BoardSubTable, example: BoardExample, contrast: BoardContrast, note: BoardNote,
+};
+
+/* GrammarBoard — renders one or more boards inside BoardFrame.
+   §7: the whole surface is a figure with role="img" semantics. The prose
+   fields (meaning, form, usage, examples) serve as the screen-reader
+   alternative — one source of truth, already correct. */
+function GrammarBoard({ boards, grammar, vocab, onVocabTap }) {
+  const g = grammar || {};
+  const captionId = "wb-caption-" + textSeed(g.point || "grammar");
+  // Build a connected prose caption from the existing fields — one paragraph,
+  // not four labelled fields. A screen reader reading "Meaning: X. Form: Y."
+  // hears an outline; a connected paragraph hears a caption. Composed from the
+  // same prose fields the fallback renders, so one source of truth.
+  const caption = [
+    g.point && `Today's grammar point is ${g.point}.`,
+    g.meaning && `It means ${g.meaning}.`,
+    g.form && `The form is: ${g.form}.`,
+    g.usage && `Use it ${g.usage}.`,
+    ...(g.examples || []).map((ex) => `For example: ${ex}.`),
+  ].filter(Boolean).join(" ");
+
+  return (
+    <div className="wb-boards" role="figure" aria-labelledby={captionId}>
+      {/* Visually hidden but present for screen readers — the caption the
+          figure points at. Inline style, no external sr-only class dependency. */}
+      <div id={captionId} style={{
+        position: "absolute", width: "1px", height: "1px",
+        padding: 0, margin: "-1px", overflow: "hidden",
+        clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0,
+      }}>{caption}</div>
+      {boards.map((board, bi) => (
+        <BoardFrame key={bi}>
+          <div className="wb-writing-band" aria-hidden="true">
+            {(board.elements || []).map((el, ei) => {
+              const Renderer = _BOARD_RENDERERS[el.type];
+              return Renderer ? <Renderer key={ei} el={el} idx={ei} vocab={vocab} onVocabTap={onVocabTap} /> : null;
+            })}
+          </div>
+        </BoardFrame>
+      ))}
+    </div>
   );
 }
 
@@ -5565,6 +5796,103 @@ function _capitalisedMidSentence(word, example) {
   return false;
 }
 
+/* ================================================================
+   BOARD VALIDATION (§6.2) — never trust generated content.
+   Runs at the same two enforcement points as CEFR_CONSTRAINTS. Until the
+   planner emits boards, this is silent: no boards = nothing to validate.
+   When boards arrive, invalid ones fall back to the prose surface (§2) —
+   the student always gets correct teaching; they never see a malformed
+   board or an error.
+   ================================================================ */
+const BOARD_VALID_TYPES = ["title","rule","formula","subTable","example","contrast","note"];
+const BOARD_VALID_ROLES = ["plain","structure","target","model"];
+const BOARD_WORD_LIMITS = { A1: 40, A2: 55 };
+
+function validateBoards(boards, cefr) {
+  if (!boards) return null; // no boards = not emitted yet; fall back silently
+  if (!Array.isArray(boards)) return "boards must be an array";
+  if (boards.length === 0) return "boards array is empty";
+  if (boards.length > 3) return "too many boards (max 3)";
+  const wl = BOARD_WORD_LIMITS[cefr];
+  for (let bi = 0; bi < boards.length; bi++) {
+    const b = boards[bi];
+    if (!b || !Array.isArray(b.elements)) return `board ${bi+1}: elements missing or not an array`;
+    if (b.elements.length > 6) return `board ${bi+1}: too many elements (max 5 + title)`;
+    let hasTitle = false, contrasts = 0, notes = 0, wordCount = 0;
+    for (let ei = 0; ei < b.elements.length; ei++) {
+      const el = b.elements[ei];
+      if (!el || !el.type) return `board ${bi+1} element ${ei+1}: missing type`;
+      if (el.type === "illustration") return `board ${bi+1} element ${ei+1}: illustration is reserved for Phase 2`;
+      if (!BOARD_VALID_TYPES.includes(el.type)) return `board ${bi+1} element ${ei+1}: unknown type "${el.type}"`;
+      // Per-type checks
+      if (el.type === "title") {
+        if (hasTitle) return `board ${bi+1}: duplicate title`;
+        hasTitle = true;
+        if (!el.text) return `board ${bi+1}: title has no text`;
+        wordCount += _countWords(el.text);
+      }
+      if (el.type === "rule") {
+        if (!Array.isArray(el.pieces) || !el.pieces.length) return `board ${bi+1} element ${ei+1}: rule needs pieces`;
+        wordCount += el.pieces.reduce((n, p) => n + _countWords(p.text), 0);
+        const bad = el.pieces.find(p => p.role && !BOARD_VALID_ROLES.includes(p.role));
+        if (bad) return `board ${bi+1} element ${ei+1}: unknown role "${bad.role}"`;
+      }
+      if (el.type === "formula") {
+        if (!Array.isArray(el.boxes) || el.boxes.length < 2 || el.boxes.length > 4)
+          return `board ${bi+1} element ${ei+1}: formula needs 2-4 boxes`;
+        wordCount += el.boxes.reduce((n, b) => n + _countWords(b.text), 0);
+        const bad = el.boxes.find(b => b.role && !BOARD_VALID_ROLES.includes(b.role));
+        if (bad) return `board ${bi+1} element ${ei+1}: unknown role "${bad.role}"`;
+      }
+      if (el.type === "subTable") {
+        if (!Array.isArray(el.slots) || el.slots.length < 2 || el.slots.length > 4)
+          return `board ${bi+1} element ${ei+1}: subTable needs 2-4 slots`;
+        let targets = 0;
+        for (const slot of el.slots) {
+          if (!Array.isArray(slot.items) || slot.items.length < 1 || slot.items.length > 4)
+            return `board ${bi+1} element ${ei+1}: each slot needs 1-4 items`;
+          if (slot.target) targets++;
+          wordCount += _countWords(slot.label) + slot.items.reduce((n, it) => n + _countWords(it), 0);
+        }
+        if (targets > 1) return `board ${bi+1} element ${ei+1}: subTable may have at most 1 target slot`;
+      }
+      if (el.type === "example") {
+        if (!Array.isArray(el.spans) || !el.spans.length) return `board ${bi+1} element ${ei+1}: example needs spans`;
+        wordCount += el.spans.reduce((n, sp) => n + _countWords(sp.text), 0);
+        const bad = el.spans.find(sp => sp.role && !BOARD_VALID_ROLES.includes(sp.role));
+        if (bad) return `board ${bi+1} element ${ei+1}: unknown role "${bad.role}"`;
+        if (el.mark && el.mark !== "tick" && el.mark !== "cross")
+          return `board ${bi+1} element ${ei+1}: mark must be "tick" or "cross"`;
+      }
+      if (el.type === "contrast") {
+        contrasts++;
+        if (contrasts > 1) return `board ${bi+1}: max 1 contrast per board`;
+        if (!el.from || !Array.isArray(el.from.spans) || !el.to || !Array.isArray(el.to.spans))
+          return `board ${bi+1} element ${ei+1}: contrast needs from.spans and to.spans`;
+        wordCount += el.from.spans.reduce((n, sp) => n + _countWords(sp.text), 0);
+        wordCount += el.to.spans.reduce((n, sp) => n + _countWords(sp.text), 0);
+      }
+      if (el.type === "note") {
+        notes++;
+        if (notes > 1) return `board ${bi+1}: max 1 note per board`;
+        if (!el.text) return `board ${bi+1} element ${ei+1}: note has no text`;
+        const nw = _countWords(el.text);
+        if (nw > 12) return `board ${bi+1} element ${ei+1}: note exceeds 12 words (has ${nw})`;
+        wordCount += nw;
+      }
+    }
+    // First element must be a title
+    if (!hasTitle || b.elements[0].type !== "title")
+      return `board ${bi+1}: first element must be a title`;
+    // Word budget
+    if (wl && wordCount > wl)
+      return `board ${bi+1}: exceeds ${cefr} word budget (${wordCount} > ${wl})`;
+  }
+  return null; // valid
+}
+
+function _countWords(str) { return (String(str || "").match(/\S+/g) || []).length; }
+
 /* ---------- Blueprint validation (client-side, structural) ----------
    The blueprint is the UNIVERSAL LESSON FORMAT. Every lesson — AI-generated,
    teacher-authored, or hybrid — ultimately produces one of these objects.
@@ -5732,6 +6060,16 @@ function validateBlueprint(bp) {
         problems.push(`vocabulary item "${rawWord}" looks like a proper noun — proper nouns may appear in your text but may never take a vocabulary slot`);
       }
     });
+  }
+
+  // Board validation (§6.2) — at both enforcement points via validateBlueprint.
+  // Silent when the planner does not emit boards (validateBoards returns null).
+  // When boards arrive, invalid ones fall back to the prose surface automatically —
+  // the problem message never reaches the outer catch; the renderer checks validity
+  // independently and falls back, so this is advisory for the retry prompt.
+  if (bp.grammar && bp.grammar.boards) {
+    const boardErr = validateBoards(bp.grammar.boards, bp.cefr);
+    if (boardErr) problems.push("grammar boards invalid: " + boardErr);
   }
 
   // Vocabulary: duplicate detection (case-insensitive)
@@ -7930,7 +8268,7 @@ export default function App() {
   useEffect(() => {
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700&family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Karla:wght@400;500;700&family=Caveat:wght@600&display=swap";
+    link.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700&family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Karla:wght@400;500;700&family=Caveat:wght@600&family=Kalam:wght@400;700&display=swap";
     document.head.appendChild(link);
   }, []);
 
@@ -8270,6 +8608,12 @@ const CSS = `
   --divider:#EDEDEA; /* Ruling 4 — rows inside a card, and the tab bar's top edge. Never an outer edge. */
   --color-success:#16A34A; --color-error:#DC4A3A; --color-warning:#E5A117;
   --space-1:4px; --space-2:8px; --space-3:16px; --space-4:24px; --space-5:32px; --space-6:48px; --space-7:64px;
+  /* W-01 Whiteboard Grammar — marker tokens (§5.1). Content colours, not UI
+     colours: the teacher's pens. Deliberately separate from --color-error,
+     --leo-green, so a marker never drifts when a UI state colour is retuned. */
+  --board-face:#FCFCFA;
+  --marker-black:#2B3037; --marker-blue:#2456A8; --marker-red:#C43B2E;
+  --marker-green:#1E7A4E; --marker-orange:#B5690F;
 }
 *{box-sizing:border-box; margin:0;}
 .app{min-height:100vh; background:var(--bg-warm); color:var(--text-primary); font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-size:16px; line-height:1.6;}
@@ -8579,6 +8923,74 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .passage{background:#fff; border:1.5px solid var(--line); border-radius:12px; padding:14px; font-size:15px; line-height:1.65; white-space:pre-line;}
 .listen-box{margin-bottom:10px;}
 .gram-form{font-family:'Fraunces',serif; background:var(--sage); border-radius:8px; padding:2px 8px; color:var(--euca-deep);}
+
+/* ================================================================
+   W-01 WHITEBOARD GRAMMAR — board surface CSS
+   Kalam on the board face ONLY. Everything outside the frame stays Inter.
+   No Fraunces, no .fade-in, no legacy tokens on the board surface (§12.11).
+   ================================================================ */
+.wb-boards{display:flex; flex-direction:column; gap:var(--space-4); margin:12px 0;}
+.wb-board{position:relative; width:100%; border-radius:0;}
+.wb-board-svg{display:block; width:100%;}
+.wb-board-frame{fill:none; stroke:var(--marker-black); stroke-width:5; stroke-linejoin:round; vector-effect:non-scaling-stroke;}
+.wb-board-content{position:absolute; top:7%; left:4%; right:4%; bottom:45%; overflow:hidden;
+  display:flex; flex-direction:column; gap:6px; justify-content:flex-start;}
+/* The writing band: top 7% to 55% of the board = the content region.
+   Bottom 45% (illustration reserve + pointer) stays clear per §3.2. */
+
+/* ---- Element base ---- */
+.wb-el{font-family:'Kalam',cursive; color:var(--marker-black); animation:scRise .4s ease-out both;}
+
+/* ---- Title (§5.3) ---- */
+.wb-title{margin-bottom:4px;}
+.wb-title-text{font-size:21px; font-weight:700; color:var(--marker-black); display:inline;}
+.wb-title-underline{width:min(200px, 60%); display:block; margin-top:1px;}
+
+/* ---- Rule ---- */
+.wb-rule{font-size:16px; line-height:1.5; display:flex; flex-wrap:wrap; gap:4px; align-items:baseline;}
+
+/* ---- Formula (§5.5) ---- */
+.wb-formula{display:flex; flex-wrap:wrap; gap:4px; align-items:center; font-size:16px;}
+.wb-formula-box{border:1.5px solid var(--marker-black); border-radius:4px; padding:2px 8px; display:inline-block;}
+.wb-formula-join{font-size:18px; color:var(--marker-black); padding:0 2px;}
+
+/* ---- SubstitutionTable (§5.4) ---- */
+.wb-subtable{margin:4px 0;}
+.wb-subtable-grid{display:grid; gap:2px 8px; align-items:start; font-size:16px;}
+.wb-slot{display:flex; flex-direction:column; align-items:center; min-width:0;}
+.wb-slot-num{font-size:12px; color:var(--marker-blue); font-weight:700;}
+.wb-slot-label{font-size:12px; color:var(--marker-blue); font-weight:700; text-transform:uppercase; margin-bottom:2px;}
+.wb-slot-items{display:flex; flex-direction:column; align-items:center; gap:1px; border-top:2px solid var(--marker-black); padding-top:3px; width:100%;}
+.wb-slot-item{text-align:center; padding:1px 4px; font-size:15px;}
+.wb-slot-target{border:2px solid var(--marker-red); border-radius:4px; padding:2px;}
+.wb-subtable-example{margin-top:6px; font-size:15px; color:var(--marker-green); font-style:italic;}
+
+/* ---- Example (§5.6) ---- */
+.wb-example{display:flex; align-items:baseline; gap:8px; font-size:16px; line-height:1.5;}
+.wb-example-text{display:inline;}
+.wb-mark{font-size:22px; font-weight:700; line-height:1;}
+.wb-mark-tick{color:var(--marker-green);}
+.wb-mark-cross{color:var(--marker-red);}
+
+/* ---- Contrast (§5.6) ---- */
+.wb-contrast{display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:16px;}
+.wb-contrast-from,.wb-contrast-to{display:inline-flex; gap:3px; flex-wrap:wrap;}
+
+/* ---- Note (§5.7) ---- */
+.wb-note{position:relative; padding:6px 10px; font-size:14px; font-weight:700; color:var(--marker-orange); max-width:70%;}
+.wb-note-bubble{position:absolute; inset:0; width:100%; height:100%; pointer-events:none;}
+.wb-note-text{position:relative; z-index:1;}
+
+/* ---- Role colours (§5.1) ---- */
+.wb-plain{color:var(--marker-black);}
+.wb-structure{color:var(--marker-blue);}
+.wb-target{color:var(--marker-red); font-weight:700;}
+.wb-model{color:var(--marker-green);}
+
+/* ---- Reduced motion (§8.3): board elements render in final state ---- */
+@media (prefers-reduced-motion: reduce){
+  .wb-el{animation:none; opacity:1; transform:translateY(0);}
+}
 .review-form{margin-top:12px; border-top:1px solid var(--line); padding-top:10px;}
 .ghost-btn.wide,.primary-btn.wide{width:100%;}
 .mission-box{display:flex; gap:12px; align-items:flex-start; background:#FFF7E6; border:1.5px solid var(--wattle); border-radius:12px; padding:13px 15px;}
