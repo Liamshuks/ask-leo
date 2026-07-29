@@ -310,6 +310,14 @@ async function liveAskClaude(prompt) {
   }
   const text = (data && data.content ? data.content : []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
   if (!text) throw new Error("liveAskClaude: response contained no text content (stop_reason=" + (data && data.stop_reason) + ")");
+  // The proxy owns max_tokens, so the client cannot know the ceiling — but it
+  // can see when the ceiling was hit. A truncated response is the failure mode
+  // the merged student_and_needs call is most exposed to (the cut lands on the
+  // needs assessment, the half Stage 3 depends on most), and this is direct
+  // evidence rather than the word-count heuristic inferring it.
+  if (data && data.stop_reason === "max_tokens") {
+    console.warn("[liveAskClaude] response hit the token ceiling and was truncated", { chars: text.length });
+  }
   return text;
 }
 
@@ -1870,6 +1878,57 @@ function _mockSpeakingReply(p) {
    reuse the same helper functions (_mockPick, _mockFindPack, etc.) as the
    text-matching branches — they ARE the same logic, keyed by contract instead
    of by fragile substring matching. */
+/* ================================================================
+   SUB-PASS 4 — splitting the merged student_and_needs response.
+   One call now produces both halves of Leo's thinking. Everything
+   downstream (Stage 3, the blueprint retry, _teacherNotes and its three
+   slice consumers) must receive byte-identical strings to what two calls
+   produced, so the merge is invisible below the planner.
+   Tolerances, per the authored specification §3:
+     - line-anchored, so a heading quoted mid-sentence cannot split the text
+     - markdown emphasis, ATX hashes and a trailing colon are all tolerated
+     - the PART ONE / PART TWO decoration the prompt itself models is
+       tolerated too, since that is the most likely way the model deviates
+     - LAST occurrence of NEEDS ASSESSMENT wins: the model may quote its own
+       heading inside Part Two prose
+   Returns null on any failure. Null means retry, then throw — never a
+   half-populated plan, because Stage 3 would silently invent the rest.
+   ================================================================ */
+const _HEADING_RE = (part, words) => new RegExp(
+  "^[ \\t]*[-\u2013\u2014\u2500=#>*]{0,12}[ \\t]*" +
+  "(?:PART[ \\t]+" + part + "[ \\t]*[-\u2013\u2014:]?[ \\t]*)?" +
+  "(?:\\*\\*|__)?[ \\t]*" + words + "[ \\t]*(?:\\*\\*|__)?[ \\t]*:?[ \\t]*" +
+  "[-\u2013\u2014\u2500=*]{0,12}[ \\t]*$", "gim");
+
+const _wordCount = (str) => (String(str).match(/\S+/g) || []).length;
+
+function splitStudentAndNeeds(text) {
+  const src = String(text || "");
+  const needsRe = _HEADING_RE("TWO", "NEEDS[ \\t]+ASSESSMENT");
+  let m, last = null;
+  while ((m = needsRe.exec(src)) !== null) {
+    last = m;
+    if (m.index === needsRe.lastIndex) needsRe.lastIndex++; // zero-length guard
+  }
+  if (!last) return null;
+  let first = src.slice(0, last.index);
+  let second = src.slice(last.index + last[0].length);
+  // Strip the leading STUDENT ANALYSIS heading with the same tolerance, so the
+  // first half opens on the student rather than on a label — the three
+  // _teacherNotes consumers slice from the front and would lose real content.
+  const saRe = _HEADING_RE("ONE", "STUDENT[ \\t]+ANALYSIS");
+  const sa = saRe.exec(first);
+  if (sa) first = first.slice(sa.index + sa[0].length);
+  first = first.trim();
+  second = second.trim();
+  if (!first || !second) return null;
+  // A short half is a truncation signal, not a terse answer. Part One is
+  // briefed at 5-8 sentences and Part Two at 4-6, so either coming back under
+  // forty words means the generation was cut off or the layout collapsed.
+  if (_wordCount(first) < 40 || _wordCount(second) < 40) return null;
+  return { studentAnalysis: first, needsAssessment: second };
+}
+
 const _MOCK_INTENT_HANDLERS = {
   /* Three length-keyed paths: 1-2 chars skip, 3-15 minimal, 16+ attempt.
      Minimal and attempt read the current pack's strings; when those are absent
@@ -1916,6 +1975,10 @@ const _MOCK_INTENT_HANDLERS = {
     const pack = _mockFindPack(ctx) || _mockNextPack(p);
     return `This student needs to practise ${pack.ctx.toLowerCase()}. This is the right lesson for today because it is a situation they will genuinely encounter in Australian life, and it builds naturally on what we have been working on. I predict they will struggle with polite request forms — they will probably say "I want" instead of "Could I get" or "I would like." They may also freeze when asked a follow-up question they did not expect. The essential vocabulary is: ${pack.vocab.join(", ")}. I would deliberately leave out more advanced terms that would overload them. The grammar that arises naturally is ${pack.grammar.point} — ${pack.grammar.meaning}. For authentic material, I would use this: ${pack.dialogue.replace(/\n/g, " ")}. The one memorable moment: Australians say "no worries" constantly — it means "you are welcome" and hearing it will make them feel like they belong. By the end, they should feel capable and proud. The final moment of success: they will role-play the complete ${pack.ctx.toLowerCase()} interaction and handle it confidently.`;
   },
+  /* Sub-pass 4. Concatenates the two handlers this merge replaced, with the
+     two headings the live prompt demands, so USE_MOCK_AI exercises the real
+     split path instead of falling through to text matching (line ~1970). */
+  student_and_needs: (p, J) => `STUDENT ANALYSIS\n\n${_MOCK_INTENT_HANDLERS.student_analysis(p, J)}\n\nNEEDS ASSESSMENT\n\n${_MOCK_INTENT_HANDLERS.needs_assessment(p, J)}`,
   educational_review: () => `1. Would I enjoy teaching this lesson? YES — it has a clear communicative purpose and authentic material.\n2. Does every vocabulary item support the objective? YES — each word is genuinely needed for this situation.\n3. Does the grammar arise naturally? YES — it comes directly from the communicative situation.\n4. Is the authentic material believable? YES — a student could encounter this in real life.\n5. Does everything build toward the final task? YES — vocabulary, grammar and speaking all prepare for the role-play.\n6. Is it memorable? YES — the Australian expression will stick.\n7. Would the student leave more confident? YES — they will have successfully completed a real interaction.\n8. Is there anything I would change? I would make sure the warm-up questions are specific enough to activate the exact vocabulary they will need.`,
   dictionary: (p, J) => {
     const w = _mockPick(p, /Word or phrase: "([^"]*)"/) || "word";
@@ -5744,29 +5807,44 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
     try {
       const levelConstraint = CEFR_CONSTRAINTS[level] || null;
       if (!levelConstraint) console.warn(`[CEFR] No constraints defined for ${level} — planner running unconstrained`);
-      // ---- STAGE 1: STUDENT ANALYSIS ----
-      // Leo thinks only about the student. Not about a lesson. Not about content.
-      // "Who is sitting in my classroom tomorrow morning?"
-      currentStage = "student_analysis";
-      const studentAnalysis = await askClaude(
-        `You are Leo, one of Australia's most experienced ELICOS teachers. Twenty years of teaching international students.\n\nRead everything you know about your student:\n\n${teacherCtx}\n\nNow write a brief STUDENT ANALYSIS. Do not plan a lesson. Do not think about content. Just think about this person:\n\n- Who are they? What kind of learner?\n- How long have I been teaching them? How are they progressing?\n- What has improved recently? What am I proud of?\n- What is still fragile? What keeps causing problems?\n- How confident are they? Has their confidence changed?\n- Did they have a mission? Did they try it?\n- What is their emotional state likely to be today?\n\nWrite 5-8 sentences. Be specific. Use their name. This is your private thinking.`,
-        { intent: "student_analysis" }
-      );
+      // ---- STAGE 1+2: STUDENT ANALYSIS AND NEEDS ASSESSMENT (merged, sub-pass 4) ----
+      // One call, two pieces of thinking, written in order. Leo thinks about the
+      // person first and only then decides what they need — the ordering is the
+      // pedagogy, not a formatting preference. The response is split straight
+      // back into the two strings the rest of the planner has always received.
+      currentStage = "student_and_needs";
+      const mergedPrompt = (reminder) =>
+        `You are Leo, one of Australia's most experienced ELICOS teachers. Twenty years of teaching international students.\n\nYou are going to do TWO separate pieces of thinking, in order, in one sitting. This is how you plan every lesson: first you think about the person, then — and only then — you decide what they need. THE ORDER IS A RULE, NOT A SUGGESTION. A needs decision made before the picture of the student is complete is a decision about a lesson, not about a learner.\n\nFIRST write PART ONE, in full. THEN, and only once Part One is finished on the page, write PART TWO. Do not begin Part Two while Part One is still forming.\n\n═══ WHAT YOU KNOW ABOUT YOUR STUDENT ═══\n\n${teacherCtx}\n\n─── PART ONE — STUDENT ANALYSIS ───\n\nUse ONLY the student record above. Do not plan a lesson. Do not think about content. Do not look ahead to the vocabulary lists and error tallies further down this page — if something there suggests a lesson to you, that thought belongs in Part Two and nowhere else. Just think about this person:\n\n- Who are they? What kind of learner?\n- How long have I been teaching them? How are they progressing?\n- What has improved recently? What am I proud of?\n- What is still fragile? What keeps causing problems?\n- How confident are they? Has their confidence changed?\n- Did they have a mission? Did they try it?\n- What is their emotional state likely to be today?\n\nWrite 5-8 sentences. Be specific. Use their name. This is your private thinking.\n\n─── PART TWO — NEEDS ASSESSMENT ───\n\nBegin only once Part One is written. Read your own Part One back as though a colleague wrote it, and be willing to disagree with it. Part One DESCRIBES; Part Two DECIDES. If Part Two only restates Part One in different words, you have not done Part Two.\n\nPart Two must build FROM Part One. Name at least two specific things you wrote there — the student by name, and at least one named fragility, confidence observation, or mission outcome from your own analysis — and let today's decision follow from them. Do not introduce a need that Part One gives no evidence for. If you find yourself wanting to teach something Part One never observed, either the analysis was incomplete or the need is not real.\n\nHere is the rest of what you need. None of it was available to you in Part One, and none of it may be used to rewrite Part One.\n\n${reqLines ? "They have asked to work on:\n" + reqLines + "\n\n" : ""}STUDENT'S FIRST LANGUAGE: ${l1}\nCOUNTRY OF ORIGIN: ${country}\n\nVOCABULARY — STILL FRAGILE (not yet mastered): ${fragileWords}\nVOCABULARY — TO RECYCLE (taught but needs revisiting): ${recycleWords}\nRECURRING ERRORS: ${errorTally}\n\nIf several fragile words share a theme — for example, medical vocabulary, financial terms, or housing language — consider whether that theme is itself the right lesson today. A cluster of words that have been fragile for many lessons may be fragile precisely because no lesson has created a natural home for them. Teaching the situation they belong to is better than scattering them one by one across unrelated lessons where they will never stick.\n\nDo NOT repeat these recently-used contexts (choose something completely different): ${avoidCtx}.\n\nNow decide what this student genuinely needs today. Do not plan the lesson.\n\nIMPORTANT: You can only teach one thing well today. Choose ONE communicative objective. If this student has multiple needs — different grammar gaps, different skill weaknesses — pick the one that matters most right now and name what you are deliberately leaving for another day and why.\n\nConsider how this student's specific L1 variety affects their English — not just "Spanish" or "Chinese" but the regional variety. A Colombian Spanish speaker and a Peninsular Spanish speaker make different errors. A Cantonese speaker and a Mandarin speaker have different phonological challenges. Teach accordingly.\n\nAnswer briefly — PRIVATE REASONING only. Do NOT plan the lesson, list a vocabulary set, or write any material (SMS, menu, sign, memorable moment, emotional goal, final task); the blueprint does all of that. Answer:\n\n- The ONE communicative situation that helps them most right now, and why today.\n- What you are deliberately NOT teaching today, and why — name it plainly; this defer decision is firm and the blueprint will respect it.\n- The specific mistakes you predict, given their L1 variety.\n- The grammar point that naturally arises from this situation.${cefrBlock(level, levelConstraint)}${singlePointBlock(level)}\n\nWrite 4-6 sentences of private reasoning. The ONE objective and the defer decision you make here are FINAL — the blueprint will build exactly this, not re-decide it.\n\n─── HOW TO LAY OUT YOUR ANSWER ───\n\nRespond with exactly two sections, in this order. Each opens with its heading alone on its own line, in capital letters, spelled exactly as shown. Nothing before the first heading. Nothing after the second section. No other headings, no preamble, no sign-off, no markdown formatting on the headings.\n\nSTUDENT ANALYSIS\n(your Part One)\n\nNEEDS ASSESSMENT\n(your Part Two)${reminder || ""}`;
+      const SPLIT_REMINDER = "\n\nIMPORTANT: your previous answer could not be read. You MUST include BOTH headings, each alone on its own line, in capitals, spelled exactly: STUDENT ANALYSIS and NEEDS ASSESSMENT. Write both sections in full.";
 
-      // ---- STAGE 2: NEEDS ASSESSMENT ----
-      // Leo decides what this student genuinely needs today. Not what would make
-      // a good lesson — what THIS STUDENT needs.
-      perfMark("student_analysis");
-      currentStage = "needs_assessment";
-      const needsAssessment = await askClaude(
-        `You are Leo. You have just analysed your student:\n\n${studentAnalysis}\n\n${reqLines ? "They have asked to work on:\n" + reqLines + "\n\n" : ""}STUDENT'S FIRST LANGUAGE: ${l1}\nCOUNTRY OF ORIGIN: ${country}\n\nVOCABULARY — STILL FRAGILE (not yet mastered): ${fragileWords}\nVOCABULARY — TO RECYCLE (taught but needs revisiting): ${recycleWords}\nRECURRING ERRORS: ${errorTally}\n\nIf several fragile words share a theme — for example, medical vocabulary, financial terms, or housing language — consider whether that theme is itself the right lesson today. A cluster of words that have been fragile for many lessons may be fragile precisely because no lesson has created a natural home for them. Teaching the situation they belong to is better than scattering them one by one across unrelated lessons where they will never stick.\n\nDo NOT repeat these recently-used contexts (choose something completely different): ${avoidCtx}.\n\nNow decide what this student genuinely needs today. Do not plan a lesson yet.\n\nIMPORTANT: You can only teach one thing well today. Choose ONE communicative objective. If this student has multiple needs — different grammar gaps, different skill weaknesses — pick the one that matters most right now and name what you are deliberately leaving for another day and why.\n\nConsider how this student's specific L1 variety affects their English — not just "Spanish" or "Chinese" but the regional variety. A Colombian Spanish speaker and a Peninsular Spanish speaker make different errors. A Cantonese speaker and a Mandarin speaker have different phonological challenges. Teach accordingly.\n\nAnswer briefly — PRIVATE REASONING only. Do NOT plan the lesson, list a vocabulary set, or write any material (SMS, menu, sign, memorable moment, emotional goal, final task); the blueprint does all of that. Answer:\n\n- The ONE communicative situation that helps them most right now, and why today.\n- What you are deliberately NOT teaching today, and why — name it plainly; this defer decision is firm and the blueprint will respect it.\n- The specific mistakes you predict, given their L1 variety.\n- The grammar point that naturally arises from this situation.${cefrBlock(level, levelConstraint)}${singlePointBlock(level)}\n\nWrite 4-6 sentences of private reasoning. The ONE objective and the defer decision you make here are FINAL — the blueprint will build exactly this, not re-decide it.`,
-        { intent: "needs_assessment" }
-      );
+      let mergedThinking = await askClaude(mergedPrompt(""), { intent: "student_and_needs" });
+      let split = splitStudentAndNeeds(mergedThinking);
+      if (!split) {
+        // One retry, with the layout requirement restated. askClaude is
+        // stateless, so the whole prompt goes again with the reminder appended.
+        console.warn("[Planner] student_and_needs could not be split — retrying once", {
+          stage: currentStage, chars: (mergedThinking || "").length, tail: (mergedThinking || "").slice(-300),
+        });
+        mergedThinking = await askClaude(mergedPrompt(SPLIT_REMINDER), { intent: "student_and_needs" });
+        split = splitStudentAndNeeds(mergedThinking);
+      }
+      if (!split) {
+        // Never fall through. Assigning the whole blob to studentAnalysis and
+        // leaving needsAssessment empty would hand Stage 3 half a plan — no
+        // objective, no defer decision, no predicted errors — and Stage 3 would
+        // invent all three, invisibly, inside a finished lesson.
+        console.error("[Planner] student_and_needs failed after retry", {
+          stage: currentStage, chars: (mergedThinking || "").length, tail: (mergedThinking || "").slice(-300),
+        });
+        throw new Error("student_and_needs: response did not contain both sections");
+      }
+      const studentAnalysis = split.studentAnalysis;
+      const needsAssessment = split.needsAssessment;
+      perfMark("student_and_needs");
 
       // ---- STAGE 3: LESSON BLUEPRINT ----
       // Now Leo converts his student analysis + needs assessment into a structured plan.
       // Every field must come from the thinking above — not invented fresh.
-      perfMark("needs_assessment");
       currentStage = "blueprint";
       const raw = await askClaude(
         `You are Leo. You have analysed your student and assessed their needs. Here is your thinking:\n\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nNow convert this thinking into a structured lesson plan. Everything must come from your analysis above — do not invent new content that contradicts your reasoning. The needs assessment above has ALREADY decided the ONE communicative objective, what to defer, and the L1-variety mistakes to address: build EXACTLY that objective (do not re-pick, broaden, or swap it), do not teach anything it set aside to defer, and target the predicted L1-variety mistakes. The student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)}${narrationGuidance(level, "framing")}${singlePointBlock(level)}${volumeBlock(level)}${imageRuleBlock(level)}\n\nRespond ONLY with JSON, no fences:\n${BLUEPRINT_JSON_SHAPE}\n\nExactly 8 vocabulary items from your needs assessment. Every word must justify its place.\n\nWARM-UP: give 3 activities of DIFFERENT types, all contextualised to today's situation — never generic. Choice types (mcq, best_response, true_false, is_this_correct, spot_mistake, complete_dialogue) need options + answer + note. Sequence types (unscramble, order_conversation) need tokens in the CORRECT order + note. Free types (context_discussion, prediction, finish_sentence, mini_task) need only a prompt. ${avoidFormats ? `Do NOT use these formats — the student had them last lesson: ${avoidFormats}.` : ""}`,
