@@ -4691,19 +4691,23 @@ function GrammarSection({ bp, section, vocab, onVocabTap, onSkip, onDone }) {
    When the planner starts emitting valid boards, this surface takes over.
    ================================================================ */
 
-/* BoardFrame — the frozen logo frame, reused verbatim as a whiteboard.
-   Imports FRAME_PATH (line 7125), the same constant WhiteboardLogo uses.
-   Zero changes to frozen coordinates. Uniform scaling only. */
+/* BoardFrame — the v3 rounded rect + tray, same shape as WhiteboardLogo.
+   One shape, two scales, one identity. Board stroke is 2.5px --marker-black;
+   logo stroke is 2px --leo-green. */
 function BoardFrame({ children, width }) {
-  const vb = "-3 -3 802 590";
-  const aspect = 590 / 802;
   const w = width || "100%";
   return (
     <div className="wb-board" style={{ width: w }}>
-      <svg viewBox={vb} className="wb-board-svg" role="presentation" aria-hidden="true"
+      <svg viewBox="-5 -5 810 602" className="wb-board-svg" role="presentation" aria-hidden="true"
         style={{ width: "100%", height: "auto", display: "block" }}>
-        <rect x="0" y="0" width="796" height="548" rx="0" fill="var(--board-face)" />
-        <path d={FRAME_PATH} className="wb-board-frame" vectorEffect="non-scaling-stroke" />
+        {/* v4 §2.1: frame and tray are discrete objects with a 12-unit gap between them. */}
+        <rect x="0" y="0" width="800" height="560" rx="30"
+          fill="var(--board-face)" stroke="var(--marker-black)" strokeWidth="2.5"
+          vectorEffect="non-scaling-stroke" />
+        {/* v4 §2.2: tray drawn after frame. No occlusion — the gap separates them. */}
+        <rect x="60" y="572" width="680" height="20" rx="10"
+          fill="var(--board-face)" stroke="var(--marker-black)" strokeWidth="2.5"
+          vectorEffect="non-scaling-stroke" />
       </svg>
       <div className="wb-board-content">{children}</div>
     </div>
@@ -7562,8 +7566,10 @@ function AustraliaPage({ profile, memory, initialQuery }) {
      animate  — plays the draw sequence (splash only)
      onDone   — fires after animated sequence completes */
 
-const FRAME_PATH = "M 420,548 L 49,548 L 359,317 L 0,527 L 0,0 L 796,0 L 796,548 L 420,548";
-const FRAME_LEN = 3450;
+/* FRAME_PATH deleted — zero consumers after board migration (v3 §17.3).
+   Content That Nothing Reads Is Not Shipped. */
+const FRAME_LEN = 2669; // new rounded rect perimeter: 2(740) + 2(500) + 2pi(30)
+const TRAY_LEN = 1383;  // tray perimeter: 2(660) + 2*pi*10 (stadium, v4 §9.3)
 
 const LETTER_PATHS = [
   /* A */ "M100.70947265625 278.0 130.03564453125 197.970703125H139.05908203125L168.65380859375 278.0H160.59716796875L151.94970703125 254.2060546875H117.30615234375L108.81982421875 278.0ZM119.72314453125 247.4384765625H149.47900390625L141.58349609375 225.685546875Q140.13330078125 221.7109375 138.41455078125 216.5009765625Q136.69580078125 211.291015625 134.49365234375 204.1474609375Q132.34521484375 211.3447265625 130.599609375 216.6083984375Q128.85400390625 221.8720703125 127.51123046875 225.685546875Z",
@@ -7584,43 +7590,60 @@ function WhiteboardLogo({ width = 280, animate = false, onDone }) {
   React.useEffect(() => {
     if (!onDoneRef.current || fired.current) return;
     fired.current = true;
-    // §4.3: 1750ms last letter settles + 250ms hold + 200ms fade = 2200ms.
-    // §4.4 reduced motion: 600ms hold + 200ms fade = 800ms.
-    const delay = (animate && !reducedMotion) ? 2200 : (animate ? 800 : 0);
+    // Addendum §4.1: frame 800ms + tray/wordmark 300ms (overlapping at 500ms) + hold 200ms + fade 200ms = 1200ms.
+    // Addendum §4.4: reduced motion = hold 600ms + fade 200ms = 800ms.
+    const delay = (animate && !reducedMotion) ? 1200 : (animate ? 800 : 0);
     const t = setTimeout(() => { if (onDoneRef.current) onDoneRef.current(); }, delay);
     return () => clearTimeout(t);
   }, []); // eslint-disable-line -- runs once on mount, callback accessed via ref
 
-  // Tier 3: < 48px
+  // Minimum viable logo size — addendum §3.5
+  if (width < 24) return null;
+
+  // Tier 3: <48px — monogram. Green rounded rect with reversed-out "L".
   if (width < 48) {
+    const rx3 = Math.max(4, Math.round(width * 0.15));
     return (
       <svg viewBox="0 0 40 40" width={width} height={width} className="wb-logo-svg" aria-label="Ask Leo" role="img">
-        <rect x="0" y="0" width="40" height="40" rx="12" fill="var(--leo-green)" />
+        <rect x="0" y="0" width="40" height="40" rx={rx3} fill="var(--leo-green)" />
         <text x="20" y="21" textAnchor="middle" dominantBaseline="central" className="wb-mono">L</text>
       </svg>
     );
   }
 
-  const h = Math.round(width * 590 / 802);
-  const doAnim = animate && !reducedMotion;
-
-  // Tier 2: 48–79px — frame only
-  if (width < 80) {
+  // Tier 2: 48–119px — filled mark. No stroke, no wordmark. The shape reads as a silhouette.
+  if (width < 120) {
+    const h2 = Math.round(width * 602 / 810);
     return (
-      <svg viewBox="-3 -3 802 590" width={width} height={h} className="wb-logo-svg" aria-label="Ask Leo" role="img">
-        <path d={FRAME_PATH} className="wb-frame" />
+      <svg viewBox="-5 -5 810 602" width={width} height={h2} className="wb-logo-svg" aria-label="Ask Leo" role="img">
+        <rect x="0" y="0" width="800" height="560" rx="30" fill="var(--leo-green)" />
+        <rect x="60" y="572" width="680" height="20" rx="10" fill="var(--leo-green)" />
       </svg>
     );
   }
 
-  // Tier 1: ≥ 80px
+  // Tier 1: >=120px — full mark. Stroked frame + tray, wordmark.
+  const h = Math.round(width * 602 / 810);
+  const doAnim = animate && !reducedMotion;
+
   return (
-    <svg viewBox="-3 -3 802 590" width={width} height={h} className="wb-logo-svg" aria-label="Ask Leo" role="img">
-      <path d={FRAME_PATH} className={doAnim ? "wb-frame wb-frame-draw" : "wb-frame"} />
+    <svg viewBox="-5 -5 810 602" width={width} height={h} className="wb-logo-svg" aria-label="Ask Leo" role="img">
+      {/* Frame — stroked, not filled. The logo is line art, not a panel.
+           Beat 1 (v3 §9.1): starts bottom-centre (400,560), travels leftward first —
+           bottom edge to bottom-left, up left side, across top, down right side,
+           back to start. One continuous counter-clockwise stroke, never lifts. */}
+      <path d="M 400,560 H 30 A 30,30 0 0,1 0,530 V 30 A 30,30 0 0,1 30,0 H 770 A 30,30 0 0,1 800,30 V 530 A 30,30 0 0,1 770,560 Z"
+        className={doAnim ? "wb-frame wb-frame-draw" : "wb-frame"}
+        vectorEffect="non-scaling-stroke" />
+      {/* Tray — stroked, same treatment as frame. Drawn after frame (addendum §4.1 phase 2a). */}
+      {/* v4 §2.1: tray below the frame with 12-unit gap. fill:none — line art at logo scale. */}
+      <path d="M 70,572 H 730 A 10,10 0 0,1 740,582 A 10,10 0 0,1 730,592 H 70 A 10,10 0 0,1 60,582 A 10,10 0 0,1 70,572 Z"
+        className={doAnim ? "wb-tray wb-tray-draw" : "wb-tray"}
+        vectorEffect="non-scaling-stroke" />
+      {/* Wordmark — LETTER_PATHS, filled. Fade in as one unit, no per-letter stagger (addendum §4.2). */}
       {LETTER_PATHS.map((d, i) => (
         <path key={i} d={d}
           className={doAnim ? "wb-letter-anim" : "wb-letter-static"}
-          style={doAnim ? { animationDelay: (620 + i * 130) + "ms, " + (880 + i * 130) + "ms" } : undefined}
         />
       ))}
     </svg>
@@ -8715,7 +8738,7 @@ const CSS = `
      --leo-green, so a marker never drifts when a UI state colour is retuned. */
   --board-face:#FCFCFA;
   --marker-black:#2B3037; --marker-blue:#2456A8; --marker-red:#C43B2E;
-  --marker-green:#1E7A4E; --marker-orange:#B5690F;
+  --marker-green:#1E7A4E; --marker-orange:#A8600D;
 }
 *{box-sizing:border-box; margin:0;}
 .app{min-height:100vh; background:var(--bg-warm); color:var(--text-primary); font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-size:16px; line-height:1.6;}
@@ -8820,14 +8843,20 @@ h2{font-size:26px;} h3{font-size:17px; margin-bottom:6px;}
 .home-skyline .sky-img{width:100%; max-width:none;}
 /* Whiteboard logo */
 .wb-splash{display:flex; align-items:center; justify-content:center; min-height:100dvh; background:var(--bg-warm);}
-.wb-logo-phase{animation:wbFadeOut 200ms ease 2000ms forwards;}
+/* Addendum §4.1: hold 200ms after 800ms completion = 1000ms, then fade 200ms. Total 1200ms. */
+.wb-logo-phase{animation:wbFadeOut 200ms ease 1000ms forwards;}
 .wb-logo-svg{display:block;}
 .brand-mark{display:flex; justify-content:center; margin:0 auto var(--space-4);}
 .brand-mark-sm{display:flex; justify-content:center; margin:0 auto var(--space-3);}
-.wb-frame{fill:none; stroke:var(--leo-green); stroke-width:3; stroke-linecap:butt; stroke-linejoin:miter;}
-.wb-frame-draw{stroke-dasharray:3450; stroke-dashoffset:3450; animation:wbStroke 900ms ease-out forwards;}
+/* Logo frame — Tier 1 only. 2px stroke (addendum §3.3), thinner than the board's 2.5px. */
+.wb-frame{fill:none; stroke:var(--leo-green); stroke-width:2;}
+.wb-frame-draw{stroke-dasharray:2669; stroke-dashoffset:2669; animation:wbStroke 800ms ease-out forwards;}
+/* Logo tray — same stroke treatment as the frame. Starts at 500ms (addendum §4.1 phase 2a). */
+.wb-tray{fill:none; stroke:var(--leo-green); stroke-width:2;}
+.wb-tray-draw{stroke-dasharray:1383; stroke-dashoffset:1383; animation:wbStroke 300ms ease-out 500ms forwards;}
 .wb-letter-static{fill:var(--leo-green);}
-.wb-letter-anim{fill:var(--leo-green); fill-opacity:0; stroke:var(--leo-green); stroke-width:1.5; stroke-dasharray:800; stroke-dashoffset:800; animation:wbStroke 380ms ease-out forwards, wbFill 220ms ease-out forwards;}
+/* Wordmark fades in as one unit at 500ms, concurrent with tray (addendum §4.1 phase 2b). No per-letter stagger. */
+.wb-letter-anim{fill:var(--leo-green); fill-opacity:0; animation:wbFill 300ms ease-out 500ms forwards;}
 .wb-mono{font-family:'Inter',sans-serif; font-weight:700; font-size:24px; fill:var(--bg-warm, #FAFAF8);}
 @keyframes wbStroke{to{stroke-dashoffset:0;}}
 @keyframes wbFill{to{fill-opacity:1;}}
@@ -8837,7 +8866,8 @@ h2{font-size:26px;} h3{font-size:17px; margin-bottom:6px;}
      not what a reduced-motion user asks to be spared; removing it cuts hard. */
   .wb-logo-phase{animation:wbFadeOut 200ms ease 600ms forwards;}
   .wb-frame-draw{animation:none; stroke-dashoffset:0;}
-  .wb-letter-anim{animation:none; stroke-dashoffset:0; fill-opacity:1;}
+  .wb-tray-draw{animation:none; stroke-dashoffset:0;}
+  .wb-letter-anim{animation:none; fill-opacity:1;}
 }
 
 /* P2 Motion */
@@ -9034,8 +9064,8 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .wb-boards{display:flex; flex-direction:column; gap:var(--space-4); margin:12px 0;}
 .wb-board{position:relative; width:100%; border-radius:0;}
 .wb-board-svg{display:block; width:100%;}
-.wb-board-frame{fill:none; stroke:var(--marker-black); stroke-width:5; stroke-linejoin:round; vector-effect:non-scaling-stroke;}
-.wb-board-content{position:absolute; top:7%; left:4%; right:4%; bottom:45%; overflow:hidden;
+/* .wb-board-frame deleted — board stroke is now inline on the <rect> per v3 §2 */
+.wb-board-content{position:absolute; top:6.6%; left:5.6%; right:5.6%; bottom:12%; overflow:hidden;
   display:flex; flex-direction:column; gap:6px; justify-content:flex-start;}
 /* The writing band: top 7% to 55% of the board = the content region.
    Bottom 45% (illustration reserve + pointer) stays clear per §3.2. */
