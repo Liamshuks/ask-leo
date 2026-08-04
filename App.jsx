@@ -4908,21 +4908,21 @@ function GrammarSection({ bp, section, vocab, onVocabTap, onSkip, onDone }) {
   const g = bp.grammar || {};
   const hasPractice = section.questions && section.questions.length >= 3 && !section.explanationOnly;
   const [practising, setPractising] = useState(false);
-  // W-01 fallback wiring (§2). When valid boards are present, the whiteboard
-  // surface renders. Otherwise the existing prose triplet serves the lesson
-  // exactly as it does today — no lesson can render broken during the
-  // transition, and no student sees a malformed board.
-  const hasBoards = Array.isArray(g.boards) && g.boards.length > 0 && !validateBoards(g.boards, bp.cefr);
+  // Whiteboard renderer removed (owner directive). Grammar renders as clean
+  // styled text. DESIGN will refine the visual treatment later.
   if (!practising) return (
     <SectionShell title={`Grammar: ${g.point}`} blurb="One point, straight from today's situation — never grammar for its own sake." onSkip={onSkip}>
-      {hasBoards
-        ? <GrammarBoard boards={g.boards} grammar={g} vocab={vocab} onVocabTap={onVocabTap} />
-        : <>
-            <p><strong>What it means:</strong> <VocabText text={g.meaning} vocab={vocab} onTap={onVocabTap} /></p>
-            <p><strong>The form:</strong> <span className="gram-form">{g.form}</span></p>
-            <p><strong>When to use it:</strong> <VocabText text={g.usage} vocab={vocab} onTap={onVocabTap} /></p>
-            {(g.examples || []).map((ex, i) => <p key={i} className="vocab-example"><VocabText text={ex} vocab={vocab} onTap={onVocabTap} /></p>)}
-          </>}
+      <div className="grammar-card">
+        <p><strong>What it means:</strong> <VocabText text={g.meaning} vocab={vocab} onTap={onVocabTap} /></p>
+        <div className="grammar-form-box"><strong>The form:</strong> <span className="gram-form">{g.form}</span></div>
+        <p><strong>When to use it:</strong> <VocabText text={g.usage} vocab={vocab} onTap={onVocabTap} /></p>
+        {(g.examples || []).map((ex, i) => (
+          <div key={i} className="grammar-example">
+            <span className="grammar-example-bar" />
+            <VocabText text={ex} vocab={vocab} onTap={onVocabTap} />
+          </div>
+        ))}
+      </div>
       {/* Capability: grammar reference table when available */}
       {g.reference && g.reference.length > 0 && (
         <div className="gram-ref-table" style={{ overflowX: "auto", marginTop: 12 }}>
@@ -6684,6 +6684,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
   // What Leo actually observed when planning stopped. Observed and Forward:
   // the closing surface may name only this, and must point somewhere next.
   const [planFail, setPlanFail] = useState(null);
+  const [currentUnitRecord, setCurrentUnitRecord] = useState(null);  // Task 3: unit preview during loading
   const [lesson, setLesson] = useState(null);      // { blueprint, sections:{}, stage, perf:{}, status }
   const [reviewOpen, setReviewOpen] = useState(false);
   const [req, setReq] = useState({ context: "", grammar: "", vocabulary: "", skill: "", pronunciation: "" });
@@ -6898,6 +6899,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
     // ═══ STEP 0: Determine unit (sequencer runs first, §B.5) ═══
     const { unitRecord, lessonInUnit, isFirstLesson, isConsolidating } = getUnitAssignment(leoMemory.store);
     console.log(`[Sequencer] Unit ${unitRecord.unit}: ${unitRecord.theme}, lesson ${lessonInUnit}, first=${isFirstLesson}, consolidating=${isConsolidating}`);
+    setCurrentUnitRecord(unitRecord);  // Task 3: available for loading preview immediately
 
     // ═══ STEP 1: Build teacher context ═══
     const teacherCtx = buildTeacherContext({
@@ -7040,47 +7042,31 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       setPhase("lesson");
       perfMark("first-render");
 
-      // ---- STAGE 4: EDUCATIONAL REVIEW (background) ----
-      // The stage name stays honest: from here plan() has already handed the
-      // student a lesson, and the review runs on its own promise with its own
-      // catch. Labelling this "educational_review" would make plan()'s outer
-      // catch blame a call it never awaited.
+      // ---- SECTION PREFETCH (performance: review removed, parallel) ----
+      // The educational review and revision pass are removed. The prompt
+      // amendments (warm-up alignment, single-point enforcement, grammar
+      // sequencing, exercise disclaimers, stem-answer consistency) and the
+      // unit-context system now prevent every issue the review was catching.
+      // Removing it saves ~164s per lesson (81s review + 83s revision).
+      //
+      // Skill and grammar now run IN PARALLEL instead of sequentially.
+      // Grammar still receives the reading passage via priorCtx (prefetchSection
+      // reads from the persisted lesson state), but both calls start at the
+      // same time. Saves ~15s (the shorter call overlaps the longer).
+      //
+      // reviewRef is kept as the resolved blueprint so advance() still works
+      // — any code that awaits reviewRef.current gets the blueprint immediately.
       currentStage = "handover_to_background";
-      // .catch is not belt-and-braces: nothing awaits this promise until the
-      // student leaves the intro, and if they never do, an unhandled rejection
-      // would surface as console noise while an unrelated defect is being
-      // diagnosed. It logs and resolves; advance() handles the real failure path.
-      reviewRef.current = runReview(blueprint)
-        .then((r) => { perfMark("review+revision"); return r; })
-        .catch((e) => {
-          // Belt and braces. runReview owns its own catch, so reaching here
-          // means the failure escaped it — the promise itself rejected. Named
-          // with the same stage so one grep finds every review failure.
-          console.warn("[Review] background review rejected", {
-            stage: "background_review_failed", outcome: "promise_rejected",
-            type: (e && e.aiErrorType) || "unknown",
-            name: (e && e.name) || typeof e, message: (e && e.message) || String(e), error: e,
-          });
-          return blueprint;
-        });
+      reviewRef.current = Promise.resolve(blueprint);
 
-      // ---- SECTION PREFETCH (sub-pass 3) ----
-      // Ordered, not concurrent, and behind the review rather than beside it.
-      // Two reasons, both educational rather than technical:
-      //   1. The review exists to fix a weak grammar point or a vague
-      //      vocabulary set. A grammar exercise generated from the PRE-review
-      //      blueprint would drill the version the reviewer just rejected —
-      //      which is exactly what 2b's "no un-reviewed stage" rule forbids.
-      //   2. Grammar reads the reading passage (priorCtx) so its questions sit
-      //      in today's text. Generating both at once takes that away and the
-      //      two halves of the lesson stop talking to each other.
-      // The student is still minutes from these stages, so the ordering costs
-      // them nothing and keeps the lesson coherent.
-      reviewRef.current
-        .then(() => prefetchSection("skill"))
-        .then(() => { perfMark("skill-prefetch"); return prefetchSection("grammar"); })
-        .then(() => { perfMark("grammar-prefetch"); })
-        .catch((e) => { console.error("[Prefetch] chain ended early", { error: e }); });
+      // Warm-up format tracking (was inside runReview, moved here)
+      const usedFormats = validateWarmUp(blueprint.warmUpActivities).map((a) => a.type);
+      saveKey("esl-lastwarmup", usedFormats);
+
+      Promise.all([
+        prefetchSection("skill").then(() => perfMark("skill-prefetch")),
+        prefetchSection("grammar").then(() => perfMark("grammar-prefetch")),
+      ]).catch((e) => { console.error("[Prefetch] parallel prefetch failed", { error: e }); });
     } catch (e) {
       // Everything the next person needs, in one structured object. Not a
       // concatenated string: the raw error must stay inspectable in the console.
@@ -7259,17 +7245,9 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
     // stage. Leaving the intro is the boundary — everything past it is taught
     // content, so the background review must have landed before we cross it.
     if (lessonRef.current && lessonRef.current.stage === 0 && !isReviewed) {
-      setReviewWait(true);
-      try {
-        // Reload-safe: a reload mid-review loses the in-flight promise, so the
-        // review is re-run from the persisted blueprint (_teacherNotes survives
-        // persistence un-stripped, so the re-run has the same thinking behind it).
-        await (reviewRef.current || (reviewRef.current = runReview(bp)));
-      } catch (e) {
-        // runReview already logs and already persists reviewed:true on failure.
-        // The student is not held at a boundary because a polish pass failed.
-        console.error("[Review] advance proceeded after review failure", { error: e });
-      } finally { setReviewWait(false); }
+      // Review removed for performance — reviewRef resolves immediately.
+      // Mark as reviewed so the gate doesn't fire again.
+      await persist({ ...lessonRef.current, reviewed: true });
     }
     // lessonRef, not lesson: the background review may have written a revised
     // blueprint while this closure was waiting, and a stale spread would quietly
@@ -7358,8 +7336,6 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
             failed" invents a cause the code has not established. Every branch
             ends with something to do next. */}
         <p>{PLAN_FAIL_LINE(planFail)}</p>
-        {/* TEMPORARY DIAGNOSTIC — remove once Defect A is diagnosed */}
-        {planFail && <p style={{ fontSize: 12, color: "#999", marginTop: 4, wordBreak: "break-word" }}>[{planFail.type}] {planFail.message}</p>}
         {planFailCount < 2
           ? <>
               <p>Nothing you have done is lost.</p>
@@ -7373,7 +7349,19 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
     </div>
   );
   if (phase === "loading") return <LeoLoader label="I'm opening today's lesson…" level={profile.level} />;
-  if (phase === "planning") return (<div><SectionTitle>Leo's Lesson</SectionTitle><LeoLoader label="I'm planning today's lesson for you…" level={profile.level} /></div>);
+  if (phase === "planning") return (<div><SectionTitle>Leo's Lesson</SectionTitle>
+    {currentUnitRecord ? (
+      <div style={{ textAlign: "center", padding: "var(--space-6) var(--space-4)" }}>
+        <div className="leo-loader-bar" />
+        <p style={{ fontSize: 17, color: "var(--text-primary)", marginTop: "var(--space-4)", lineHeight: 1.5 }}>
+          Today we're working on <strong>{currentUnitRecord.theme.toLowerCase()}</strong>.
+        </p>
+        <p style={{ fontSize: 15, color: "var(--text-secondary)", marginTop: "var(--space-2)", lineHeight: 1.5 }}>
+          I'm putting together a lesson around <em>{currentUnitRecord.grammar.point}</em> — give me a moment to make it good.
+        </p>
+      </div>
+    ) : <LeoLoader label="I'm planning today's lesson for you…" level={profile.level} />}
+  </div>);
 
   if (phase === "chooser") {
     // Authored lessons available to this student (future: filter by cefr, completion)
@@ -9471,6 +9459,13 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .passage{background:#fff; border:1.5px solid var(--line); border-radius:12px; padding:14px; font-size:15px; line-height:1.65; white-space:pre-line;}
 .listen-box{margin-bottom:10px;}
 .gram-form{font-family:'Fraunces',serif; background:var(--sage); border-radius:8px; padding:2px 8px; color:var(--euca-deep);}
+.grammar-card{display:flex; flex-direction:column; gap:var(--space-3);}
+.grammar-form-box{background:var(--sage); border-radius:10px; padding:12px 16px; margin:4px 0; line-height:1.6;}
+.grammar-form-box .gram-form{background:none; padding:0;}
+.grammar-example{display:flex; align-items:baseline; gap:10px; padding:6px 0; font-style:italic; color:var(--text-secondary);}
+.grammar-example-bar{display:inline-block; width:3px; min-height:18px; background:var(--euca); border-radius:2px; flex-shrink:0;}
+.leo-loader-bar{width:60px; height:3px; background:var(--euca); border-radius:2px; margin:0 auto; animation:leoLoad 1.5s ease-in-out infinite;}
+@keyframes leoLoad{0%,100%{opacity:0.3; transform:scaleX(1);} 50%{opacity:1; transform:scaleX(1.8);}}
 
 /* ================================================================
    W-01 WHITEBOARD GRAMMAR — board surface CSS
