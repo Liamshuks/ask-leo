@@ -2390,6 +2390,22 @@ async function saveKey(key, value) {
   }
 }
 
+/* Wipe all student-specific data from storage. Called when a NEW account is
+   created so the new student starts clean — never inheriting another student's
+   word bank, lesson history, diary, or Leo's memories of someone else.
+   Preserves esl-accounts (the account list) and esl-auth-session (just written
+   by signup). Everything else under the esl- prefix is student data. */
+async function clearStudentData() {
+  try {
+    const result = await store.list("esl-");
+    const keep = new Set(["esl-accounts", "esl-auth-session"]);
+    const keys = (result && result.keys) || [];
+    await Promise.all(keys.filter((k) => !keep.has(k)).map((k) => store.delete(k)));
+  } catch (e) {
+    console.error("[clearStudentData] storage wipe failed", e);
+  }
+}
+
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
 /* ---------------- Leo's learning memory (Phase 4/5/6) ----------------
@@ -8542,7 +8558,16 @@ export default function App() {
       <div className="app">
         <style>{CSS}</style>
         {authView === "landing" && <WelcomeLanding slide={landingSlide} setSlide={setLandingSlide} onSignUp={() => setAuthView("signup")} onSignIn={() => setAuthView("signin")} />}
-        {authView === "signup" && <SignUpPage onBack={() => setAuthView("landing")} onComplete={(user) => { setAuthUser(user); setShowLeoReveal(true); setProfile(null); setPlacementDone(false); }} />}
+        {authView === "signup" && <SignUpPage onBack={() => setAuthView("landing")} onComplete={async (user) => {
+          // A new account must start clean — never inherit another student's
+          // word bank, lesson history, diary, error patterns, or Leo's memories.
+          // Storage first (persistent), then in-memory state (React).
+          await clearStudentData();
+          setWords([]); setHeard([]); setDiaryPages({}); setActivity([]);
+          setErrorLog({}); setTaskCount(0); setMemoryStore(DEFAULT_MEMORY_STORE);
+          setTodayDone({ task: false, vocab: false });
+          setAuthUser(user); setShowLeoReveal(true); setProfile(null); setPlacementDone(false);
+        }} />}
         {authView === "signin" && <SignInPage onBack={() => setAuthView("landing")} onComplete={async (user) => {
           setAuthUser(user);
           const [savedProfile, savedPlacement] = await Promise.all([
