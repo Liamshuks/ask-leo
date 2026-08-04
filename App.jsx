@@ -3276,7 +3276,7 @@ function VocabText({ text, vocab = [], onTap }) {
   if (!vocab.length || !text) return <>{text}</>;
   const escaped = [...vocab].sort((a, b) => b.length - a.length)
     .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-  const pattern = new RegExp(`(${escaped.join("|")})`, "gi");
+  const pattern = new RegExp(`\\b(${escaped.join("|")})\\b`, "gi");
   const parts = text.split(pattern);
   return <>
     {parts.map((part, i) => {
@@ -4309,8 +4309,19 @@ function PronunciationSection({ bp, onVocabTap, onSkip, onDone }) {
     ? (bp.vocabulary || []) : (bp.vocabulary || []).slice(0, 3);
   const focusSections = bp.pronunciation && bp.pronunciation.focusSections;
   const [heard, setHeard] = useState("");
+  const [everHeard, setEverHeard] = useState(false);
   const [done, setDone] = useState(false);
   const [showTable, setShowTable] = useState(!focusSections);
+  // Defect D: cycle through focus items one at a time
+  const [focusIdx, setFocusIdx] = useState(0);
+  const focusCount = focusSections ? focusSections.length : 0;
+  const currentFocus = focusSections && focusSections[focusIdx];
+  const isLastFocus = focusIdx >= focusCount - 1;
+  const advanceFocus = () => {
+    if (heard) setEverHeard(true);
+    if (isLastFocus || !focusSections) setDone(true);
+    else { setFocusIdx(focusIdx + 1); setHeard(""); }
+  };
   if (done) return (
     <SectionShell title="Say it like a local" onSkip={onSkip}>
       {/* Part B rev 2. The microphone is optional and `done` is set by the
@@ -4321,7 +4332,7 @@ function PronunciationSection({ bp, onVocabTap, onSkip, onDone }) {
           NOTE: a different `heard` exists elsewhere in the file as an array.
           This is not that one. */}
       <StageComplete message={
-        heard
+        (heard || everHeard)
           ? { title: "You had a go out loud.",
               sub: "That's the part that actually changes pronunciation. Keep going with the rest of today's words — out loud, even quietly, wherever you are." }
           : { title: "That's the sounds covered.",
@@ -4333,39 +4344,42 @@ function PronunciationSection({ bp, onVocabTap, onSkip, onDone }) {
     <SectionShell title="Say it like a local" blurb={bp.pronunciation && bp.pronunciation.focus ? `Today's focus: ${bp.pronunciation.focus}.` : undefined} onSkip={onSkip}>
       {(bp.pronunciation && bp.pronunciation.tips || []).map((t, i) => <p key={i} className="muted small">💡 {t}</p>)}
 
-      {/* Capability: pronunciation focus sections when available */}
-      {focusSections && focusSections.map((fs, i) => (
-        <Card key={i}>
-          <h4 className="diary-label">{fs.title}</h4>
-          <p className="muted small">{fs.description}</p>
-          {fs.targetWord && (
-            <p className="pron-word"><VocabToken word={fs.targetWord} onTap={onVocabTap} /> <span className="vocab-ipa">{fs.ipa}</span></p>
-          )}
-          {fs.targetWords && fs.targetWords.map((tw, j) => (
-            <p key={j} className="pron-word"><VocabToken word={tw.word} onTap={onVocabTap} /> <span className="vocab-ipa">{tw.ipa}</span></p>
-          ))}
-          {fs.instructions && (Array.isArray(fs.instructions)
-            ? fs.instructions.map((inst, j) => <p key={j} className="small">• {inst}</p>)
-            : <p className="small">{fs.instructions}</p>)}
-          {fs.practiceWords && (
-            <div style={{ marginTop: 6 }}>
-              <span className="muted small">Practise: </span>
-              {fs.practiceWords.map((pw, j) => (
-                <span key={j}>
-                  {TTS_OK ? <button className="link-btn small" onClick={() => speakText(pw)}>{pw}</button> : <span className="small">{pw}</span>}
-                  {j < fs.practiceWords.length - 1 ? " \u00b7 " : ""}
-                </span>
-              ))}
-            </div>
-          )}
-          {fs.correct && (
-            <div style={{ marginTop: 6 }}>
-              <p className="small"><strong>Correct:</strong> {Array.isArray(fs.correct) ? fs.correct.join(" \u00b7 ") : fs.correct}</p>
-              {fs.incorrect && <p className="small" style={{ opacity: 0.5 }}><strong>Not:</strong> ❌ {Array.isArray(fs.incorrect) ? fs.incorrect.join(" · ❌ ") : fs.incorrect}</p>}
-            </div>
-          )}
-        </Card>
-      ))}
+      {/* Focus sections: show one at a time, cycling on Continue */}
+      {currentFocus && (
+        <>
+          {focusCount > 1 && <p className="muted small">Word {focusIdx + 1} of {focusCount}</p>}
+          <Card>
+            <h4 className="diary-label">{currentFocus.title}</h4>
+            <p className="muted small">{currentFocus.description}</p>
+            {currentFocus.targetWord && (
+              <p className="pron-word"><VocabToken word={currentFocus.targetWord} onTap={onVocabTap} /> <span className="vocab-ipa">{currentFocus.ipa}</span></p>
+            )}
+            {currentFocus.targetWords && currentFocus.targetWords.map((tw, j) => (
+              <p key={j} className="pron-word"><VocabToken word={tw.word} onTap={onVocabTap} /> <span className="vocab-ipa">{tw.ipa}</span></p>
+            ))}
+            {currentFocus.instructions && (Array.isArray(currentFocus.instructions)
+              ? currentFocus.instructions.map((inst, j) => <p key={j} className="small">• {inst}</p>)
+              : <p className="small">{currentFocus.instructions}</p>)}
+            {currentFocus.practiceWords && (
+              <div style={{ marginTop: 6 }}>
+                <span className="muted small">Practise: </span>
+                {currentFocus.practiceWords.map((pw, j) => (
+                  <span key={j}>
+                    {TTS_OK ? <button className="link-btn small" onClick={() => speakText(pw)}>{pw}</button> : <span className="small">{pw}</span>}
+                    {j < currentFocus.practiceWords.length - 1 ? " \u00b7 " : ""}
+                  </span>
+                ))}
+              </div>
+            )}
+            {currentFocus.correct && (
+              <div style={{ marginTop: 6 }}>
+                <p className="small"><strong>Correct:</strong> {Array.isArray(currentFocus.correct) ? currentFocus.correct.join(" \u00b7 ") : currentFocus.correct}</p>
+                {currentFocus.incorrect && <p className="small" style={{ opacity: 0.5 }}><strong>Not:</strong> ❌ {Array.isArray(currentFocus.incorrect) ? currentFocus.incorrect.join(" · ❌ ") : currentFocus.incorrect}</p>}
+              </div>
+            )}
+          </Card>
+        </>
+      )}
 
       {focusSections && (
         <button className="ghost-btn wide" style={{ marginBottom: 8 }} onClick={() => setShowTable(!showTable)}>
@@ -4381,12 +4395,12 @@ function PronunciationSection({ bp, onVocabTap, onSkip, onDone }) {
       ))}
 
       <div className="pron-try">
-        <p className="muted small">Now you — say one of the words out loud.</p>
+        <p className="muted small">Now you — say {currentFocus && currentFocus.targetWord ? `"${currentFocus.targetWord}"` : "one of the words"} out loud.</p>
         <MicButton onText={(t) => setHeard(t)} />
         {heard && <LeoFeedback ok>I heard: “{heard}” — good on you for having a go out loud. That's how pronunciation improves.</LeoFeedback>}
         {!TTS_OK && <p className="muted small">(Audio isn't available on this device — practise saying each word slowly, stressing the marked syllable.)</p>}
       </div>
-      <button className="primary-btn" onClick={() => setDone(true)}>Continue</button>
+      <button className="primary-btn" onClick={advanceFocus}>{isLastFocus || !focusSections ? "Continue" : "Next word"}</button>
     </SectionShell>
   );
 }
