@@ -4300,6 +4300,86 @@ function VocabReviewExercise({ exercises, vocab, onVocabTap, onDone }) {
    a student with a motor impairment or a screen reader, and Leo teaches everyone.
    A short press with no movement selects a word; tapping a meaning then matches
    it. Keyboard users get the identical two-step via Enter/Space. */
+/* ================================================================
+   WORD CARD — step-through vocabulary/pronunciation card (§1–§11)
+   Spec: WORD_CARD_SPECIFICATION.md. One word per screen. Tap Next.
+   ================================================================ */
+function WordCard({ word, ipa, pos, meaning, example, index, total, pronunciation, onNext, onVocabTap, lastLabel }) {
+  const [heard, setHeard] = useState("");
+  const isLast = index === total - 1;
+  return (
+    <div className="word-card" key={word + "-" + index}>
+      {/* §4 Progress row */}
+      <div className="wc-progress">
+        <span className="wc-progress-text">Word {index + 1} of {total}</span>
+        <span className="wc-dots">
+          {Array.from({ length: total }, (_, i) => (
+            <span key={i} className={"wc-dot" + (i < index ? " wc-dot-done" : i === index ? " wc-dot-current" : "")} />
+          ))}
+        </span>
+      </div>
+      {/* §3 Typography */}
+      <div className="wc-word"><VocabToken word={word} onTap={onVocabTap} /></div>
+      {ipa && <div className="wc-ipa">{ipa}</div>}
+      {pos && <div className="wc-pos">{pos}</div>}
+      <div className="wc-meaning">{meaning}</div>
+      {example && <div className="wc-example">{example}</div>}
+      {/* §5 Action buttons */}
+      <div className="wc-actions">
+        {TTS_OK && <button className="ghost-btn wc-action-btn" onClick={() => speakText(word + ". " + (example || ""))}>{"\uD83D\uDD0A"} Hear it</button>}
+        <MicButton className="ghost-btn wc-action-btn" label="\uD83C\uDF99\uFE0F Say it" onText={(t) => setHeard(t)} />
+      </div>
+      {heard && <p className="wc-heard">I heard: "{heard}"</p>}
+      {/* §6 Pronunciation block */}
+      {pronunciation && (
+        <div className="wc-pron-block">
+          {pronunciation.practiceWords && pronunciation.practiceWords.length > 0 && (
+            <div className="wc-practise-row">
+              <span className="muted small">Practise: </span>
+              {pronunciation.practiceWords.map((pw, j) => (
+                <span key={j}>
+                  {TTS_OK ? <button className="link-btn small" onClick={() => speakText(pw)}>{pw}</button> : <span className="small">{pw}</span>}
+                  {j < pronunciation.practiceWords.length - 1 ? " \u00b7 " : ""}
+                </span>
+              ))}
+            </div>
+          )}
+          {(pronunciation.instructions || pronunciation.description) && (
+            <p className="wc-pron-tip">{pronunciation.instructions || pronunciation.description}</p>
+          )}
+          {pronunciation.correct && (
+            <p className="wc-pron-correct">{"\u2713"} {Array.isArray(pronunciation.correct) ? pronunciation.correct.join(" \u00b7 ") : pronunciation.correct}</p>
+          )}
+          {pronunciation.incorrect && (
+            <p className="wc-pron-incorrect">{"\u2717"} <s>{Array.isArray(pronunciation.incorrect) ? pronunciation.incorrect.join(" \u00b7 ") : pronunciation.incorrect}</s></p>
+          )}
+        </div>
+      )}
+      {/* §5.4 Next */}
+      <button className="primary-btn wide wc-next" onClick={onNext}>{isLast ? (lastLabel || "Continue") : "Next \u2192"}</button>
+    </div>
+  );
+}
+
+/* WordCardSequence — manages the current index through a list of word data */
+function WordCardSequence({ words, onComplete, onVocabTap, lastLabel }) {
+  const [idx, setIdx] = useState(0);
+  const w = words[idx];
+  if (!w) return null;
+  return (
+    <WordCard
+      key={w.word + "-" + idx}
+      word={w.word} ipa={w.ipa} pos={w.pos} meaning={w.meaning}
+      example={w.examples && w.examples[0] ? w.examples[0] : w.example}
+      index={idx} total={words.length}
+      pronunciation={w._pronunciation || null}
+      onNext={() => { if (idx < words.length - 1) setIdx(idx + 1); else onComplete(); }}
+      onVocabTap={onVocabTap}
+      lastLabel={lastLabel}
+    />
+  );
+}
+
 function VocabularySection({ bp, onVocabTap, leoMemory, onSkip, onDone }) {
   // Authored lessons declare matchVocab (a curated subset of up to 8 words for
   // the matching exercise). AI-generated lessons use the first 8 from vocabulary.
@@ -4327,7 +4407,7 @@ function VocabularySection({ bp, onVocabTap, leoMemory, onSkip, onDone }) {
   const [missed, setMissed] = useState({});        // word -> true (had a wrong attempt)
   const [selected, setSelected] = useState(null);  // word chosen by tap/keyboard
   const [done, setDone] = useState(false);
-  const [vocabPhase, setVocabPhase] = useState("matching"); // "matching" | "review"
+  const [vocabPhase, setVocabPhase] = useState("cards"); // "cards" | "matching" | "review"
   const [matchScore, setMatchScore] = useState({ correct: 0, total: 0 });
   const hasReview = !!(bp.vocabReviewExercises && (bp.vocabReviewExercises.oddOneOut || bp.vocabReviewExercises.completeSentences));
   const [dragState, setDragState] = useState(null);
@@ -4473,6 +4553,18 @@ function VocabularySection({ bp, onVocabTap, leoMemory, onSkip, onDone }) {
     </SectionShell>
   );
 
+    // §10.1: word cards run before the matching exercise
+  if (vocabPhase === "cards") return (
+    <SectionShell title="Today's vocabulary" blurb="Let's meet today's words." onSkip={onSkip}>
+      <WordCardSequence
+        words={items}
+        onComplete={() => setVocabPhase("matching")}
+        onVocabTap={onVocabTap}
+        lastLabel="Start matching"
+      />
+    </SectionShell>
+  );
+
   return (
     <SectionShell title="Today's vocabulary"
       blurb={selected ? `“${selected}” is selected — now choose its meaning.` : "Drag a line from each word to its meaning — or tap a word, then tap its meaning."}
@@ -4546,103 +4638,48 @@ function VocabularySection({ bp, onVocabTap, leoMemory, onSkip, onDone }) {
 
 /* ---------- Stage 3: Pronunciation — model, listen, try ---------- */
 function PronunciationSection({ bp, onVocabTap, onSkip, onDone }) {
-  // Capability: show full vocabulary table when focus sections exist, otherwise 3
-  const items = (bp.vocabulary || []).length > 3 && bp.pronunciation && bp.pronunciation.focusSections
-    ? (bp.vocabulary || []) : (bp.vocabulary || []).slice(0, 3);
+  // §10.2: word cards for ALL vocabulary words, with pronunciation data attached
+  // where a matching focusSection exists.
   const focusSections = bp.pronunciation && bp.pronunciation.focusSections;
-  const [heard, setHeard] = useState("");
-  const [everHeard, setEverHeard] = useState(false);
+  const vocabItems = (bp.vocabulary || []).slice(0, 8);
   const [done, setDone] = useState(false);
-  const [showTable, setShowTable] = useState(!focusSections);
-  // Defect D: cycle through focus items one at a time
-  const [focusIdx, setFocusIdx] = useState(0);
-  const focusCount = focusSections ? focusSections.length : 0;
-  const currentFocus = focusSections && focusSections[focusIdx];
-  const isLastFocus = focusIdx >= focusCount - 1;
-  const advanceFocus = () => {
-    if (heard) setEverHeard(true);
-    if (isLastFocus || !focusSections) setDone(true);
-    else { setFocusIdx(focusIdx + 1); setHeard(""); }
-  };
+  const [everSpoke, setEverSpoke] = useState(false);
+
+  // Enrich vocab items with pronunciation data where a focus section matches
+  const enrichedWords = React.useMemo(() => {
+    return vocabItems.map((v) => {
+      if (!focusSections) return v;
+      // Match by targetWord or by checking if the word appears in practiceWords
+      const match = focusSections.find((fs) =>
+        (fs.targetWord && fs.targetWord.toLowerCase() === v.word.toLowerCase()) ||
+        (fs.targetWords && fs.targetWords.some(tw => tw.word && tw.word.toLowerCase() === v.word.toLowerCase()))
+      );
+      return match ? { ...v, _pronunciation: match } : v;
+    });
+  }, [vocabItems, focusSections]);
+
   if (done) return (
     <SectionShell title="Say it like a local" onSkip={onSkip}>
-      {/* Part B rev 2. The microphone is optional and `done` is set by the
-          Continue button, so the old line asserted an act never observed.
-          `heard` is a SINGLE STRING holding the most recent transcript — it is
-          evidence that speech was captured and nothing more. It carries no
-          count, so no copy here may quantify the speaking.
-          NOTE: a different `heard` exists elsewhere in the file as an array.
-          This is not that one. */}
       <StageComplete message={
-        (heard || everHeard)
+        everSpoke
           ? { title: "You had a go out loud.",
-              sub: "That's the part that actually changes pronunciation. Keep going with the rest of today's words — out loud, even quietly, wherever you are." }
-          : { title: "That's the sounds covered.",
-              sub: "You've seen how these words are built. Pronunciation only changes once the words leave your mouth — say three of them out loud before today's over." }
+              sub: "That\u2019s the part that actually changes pronunciation. Keep going with the rest of today\u2019s words \u2014 out loud, even quietly, wherever you are." }
+          : { title: "That\u2019s the sounds covered.",
+              sub: "You\u2019ve seen how these words are built. Pronunciation only changes once the words leave your mouth \u2014 say three of them out loud before today\u2019s over." }
       } onContinue={onDone} />
     </SectionShell>
   );
+
   return (
-    <SectionShell title="Say it like a local" blurb={bp.pronunciation && bp.pronunciation.focus ? `Today's focus: ${bp.pronunciation.focus}.` : undefined} onSkip={onSkip}>
-      {(bp.pronunciation && bp.pronunciation.tips || []).map((t, i) => <p key={i} className="muted small">💡 {t}</p>)}
-
-      {/* Focus sections: show one at a time, cycling on Continue */}
-      {currentFocus && (
-        <>
-          {focusCount > 1 && <p className="muted small">Word {focusIdx + 1} of {focusCount}</p>}
-          <Card>
-            <h4 className="diary-label">{currentFocus.title}</h4>
-            <p className="muted small">{currentFocus.description}</p>
-            {currentFocus.targetWord && (
-              <p className="pron-word"><VocabToken word={currentFocus.targetWord} onTap={onVocabTap} /> <span className="vocab-ipa">{currentFocus.ipa}</span></p>
-            )}
-            {currentFocus.targetWords && currentFocus.targetWords.map((tw, j) => (
-              <p key={j} className="pron-word"><VocabToken word={tw.word} onTap={onVocabTap} /> <span className="vocab-ipa">{tw.ipa}</span></p>
-            ))}
-            {currentFocus.instructions && (Array.isArray(currentFocus.instructions)
-              ? currentFocus.instructions.map((inst, j) => <p key={j} className="small">• {inst}</p>)
-              : <p className="small">{currentFocus.instructions}</p>)}
-            {currentFocus.practiceWords && (
-              <div style={{ marginTop: 6 }}>
-                <span className="muted small">Practise: </span>
-                {currentFocus.practiceWords.map((pw, j) => (
-                  <span key={j}>
-                    {TTS_OK ? <button className="link-btn small" onClick={() => speakText(pw)}>{pw}</button> : <span className="small">{pw}</span>}
-                    {j < currentFocus.practiceWords.length - 1 ? " \u00b7 " : ""}
-                  </span>
-                ))}
-              </div>
-            )}
-            {currentFocus.correct && (
-              <div style={{ marginTop: 6 }}>
-                <p className="small"><strong>Correct:</strong> {Array.isArray(currentFocus.correct) ? currentFocus.correct.join(" \u00b7 ") : currentFocus.correct}</p>
-                {currentFocus.incorrect && <p className="small" style={{ opacity: 0.5 }}><strong>Not:</strong> ❌ {Array.isArray(currentFocus.incorrect) ? currentFocus.incorrect.join(" · ❌ ") : currentFocus.incorrect}</p>}
-              </div>
-            )}
-          </Card>
-        </>
-      )}
-
-      {focusSections && (
-        <button className="ghost-btn wide" style={{ marginBottom: 8 }} onClick={() => setShowTable(!showTable)}>
-          {showTable ? "Hide" : "Show"} full vocabulary table ({items.length} words)
-        </button>
-      )}
-      {showTable && items.map((it) => (
-        <div key={it.word} className="pron-row">
-          <div className="pron-word"><VocabToken word={it.word} onTap={onVocabTap} /><span className="vocab-ipa"> {it.ipa}</span></div>
-          <div className="pron-meta muted small">{it.syllables} · stress on {it.stress}</div>
-          {TTS_OK && <button className="ghost-btn" onClick={() => speakText(it.word + ". " + it.example)}>🔊 Hear it</button>}
-        </div>
-      ))}
-
-      <div className="pron-try">
-        <p className="muted small">Now you — say {currentFocus && currentFocus.targetWord ? `"${currentFocus.targetWord}"` : "one of the words"} out loud.</p>
-        <MicButton onText={(t) => setHeard(t)} />
-        {heard && <LeoFeedback ok>I heard: “{heard}” — good on you for having a go out loud. That's how pronunciation improves.</LeoFeedback>}
-        {!TTS_OK && <p className="muted small">(Audio isn't available on this device — practise saying each word slowly, stressing the marked syllable.)</p>}
-      </div>
-      <button className="primary-btn" onClick={advanceFocus}>{isLastFocus || !focusSections ? "Continue" : "Next word"}</button>
+    <SectionShell title="Say it like a local"
+      blurb={bp.pronunciation && bp.pronunciation.focus ? `Today\u2019s focus: ${bp.pronunciation.focus}.` : undefined}
+      onSkip={onSkip}>
+      <WordCardSequence
+        words={enrichedWords}
+        onComplete={() => setDone(true)}
+        onVocabTap={onVocabTap}
+        lastLabel="Continue"
+      />
     </SectionShell>
   );
 }
@@ -9468,6 +9505,30 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .grammar-example-bar{display:inline-block; width:3px; min-height:18px; background:var(--euca); border-radius:2px; flex-shrink:0;}
 .leo-loader-bar{width:60px; height:3px; background:var(--euca); border-radius:2px; margin:0 auto; animation:leoLoad 1.5s ease-in-out infinite;}
 @keyframes leoLoad{0%,100%{opacity:0.3; transform:scaleX(1);} 50%{opacity:1; transform:scaleX(1.8);}}
+
+/* ═══ WORD CARD (WORD_CARD_SPECIFICATION §2–§8) ═══ */
+.word-card{animation:scRise .4s ease-out both; text-align:center;}
+.wc-progress{display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-6);}
+.wc-progress-text{font-size:14px; color:var(--text-secondary);}
+.wc-dots{display:flex; gap:6px; align-items:center;}
+.wc-dot{width:8px; height:8px; border-radius:50%; border:1.5px solid var(--text-tertiary); background:transparent; box-sizing:border-box;}
+.wc-dot-done{background:var(--leo-green); border-color:var(--leo-green);}
+.wc-dot-current{background:var(--leo-green); border-color:var(--leo-green); box-shadow:0 0 0 2px var(--leo-green-light);}
+.wc-word{font-size:28px; font-weight:700; color:var(--text-primary); margin-bottom:var(--space-1);}
+.wc-ipa{font-size:16px; font-style:italic; color:var(--text-secondary); margin-bottom:var(--space-2);}
+.wc-pos{font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--leo-green); margin-bottom:var(--space-4);}
+.wc-meaning{font-size:17px; color:var(--text-primary); line-height:1.5; margin-bottom:var(--space-2);}
+.wc-example{font-size:15px; font-style:italic; color:var(--text-secondary); line-height:1.5; max-width:30ch; margin:0 auto var(--space-5) auto;}
+.wc-actions{display:flex; gap:12px; justify-content:center; margin-bottom:var(--space-2);}
+.wc-action-btn{flex:1; max-width:160px;}
+.wc-heard{font-size:14px; color:var(--text-secondary); text-align:center; margin-bottom:var(--space-4);}
+.wc-pron-block{background:var(--leo-green-light); border-radius:10px; padding:16px; text-align:left; margin-bottom:var(--space-5);}
+.wc-pron-tip{font-size:15px; color:var(--text-primary); line-height:1.5; margin:0 0 var(--space-2) 0;}
+.wc-pron-correct{font-size:15px; font-weight:500; color:var(--leo-green); margin:0 0 var(--space-1) 0;}
+.wc-pron-incorrect{font-size:15px; color:var(--text-secondary); opacity:0.5; margin:0;}
+.wc-practise-row{margin-bottom:var(--space-2);}
+.wc-next{margin-top:var(--space-5);}
+@media(prefers-reduced-motion:reduce){.word-card{animation:none; opacity:1; transform:translateY(0);}}
 
 /* ================================================================
    W-01 WHITEBOARD GRAMMAR — board surface CSS
