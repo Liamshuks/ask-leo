@@ -6211,29 +6211,38 @@ function validateBlueprint(bp) {
   }
 
   // Board validation (§6.2 + v2 §6) — at both enforcement points.
-  // Structural bounds from validateBoards, plus the wording-standard mechanical
-  // checks from v2 §6 (title ≤7 words, title not a question, note ≤12 words,
-  // note count ≤1 per board). On failure, the retry prompt gets the specific
-  // rejection reason; the renderer independently falls back to prose.
+  // Board failures are NEVER fatal. The grammar teaching lives in the prose
+  // fields (point, form, usage, examples) which are validated separately above.
+  // Invalid boards are stripped so the renderer falls back to prose: a jammed
+  // photocopier, not a cancelled class. The student always gets correct teaching.
   if (bp.grammar && bp.grammar.boards) {
     const boardErr = validateBoards(bp.grammar.boards, bp.cefr);
-    if (boardErr) problems.push("grammar boards invalid: " + boardErr);
-    else {
-      // v2 §6 mechanical checks — finer than validateBoards' structural bounds
-      for (let bi = 0; bi < bp.grammar.boards.length; bi++) {
+    if (boardErr) {
+      console.warn("[validateBlueprint] boards stripped (renderer falls back to prose):", boardErr);
+      delete bp.grammar.boards;
+    } else {
+      // v2 §6 mechanical checks — finer than validateBoards' structural bounds.
+      // Same principle: strip and fall back, never kill the lesson.
+      let wordingErr = null;
+      for (let bi = 0; bi < bp.grammar.boards.length && !wordingErr; bi++) {
         const b = bp.grammar.boards[bi];
         for (const el of (b.elements || [])) {
+          if (wordingErr) break;
           if (el.type === "title") {
             const tw = (String(el.text || "").match(/\S+/g) || []).length;
-            if (tw > 7) problems.push(`board ${bi+1} title exceeds 7 words (has ${tw}): "${el.text}"`);
+            if (tw > 7) wordingErr = `board ${bi+1} title exceeds 7 words (has ${tw}): "${el.text}"`;
             if (String(el.text || "").trim().endsWith("?"))
-              problems.push(`board ${bi+1} title is a question — a board title is a label, not a prompt`);
+              wordingErr = wordingErr || `board ${bi+1} title is a question — a board title is a label, not a prompt`;
           }
           if (el.type === "note") {
             const nw = (String(el.text || "").match(/\S+/g) || []).length;
-            if (nw > 12) problems.push(`board ${bi+1} note exceeds 12 words (has ${nw}): "${el.text}"`);
+            if (nw > 12) wordingErr = `board ${bi+1} note exceeds 12 words (has ${nw}): "${el.text}"`;
           }
         }
+      }
+      if (wordingErr) {
+        console.warn("[validateBlueprint] boards stripped (v2 §6 wording check failed, renderer falls back to prose):", wordingErr);
+        delete bp.grammar.boards;
       }
     }
   }
@@ -6695,7 +6704,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       // Every field must come from the thinking above — not invented fresh.
       currentStage = "blueprint";
       const raw = await askClaude(
-        `You are Leo. You have analysed your student and assessed their needs. Here is your thinking:\n\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nNow convert this thinking into a structured lesson plan. Everything must come from your analysis above — do not invent new content that contradicts your reasoning. The needs assessment above has ALREADY decided the ONE communicative objective, what to defer, and the L1-variety mistakes to address: build EXACTLY that objective (do not re-pick, broaden, or swap it), do not teach anything it set aside to defer, and target the predicted L1-variety mistakes. The student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)}${narrationGuidance(level, "framing")}${singlePointBlock(level)}${volumeBlock(level)}${imageRuleBlock(level)}${pronunciationBlock(level)}${vocabSelectionBlock(level)}${boardTitleBlock(level)}${boardNoteBlock(level)}\n\nGRAMMAR BOARD: alongside your prose grammar fields (point, meaning, form, usage, examples — keep all of these), also produce a boards array inside grammar. Each board has an elements array. First element MUST be a title.\n\nELEMENT TYPES — use these exact field names:\n- title: {type:\"title\", text:\"grammar point name\"}\n- subTable: {type:\"subTable\", slots:[{label:\"slot name\", items:[\"option1\",\"option2\"], target:true/false}], numbered:true/false, example:\"optional sentence\"}\n- rule: {type:\"rule\", pieces:[{text:\"...\", role:\"plain|structure|target|model\"}]}\n- formula: {type:\"formula\", boxes:[{text:\"...\", role:\"plain|structure|target|model\"}], joiner:\"+\"}\n- example: {type:\"example\", spans:[{text:\"...\", role:\"plain|structure|target|model\"}], mark:\"tick\" or \"cross\" (optional)}\n- contrast: {type:\"contrast\", from:{spans:[{text:\"...\", role:\"...\"}]}, to:{spans:[{text:\"...\", role:\"...\"}]}}\n- note: {type:\"note\", text:\"max 12 words\"}\n\nRoles: \"plain\" (black), \"structure\" (blue), \"target\" (red — the form under focus), \"model\" (green — examples). At most one note per board. Maximum 3 boards, 5 elements + title per board.${
+        `You are Leo. You have analysed your student and assessed their needs. Here is your thinking:\n\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nNow convert this thinking into a structured lesson plan. Everything must come from your analysis above — do not invent new content that contradicts your reasoning. The needs assessment above has ALREADY decided the ONE communicative objective, what to defer, and the L1-variety mistakes to address: build EXACTLY that objective (do not re-pick, broaden, or swap it), do not teach anything it set aside to defer, and target the predicted L1-variety mistakes. The student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)}${narrationGuidance(level, "framing")}${singlePointBlock(level)}${volumeBlock(level)}${imageRuleBlock(level)}${pronunciationBlock(level)}${vocabSelectionBlock(level)}${boardTitleBlock(level)}${boardNoteBlock(level)}\n\nGRAMMAR BOARD: alongside your prose grammar fields (point, meaning, form, usage, examples — keep all of these), also produce a boards array inside grammar. Each board has an elements array. First element MUST be a title.\n\nELEMENT TYPES — use these exact field names:\n- title: {type:\"title\", text:\"grammar point name\"}\n- subTable: {type:\"subTable\", slots:[{label:\"slot name\", items:[\"option1\",\"option2\"], target:true/false}], numbered:true/false, example:\"optional sentence\"}\n- rule: {type:\"rule\", pieces:[{text:\"...\", role:\"plain|structure|target|model\"}]}\n- formula: {type:\"formula\", boxes:[{text:\"...\", role:\"plain|structure|target|model\"}], joiner:\"+\"}\n- example: {type:\"example\", spans:[{text:\"...\", role:\"plain|structure|target|model\"}], mark:\"tick\" or \"cross\" (optional)}\n- contrast: {type:\"contrast\", from:{spans:[{text:\"...\", role:\"...\"}]}, to:{spans:[{text:\"...\", role:\"...\"}]}}\n- note: {type:\"note\", text:\"max 12 words\"}\n\nRoles: \"plain\" (black), \"structure\" (blue), \"target\" (red — the form under focus), \"model\" (green — examples). At most one note per board. At most one contrast per board. Maximum 3 boards, 5 elements + title per board.${
   // L1-transfer state for the note preference order (v2 §3.5).
   // Three signals: is a transfer error known, is the student's L1 known,
   // what is the corrective form. The model receives these and selects
