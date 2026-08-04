@@ -6827,7 +6827,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
         elapsedMs: detail.ms != null ? detail.ms : null,
         error: e,
       });
-      setPlanFail({ stage: currentStage, type });
+      setPlanFail({ stage: currentStage, type, message: (e && e.message) || String(e) });
       setPlanFailCount((c) => c + 1);
       setPhase("error");
     }
@@ -7058,6 +7058,8 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
             failed" invents a cause the code has not established. Every branch
             ends with something to do next. */}
         <p>{PLAN_FAIL_LINE(planFail)}</p>
+        {/* TEMPORARY DIAGNOSTIC — remove once Defect A is diagnosed */}
+        {planFail && <p style={{ fontSize: 12, color: "#999", marginTop: 4, wordBreak: "break-word" }}>[{planFail.type}] {planFail.message}</p>}
         {planFailCount < 2
           ? <>
               <p>Nothing you have done is lost.</p>
@@ -7183,11 +7185,11 @@ const readReply = (raw) => {
 // Multi-turn chat call: sends the whole history so the tutor remembers context
 // Runs the English tutor through the same proven API call the rest of the app uses,
 // by serialising the conversation into a single prompt.
-async function askTutor(system, history, question) {
+async function askTutor(system, history, question, level) {
   const convo = history
     .map((m) => (m.role === "user" ? "" : "Tutor: ") + m.content)
     .join("\n\n");
-  const prompt = `${system}${narrationGuidance(bp.cefr, "chat")}\n\n${convo ? "Conversation so far:\n" + convo + "\n\n" : ""}The student now says: "${question}"\n\nReply as the tutor, in plain text only (no JSON, no labels).`;
+  const prompt = `${system}${narrationGuidance(level, "chat")}\n\n${convo ? "Conversation so far:\n" + convo + "\n\n" : ""}The student now says: "${question}"\n\nReply as the tutor, in plain text only (no JSON, no labels).`;
   return askClaude(prompt, { intent: "chat_reply" });
 }
 
@@ -7239,7 +7241,7 @@ STYLE: Reply in clear, simple English suitable for their level. Keep answers foc
     if (leoMemory) leoMemory.recordQuestion(q); // M6: contributes to Leo's understanding of the learner
     saveKey("esl-chat", nextMsgs.slice(-40)).catch(() => {}); // keep it even if the reply fails
     try {
-      const raw = await askTutor(SYSTEM, messages, q);
+      const raw = await askTutor(SYSTEM, messages, q, levelFor(profile));
       const { offTopic, content } = readReply(raw);
       const withReply = [...nextMsgs, { role: "assistant", content, offTopic, askedAbout: offTopic ? q : undefined }];
       setMessages(withReply);
