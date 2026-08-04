@@ -4683,7 +4683,7 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
 
   const opener = hasDiscussion
     ? `Let's discuss: ${discussionQs[0]}`
-    : `Let's practise for real. Imagine we're in this situation: ${bp.context}. I'll start — ${(bp.warmUpQuestions && bp.warmUpQuestions[1]) || "tell me what you would say first."}`;
+    : `Let's practise for real. Imagine we're in this situation: ${bp.context}. I'll start — tell me what you would say first.`;
   const [turns, setTurns] = useState([{ role: "leo", text: opener }]);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
@@ -6385,7 +6385,9 @@ function validateBlueprint(bp) {
   ["communicativeObjective", "context", "explanation", "mission", "learningOutcome"].forEach((k) => {
     if (!bp[k]) problems.push(k + " missing");
   });
-  if (!Array.isArray(bp.warmUpQuestions) || bp.warmUpQuestions.length < 4) problems.push("warmUpQuestions too short");
+  // warmUpQuestions removed from BLUEPRINT_JSON_SHAPE — warmUpActivities is the
+  // structured format that renders. warmUpQuestions may still arrive from mock data
+  // or older blueprints; validation no longer requires it.
   // Count: 4-8. Eight was always a ceiling for the mobile matching UI; the old
   // floor of 5 pre-dates the selection standard, which rules that some honest
   // A1 objectives (introducing yourself, greeting a neighbour) hold only four
