@@ -3659,15 +3659,25 @@ function MicButton({ onText }) {
 }
 
 /* ---------- Shared stage shell: title, purpose, uniform Skip ---------- */
-function SectionShell({ title, blurb, onSkip, children }) {
+function SectionShell({ title, blurb, onSkip, stageIndex, totalStages, children }) {
   return (
     <Card>
       <div className="stage-head">
         <h3>{title}</h3>
-        <button className="skip-btn" onClick={onSkip} aria-label={`Skip ${title}`}>Skip →</button>
+        {onSkip && <button className="skip-btn" onClick={onSkip} aria-label={`Skip ${title}`}>Skip →</button>}
       </div>
-      {blurb && <p className="muted small">{blurb}</p>}
-      {children}
+      {/* §5 Step indicator dots */}
+      {typeof stageIndex === "number" && totalStages > 0 && (
+        <div className="step-dots">
+          {Array.from({ length: totalStages }, (_, i) => (
+            <span key={i} className={"step-dot" + (i < stageIndex ? " step-dot-done" : i === stageIndex ? " step-dot-current" : "")} />
+          ))}
+        </div>
+      )}
+      {/* §2.9 Bridge line enters first */}
+      {blurb && <p className="muted small stage-enter">{blurb}</p>}
+      {/* §2.9 Content enters 0.2s later */}
+      <div className="stage-enter-delayed">{children}</div>
     </Card>
   );
 }
@@ -4150,10 +4160,10 @@ function IntroductionSection({ bp, vocab, onVocabTap, onSkip, onDone }) {
 
   if (idx === -1) return (
     <SectionShell title="Today's lesson" onSkip={onSkip}>
-      <div className="lesson-head leo-accent"><p className="lesson-greeting text-leo"><VocabText text={bp.explanation} vocab={vocab} onTap={onVocabTap} /></p></div>
-      <p className="lesson-why"><strong>Today:</strong> {bp.context}</p>
-      <p className="lesson-goal">🎯 <VocabText text={bp.communicativeObjective} vocab={vocab} onTap={onVocabTap} /></p>
-      <button className="primary-btn wide" style={{ marginTop: 6 }} onClick={() => setIdx(0)}>Let's warm up</button>
+      <div className="lesson-head leo-accent" style={{ animation: "scRise .4s ease-out both" }}>
+        <p className="lesson-greeting text-leo"><VocabText text={bp.explanation} vocab={vocab} onTap={onVocabTap} /></p>
+      </div>
+      <button className="primary-btn wide" style={{ marginTop: "var(--space-4)", animation: "scRise .4s ease-out both", animationDelay: "0.3s" }} onClick={() => setIdx(0)}>Let's warm up</button>
     </SectionShell>
   );
 
@@ -4950,9 +4960,12 @@ function GrammarSection({ bp, section, vocab, onVocabTap, onSkip, onDone }) {
   if (!practising) return (
     <SectionShell title={`Grammar: ${g.point}`} blurb="One point, straight from today's situation — never grammar for its own sake." onSkip={onSkip}>
       <div className="grammar-card">
-        <p><strong>What it means:</strong> <VocabText text={g.meaning} vocab={vocab} onTap={onVocabTap} /></p>
-        <div className="grammar-form-box"><strong>The form:</strong> <span className="gram-form">{g.form}</span></div>
-        <p><strong>When to use it:</strong> <VocabText text={g.usage} vocab={vocab} onTap={onVocabTap} /></p>
+        <p className="gram-section-label">Meaning</p>
+        <p><VocabText text={g.meaning} vocab={vocab} onTap={onVocabTap} /></p>
+        <p className="gram-section-label">The form</p>
+        <div className="grammar-form-box"><span className="gram-form">{g.form}</span></div>
+        <p className="gram-section-label">When to use it</p>
+        <p><VocabText text={g.usage} vocab={vocab} onTap={onVocabTap} /></p>
         {(g.examples || []).map((ex, i) => (
           <div key={i} className="grammar-example">
             <span className="grammar-example-bar" />
@@ -4960,23 +4973,23 @@ function GrammarSection({ bp, section, vocab, onVocabTap, onSkip, onDone }) {
           </div>
         ))}
       </div>
-      {/* Capability: grammar reference table when available */}
+      {/* Grammar reference table — settled tokens (§2.6) */}
       {g.reference && g.reference.length > 0 && (
         <div className="gram-ref-table" style={{ overflowX: "auto", marginTop: 12 }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13.5px" }}>
             <thead>
               <tr>
-                <th style={{ textAlign: "left", padding: "8px 10px", borderBottom: "2px solid var(--euca)", color: "var(--euca-deep)", fontWeight: 700 }}>Function</th>
-                <th style={{ textAlign: "left", padding: "8px 10px", borderBottom: "2px solid var(--euca)", color: "var(--euca-deep)", fontWeight: 700 }}>Form</th>
-                <th style={{ textAlign: "left", padding: "8px 10px", borderBottom: "2px solid var(--euca)", color: "var(--euca-deep)", fontWeight: 700 }}>Example</th>
+                <th style={{ textAlign: "left", padding: "8px 10px", borderBottom: "2px solid var(--leo-green)", color: "var(--text-primary)", fontWeight: 700 }}>Function</th>
+                <th style={{ textAlign: "left", padding: "8px 10px", borderBottom: "2px solid var(--leo-green)", color: "var(--text-primary)", fontWeight: 700 }}>Form</th>
+                <th style={{ textAlign: "left", padding: "8px 10px", borderBottom: "2px solid var(--leo-green)", color: "var(--text-primary)", fontWeight: 700 }}>Example</th>
               </tr>
             </thead>
             <tbody>
               {g.reference.map((row, i) => (
                 <tr key={i}>
-                  <td style={{ padding: "7px 10px", borderBottom: "1px solid var(--line)", fontWeight: 600, color: "var(--euca-deep)" }}>{row.function}</td>
-                  <td style={{ padding: "7px 10px", borderBottom: "1px solid var(--line)" }}><span className="gram-form">{row.form}</span></td>
-                  <td style={{ padding: "7px 10px", borderBottom: "1px solid var(--line)", fontStyle: "italic", opacity: 0.8 }}>{row.example}</td>
+                  <td style={{ padding: "7px 10px", borderBottom: "1px solid var(--divider)", fontWeight: 600, color: "var(--text-primary)" }}>{row.function}</td>
+                  <td style={{ padding: "7px 10px", borderBottom: "1px solid var(--divider)" }}><span className="gram-form">{row.form}</span></td>
+                  <td style={{ padding: "7px 10px", borderBottom: "1px solid var(--divider)", fontStyle: "italic", opacity: 0.8 }}>{row.example}</td>
                 </tr>
               ))}
             </tbody>
@@ -5226,15 +5239,17 @@ function SummarySection({ bp, section, vocab, onVocabTap, onFinish }) {
   const s = section;
   return (
     <Card className="leo-card">
-      <div className="lesson-head leo-accent"><h3 style={{ margin: 0 }}>That's today's lesson 🎉</h3></div>
+      <div className="lesson-head leo-accent"><h3 style={{ margin: 0 }}>That's today's lesson</h3></div>
       <p className="text-leo"><VocabText text={s.praise} vocab={vocab} onTap={onVocabTap} /></p>
-      <p className="muted"><VocabText text={s.summary} vocab={vocab} onTap={onVocabTap} /></p>
+      <div className="card" style={{ marginTop: "var(--space-3)", marginBottom: "var(--space-3)" }}>
+        <p className="gram-section-label">What you built today</p>
+        <p className="muted"><VocabText text={s.summary} vocab={vocab} onTap={onVocabTap} /></p>
+      </div>
       <p className="text-leo"><strong>Your strength today:</strong> {s.strength}</p>
       <p className="text-leo"><strong>One thing to work on:</strong> {s.improvement}</p>
-      <p className="muted small">{s.connection}</p>
       <div className="mission-box"><span className="mission-icon">🌏</span><p><VocabText text={bp.mission} vocab={vocab} onTap={onVocabTap} /></p></div>
       <p className="lesson-tomorrow"><strong>Next time:</strong> {s.tomorrowPreview}</p>
-      <button className="primary-btn wide" style={{ marginTop: 6 }} onClick={onFinish}>Finish lesson 🎉</button>
+      <button className="primary-btn wide" style={{ marginTop: "var(--space-4)" }} onClick={onFinish}>Finish lesson</button>
     </Card>
   );
 }
@@ -7390,16 +7405,15 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
   if (phase === "loading") return <LeoLoader label="I'm opening today's lesson…" level={profile.level} />;
   if (phase === "planning") return (<div><SectionTitle>Leo's Lesson</SectionTitle>
     {currentUnitRecord ? (
-      <div style={{ textAlign: "center", padding: "var(--space-6) var(--space-4)" }}>
-        <div className="leo-loader-bar" />
-        <p style={{ fontSize: 17, color: "var(--text-primary)", marginTop: "var(--space-4)", lineHeight: 1.5 }}>
-          Today we're working on <strong>{currentUnitRecord.theme.toLowerCase()}</strong>.
-        </p>
-        <p style={{ fontSize: 15, color: "var(--text-secondary)", marginTop: "var(--space-2)", lineHeight: 1.5 }}>
-          I'm putting together a lesson around <em>{currentUnitRecord.grammar.point}</em> — give me a moment to make it good.
-        </p>
+      <div className="plan-reveal">
+        <p className="plan-line plan-d1" style={{ fontSize: 17, fontWeight: 500, color: "var(--text-primary)" }}>Today: {currentUnitRecord.theme.toLowerCase()}</p>
+        <p className="plan-line plan-d2">Reading and listening practice</p>
+        <p className="plan-line plan-d3">Grammar: {currentUnitRecord.grammar.point}</p>
+        <p className="plan-line plan-d4">{(currentUnitRecord.coreVocab || []).length} new words to learn</p>
+        <p className="plan-line plan-d5">Pronunciation focus</p>
+        <div className="plan-line plan-d6"><div className="leo-loader-bar" /></div>
       </div>
-    ) : <LeoLoader label="I'm planning today's lesson for you…" level={profile.level} />}
+    ) : <LeoLoader label="I'm putting together today's lesson." level={profile.level} />}
   </div>);
 
   if (phase === "chooser") {
@@ -7470,7 +7484,12 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
   return (
     <div>
       <SectionTitle sub={`${bp.context} · ${stage.label} · ${lesson.stage + 1} of ${LESSON_STAGES.length}`}>Leo's Lesson</SectionTitle>
-      <div className="progress-bar"><span style={{ width: `${((lesson.stage + 1) / LESSON_STAGES.length) * 100}%` }} /></div>
+      {/* §5 Step indicator dots — replaces the thin progress bar */}
+      <div className="step-dots" style={{ marginTop: "var(--space-2)" }}>
+        {LESSON_STAGES.map((s, i) => (
+          <span key={s.id} className={"step-dot" + (i < lesson.stage ? " step-dot-done" : i === lesson.stage ? " step-dot-current" : "")} />
+        ))}
+      </div>
       {STAGE_BRIDGE_TEXT[stage.id] && <p className="leo-accent text-leo" style={{ marginTop: "var(--space-5)", marginBottom: "var(--space-3)" }}>{STAGE_BRIDGE_TEXT[stage.id]}</p>}
 
       {needsAI && (!section || sectionLoading || section.skipped) && <LeoLoader label="I'm preparing this part…" level={profile.level} />}
@@ -7518,6 +7537,16 @@ async function askTutor(system, history, question, level) {
     .join("\n\n");
   const prompt = `${AUSTRALIAN_SPELLING}${system}${narrationGuidance(level, "chat")}\n\n${convo ? "Conversation so far:\n" + convo + "\n\n" : ""}The student now says: "${question}"\n\nReply as the tutor, in plain text only (no JSON, no labels).`;
   return askClaude(prompt, { intent: "chat_reply" });
+}
+
+/* §7 — Minimal markdown rendering for Leo's chat responses */
+function renderMarkdown(text) {
+  if (!text) return text;
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/gs, '<ul style="margin:8px 0;padding-left:20px;list-style:disc">$1</ul>')
+    .replace(/\n/g, '<br />');
 }
 
 function QuestionsPage({ profile, memory, leoMemory, pendingAsk, onPendingHandled, markActivity, onOpenAustralia }) {
@@ -7608,7 +7637,7 @@ STYLE: Reply in clear, simple English suitable for their level. Keep answers foc
           <React.Fragment key={i}>
             <div className={"bubble-row " + (m.role === "user" ? "row-user" : "row-bot")}>
               {m.role === "assistant" && <span className="bot-avatar-leo">L</span>}
-              <div className={"bubble " + (m.role === "user" ? "bubble-user" : "bubble-bot")}>{m.content}</div>
+              <div className={"bubble " + (m.role === "user" ? "bubble-user" : "bubble-bot")}>{m.role === "user" ? m.content : <span dangerouslySetInnerHTML={{ __html: renderMarkdown(m.content) }} />}</div>
             </div>
             {/* The refusal becomes a doorway (spec A6): Leo's line, and one
                 control that opens Australia carrying the question across. */}
@@ -9383,7 +9412,7 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .vocab-example-today{border-left-color:var(--euca); background:rgba(55,98,75,.06); border-radius:0 6px 6px 0; padding:6px 10px;}
 .vocab-today-tag{display:block; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--euca); margin-bottom:2px;}
 .vocab-related{display:flex; flex-wrap:wrap; gap:8px;}
-.vocab-related-chip{font-size:14px; background:#fff; border:1.5px solid var(--line); border-radius:20px; padding:5px 12px; color:var(--euca-deep); font-family:'Karla',sans-serif;}
+.vocab-related-chip{font-size:14px; background:#fff; border:1px solid var(--divider); border-radius:20px; padding:5px 12px; color:var(--euca-deep); font-family:'Karla',sans-serif;}
 .vocab-save-btn{width:100%; padding:14px; background:var(--euca); color:#fff; border:none; border-radius:12px; font-family:'Karla',sans-serif; font-size:16px; font-weight:700; cursor:pointer; margin-top:10px;}
 .vocab-save-btn-saved{background:var(--sage); color:var(--euca-deep); cursor:default;}
 .stage-head{display:flex; align-items:center; justify-content:space-between; gap:10px;}
@@ -9395,7 +9424,7 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .mic-on{background:var(--wattle); border-color:var(--wattle); color:#fff;}
 .match-grid{display:grid; grid-template-columns:1fr 1.35fr; gap:14px 18px; margin:14px 0 16px; min-height:220px;}
 .match-col{display:flex; flex-direction:column; gap:12px;}
-.match-word,.match-meaning{position:relative; text-align:left; background:var(--card); border:1.5px solid var(--line); border-radius:14px; padding:13px 15px; font-family:'Karla'; font-size:14.5px; color:var(--ink); user-select:none; -webkit-user-select:none; min-height:52px; display:flex; align-items:center; box-shadow:0 1px 2px rgba(34,48,42,.05), 0 3px 10px rgba(34,48,42,.045); transition:border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .12s ease;}
+.match-word,.match-meaning{position:relative; text-align:left; background:var(--card); border:1px solid var(--divider); border-radius:14px; padding:13px 15px; font-family:'Karla'; font-size:14.5px; color:var(--ink); user-select:none; -webkit-user-select:none; min-height:52px; display:flex; align-items:center; box-shadow:0 1px 2px rgba(34,48,42,.05), 0 3px 10px rgba(34,48,42,.045); transition:border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .12s ease;}
 .match-word{font-family:'Fraunces',serif; font-weight:650; font-size:16px; color:var(--euca-deep); border-right:3px solid var(--euca); padding-right:12px; cursor:grab; letter-spacing:.1px;}
 .match-word::after{content:""; display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--euca); margin-left:auto; flex-shrink:0; opacity:.45; transition:opacity .18s ease, transform .18s ease;}
 .match-meaning{border-left:3px solid var(--line); padding-left:12px; line-height:1.45; cursor:pointer;}
@@ -9462,7 +9491,7 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .wu-build-empty{font-size:13.5px; opacity:.5;}
 .wu-pool{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;}
 .wu-pool.wu-build-lines{flex-direction:column;}
-.wu-chip{background:var(--card); border:1.5px solid var(--line); border-radius:10px; padding:9px 13px; font-family:'Karla'; font-size:14.5px; color:var(--ink); cursor:pointer; text-align:left; min-height:42px; box-shadow:0 1px 2px rgba(34,48,42,.05); transition:border-color .15s, background .15s, transform .1s;}
+.wu-chip{background:var(--card); border:1px solid var(--divider); border-radius:10px; padding:9px 13px; font-family:'Karla'; font-size:14.5px; color:var(--ink); cursor:pointer; text-align:left; min-height:42px; box-shadow:0 1px 2px rgba(34,48,42,.05); transition:border-color .15s, background .15s, transform .1s;}
 .wu-chip:not(:disabled):hover{border-color:var(--euca); background:var(--sage);}
 .wu-chip:not(:disabled):active{transform:scale(.96);}
 .wu-chip:focus-visible{outline:3px solid var(--wattle); outline-offset:2px;}
@@ -9474,7 +9503,7 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .quiz-progress span{display:block; height:100%; background:var(--euca); border-radius:99px; transition:width .4s cubic-bezier(.4,0,.2,1);}
 
 .mcq-opts{display:flex; flex-direction:column; gap:8px; margin:10px 0;}
-.mcq-opt{text-align:left; background:var(--bg-card); border:1.5px solid var(--line); border-radius:10px; padding:14px 16px; font-size:15px; cursor:pointer; color:var(--text-primary); min-height:56px; display:flex; align-items:center; transition:background .3s ease, border-color .3s ease;}
+.mcq-opt{text-align:left; background:var(--bg-card); border:1px solid var(--divider); border-radius:10px; padding:14px 16px; font-size:15px; cursor:pointer; color:var(--text-primary); min-height:56px; display:flex; align-items:center; transition:background .3s ease, border-color .3s ease;}
 .mcq-right{border-color:var(--color-success); background:rgba(22,163,74,.10); font-weight:700;}
 .mcq-wrong{border-color:var(--color-error); background:rgba(220,74,58,.08);}
 .speak-thread{display:flex; flex-direction:column; gap:10px; margin-bottom:12px; max-height:44vh; overflow-y:auto;}
@@ -9482,7 +9511,7 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .speak-turn p{margin:0; padding:9px 12px; border-radius:12px; font-size:15px; line-height:1.5;}
 .speak-leo p{background:var(--sage); color:var(--euca-deep);}
 .speak-you{justify-content:flex-end;}
-.speak-you p{background:#fff; border:1.5px solid var(--line);}
+.speak-you p{background:#fff; border:1px solid var(--divider);}
 .gapfill-item{margin-bottom:14px;}
 .gapfill-item .input-row{margin-top:6px;}
 .frames-panel{margin-bottom:10px;}
@@ -9495,7 +9524,7 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .pron-row{border-bottom:1px solid var(--line); padding:8px 0;}
 .pron-word{font-family:'Fraunces',serif; font-size:18px; color:var(--euca-deep); font-weight:700;}
 .pron-try{margin:12px 0;}
-.passage{background:#fff; border:1.5px solid var(--line); border-radius:12px; padding:14px; font-size:15px; line-height:1.65; white-space:pre-line;}
+.passage{background:#fff; border:1px solid var(--divider); border-radius:12px; padding:14px; font-size:15px; line-height:1.65; white-space:pre-line;}
 .listen-box{margin-bottom:10px;}
 .gram-form{font-family:'Fraunces',serif; background:var(--sage); border-radius:8px; padding:2px 8px; color:var(--euca-deep);}
 .grammar-card{display:flex; flex-direction:column; gap:var(--space-3);}
@@ -9503,7 +9532,7 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .grammar-form-box .gram-form{background:none; padding:0;}
 .grammar-example{display:flex; align-items:baseline; gap:10px; padding:6px 0; font-style:italic; color:var(--text-secondary);}
 .grammar-example-bar{display:inline-block; width:3px; min-height:18px; background:var(--euca); border-radius:2px; flex-shrink:0;}
-.leo-loader-bar{width:60px; height:3px; background:var(--euca); border-radius:2px; margin:0 auto; animation:leoLoad 1.5s ease-in-out infinite;}
+.leo-loader-bar{width:60px; height:3px; background:var(--leo-green); border-radius:2px; margin:0 auto; animation:leoLoad 1.5s ease-in-out infinite;}
 @keyframes leoLoad{0%,100%{opacity:0.3; transform:scaleX(1);} 50%{opacity:1; transform:scaleX(1.8);}}
 
 /* ═══ WORD CARD (WORD_CARD_SPECIFICATION §2–§8) ═══ */
@@ -9529,6 +9558,34 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .wc-practise-row{margin-bottom:var(--space-2);}
 .wc-next{margin-top:var(--space-5);}
 @media(prefers-reduced-motion:reduce){.word-card{animation:none; opacity:1; transform:translateY(0);}}
+
+/* ═══ VISUAL REDESIGN CSS (FULL_VISUAL_REDESIGN_SPECIFICATION) ═══ */
+/* §2.1 Planning stagger */
+.plan-reveal{text-align:center; padding:var(--space-6) var(--space-4);}
+.plan-line{font-size:15px; color:var(--text-secondary); line-height:1.6; margin:var(--space-2) 0; animation:scRise .4s ease-out both; opacity:0;}
+.plan-d1{animation-delay:0s;} .plan-d2{animation-delay:1.2s;} .plan-d3{animation-delay:2.4s;}
+.plan-d4{animation-delay:3.6s;} .plan-d5{animation-delay:4.8s;} .plan-d6{animation-delay:6s;}
+@media(prefers-reduced-motion:reduce){.plan-line{animation:none; opacity:1;}}
+
+/* §2.6 Grammar section labels */
+.gram-section-label{font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--leo-green); margin:0 0 var(--space-1) 0;}
+.grammar-card{display:flex; flex-direction:column; gap:var(--space-4);}
+.grammar-form-box{background:var(--leo-green-light); border-radius:10px; padding:12px 16px; line-height:1.6;}
+.grammar-form-box .gram-form{background:none; padding:0;}
+
+/* §2.7 Speaking bubbles */
+.bubble-bot{background:var(--leo-green-light) !important; font-family:'Inter',sans-serif !important;}
+
+/* §2.9 Stage transitions — content enters with scRise */
+.stage-enter{animation:scRise .4s ease-out both;}
+.stage-enter-delayed{animation:scRise .4s ease-out both; animation-delay:0.2s; opacity:0;}
+@media(prefers-reduced-motion:reduce){.stage-enter,.stage-enter-delayed{animation:none; opacity:1;}}
+
+/* §5 Step indicator dots */
+.step-dots{display:flex; gap:5px; justify-content:center; margin-bottom:var(--space-3);}
+.step-dot{width:6px; height:6px; border-radius:50%; border:1px solid var(--text-tertiary); background:transparent; box-sizing:border-box;}
+.step-dot-done{background:var(--leo-green); border-color:var(--leo-green);}
+.step-dot-current{background:var(--leo-green); border-color:var(--leo-green); box-shadow:0 0 0 2px var(--leo-green-light);}
 
 /* ================================================================
    W-01 WHITEBOARD GRAMMAR — board surface CSS
@@ -9602,7 +9659,7 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .mission-box{display:flex; gap:12px; align-items:flex-start; background:#FFF7E6; border:1.5px solid var(--wattle); border-radius:12px; padding:13px 15px;}
 .mission-icon{font-size:22px; line-height:1;}
 .rev-options{display:flex; flex-direction:column; gap:9px; margin-top:6px;}
-.rev-option{text-align:left; background:#fff; border:1.5px solid var(--line); border-radius:12px; padding:12px 15px; font-family:'Karla'; font-size:15.5px; color:var(--ink); cursor:pointer;}
+.rev-option{text-align:left; background:#fff; border:1px solid var(--divider); border-radius:12px; padding:12px 15px; font-family:'Karla'; font-size:15.5px; color:var(--ink); cursor:pointer;}
 .rev-option:hover:not(:disabled){border-color:var(--euca);}
 .rev-option:focus-visible{outline:3px solid var(--wattle); outline-offset:2px;}
 .rev-right{border-color:#28A05A; background:#EAF6EE; color:#1B7A42; font-weight:700;}
@@ -9690,7 +9747,7 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .date-wrap{text-align:center;}
 .date-hand{font-family:'Caveat',cursive; font-size:26px; color:var(--euca-deep); line-height:1.1; display:block;}
 .today-badge{display:inline-block; background:var(--wattle); font-size:11.5px; font-weight:700; border-radius:6px; padding:2px 9px; color:#3D2E00; margin-top:3px;}
-.page-arrow{background:#fff; border:1.5px solid var(--line); border-radius:12px; width:46px; height:46px; display:flex; align-items:center; justify-content:center; color:var(--euca); cursor:pointer; flex-shrink:0;}
+.page-arrow{background:#fff; border:1px solid var(--divider); border-radius:12px; width:46px; height:46px; display:flex; align-items:center; justify-content:center; color:var(--euca); cursor:pointer; flex-shrink:0;}
 .page-arrow:disabled{opacity:.3; cursor:default;}
 .page-arrow:focus-visible{outline:3px solid var(--wattle); outline-offset:2px;}
 .diary-page2{background:#fff; border:1px solid var(--line); border-radius:16px; box-shadow:3px 3px 0 var(--sage), 6px 6px 0 #F1F5F0; margin-bottom:14px; overflow:hidden;}
@@ -9809,7 +9866,7 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .motiv-mark{font-family:'Fraunces',serif; font-size:70px; color:var(--euca); opacity:.25; position:absolute; top:-34px; left:-6px;}
 .motiv-quote{font-family:'Fraunces',serif; font-size:27px; line-height:1.4; color:var(--euca-deep);}
 .motiv-next{max-width:260px;}
-.mic-btn{width:44px; height:44px; border-radius:10px; border:1.5px solid var(--line); background:#fff; color:var(--euca); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;}
+.mic-btn{width:44px; height:44px; border-radius:10px; border:1px solid var(--divider); background:#fff; color:var(--euca); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;}
 .mic-btn:focus-visible{outline:2px solid var(--wattle); outline-offset:2px;}
 .mic-on{background:var(--rust); color:#fff; border-color:var(--rust); animation:micPulse 1.2s ease-in-out infinite;}
 @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(185,87,55,.5);} 50%{box-shadow:0 0 0 7px rgba(185,87,55,0);}}
