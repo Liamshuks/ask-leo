@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { createClient } from "@supabase/supabase-js";
 import {
   BookOpen, Book, MessageCircle, Sparkles, Ear, MapPin, Mic, Gamepad2,
   LayoutDashboard, Check, X, Search, Send, Plus, Trash2, Loader2, ChevronLeft, ChevronRight, ExternalLink, Repeat,
@@ -1156,38 +1157,21 @@ function LeoReveal({ onDone }) {
   );
 }
 
-function SignUpPage({ onBack, onComplete }) {
-  const [step, setStep] = useState(1); // 1=account, 2=done
+function SignUpPage({ onBack, onLinkSent }) {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   const validateEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
-  const handleCreate = async () => {
+  const handleSend = async () => {
     setError("");
     if (!validateEmail(email)) { setError("Please enter a valid email address."); return; }
-    if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
-    if (password !== confirm) { setError("Passwords don't match."); return; }
     setBusy(true);
-    try {
-      // Check if account already exists
-      const accounts = await loadKey("esl-accounts", []);
-      if (accounts.find((a) => a.email.toLowerCase() === email.toLowerCase())) {
-        setError("An account with this email already exists. Try signing in instead.");
-        setBusy(false);
-        return;
-      }
-      const user = { id: "user_" + Date.now(), email: email.toLowerCase(), password, createdAt: new Date().toISOString(), lastLogin: new Date().toISOString() };
-      await saveKey("esl-accounts", [...accounts, user]);
-      await saveKey("esl-auth-session", user);
-      onComplete(user);
-    } catch {
-      setError("Something went wrong. Please try again.");
-    }
+    const err = await sendMagicLink(email);
     setBusy(false);
+    if (err) { setError("Something went wrong. Please try again."); console.error("[Auth] magic link failed", err); return; }
+    onLinkSent(email);
   };
 
   return (
@@ -1195,23 +1179,18 @@ function SignUpPage({ onBack, onComplete }) {
       <div className="ob-card fade-in">
         <div className="brand-mark-sm"><WhiteboardLogo width={132} /></div>
         <h2 className="ob-question">Create your account</h2>
+        <p className="muted small" style={{ textAlign: "center", marginBottom: 14 }}>Enter your email and we'll send you a link to get started — no password to remember.</p>
         <div style={{ textAlign: "left" }}>
           <label className="input-label">Email</label>
           <input className="big-input" type="email" placeholder="your@email.com" value={email}
-            onChange={(e) => setEmail(e.target.value)} />
-          <label className="input-label">Password</label>
-          <input className="big-input" type="password" placeholder="At least 6 characters" value={password}
-            onChange={(e) => setPassword(e.target.value)} />
-          <label className="input-label">Confirm password</label>
-          <input className="big-input" type="password" placeholder="Type your password again" value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }} />
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }} />
         </div>
         {error && <p className="auth-error">{error}</p>}
         <div className="ob-nav" style={{ marginTop: 16 }}>
           <button className="ghost-btn" onClick={onBack}>Back</button>
-          <button className="primary-btn" onClick={handleCreate} disabled={busy}>
-            {busy ? "Creating…" : "Create Account"}
+          <button className="primary-btn" onClick={handleSend} disabled={busy}>
+            {busy ? "Sending…" : "Send me a link"}
           </button>
         </div>
       </div>
@@ -1219,28 +1198,21 @@ function SignUpPage({ onBack, onComplete }) {
   );
 }
 
-function SignInPage({ onBack, onComplete }) {
+function SignInPage({ onBack, onLinkSent }) {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const handleSignIn = async () => {
+  const validateEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+
+  const handleSend = async () => {
     setError("");
-    if (!email.trim() || !password) { setError("Please enter your email and password."); return; }
+    if (!validateEmail(email)) { setError("Please enter a valid email address."); return; }
     setBusy(true);
-    try {
-      const accounts = await loadKey("esl-accounts", []);
-      const user = accounts.find((a) => a.email.toLowerCase() === email.toLowerCase() && a.password === password);
-      if (!user) { setError("Email or password is incorrect. Please try again."); setBusy(false); return; }
-      user.lastLogin = new Date().toISOString();
-      await saveKey("esl-accounts", accounts.map((a) => a.id === user.id ? user : a));
-      await saveKey("esl-auth-session", user);
-      onComplete(user);
-    } catch {
-      setError("Something went wrong. Please try again.");
-    }
+    const err = await sendMagicLink(email);
     setBusy(false);
+    if (err) { setError("Something went wrong. Please try again."); console.error("[Auth] magic link failed", err); return; }
+    onLinkSent(email);
   };
 
   return (
@@ -1248,22 +1220,40 @@ function SignInPage({ onBack, onComplete }) {
       <div className="ob-card fade-in">
         <div className="brand-mark-sm"><WhiteboardLogo width={132} /></div>
         <h2 className="ob-question">Welcome back!</h2>
-        <p className="muted small" style={{ textAlign: "center", marginBottom: 14 }}>Sign in to continue learning with Leo.</p>
+        <p className="muted small" style={{ textAlign: "center", marginBottom: 14 }}>Enter your email and we'll send you a link to sign in — no password needed.</p>
         <div style={{ textAlign: "left" }}>
           <label className="input-label">Email</label>
           <input className="big-input" type="email" placeholder="your@email.com" value={email}
-            onChange={(e) => setEmail(e.target.value)} />
-          <label className="input-label">Password</label>
-          <input className="big-input" type="password" placeholder="Your password" value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") handleSignIn(); }} />
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }} />
         </div>
         {error && <p className="auth-error">{error}</p>}
         <div className="ob-nav" style={{ marginTop: 16 }}>
           <button className="ghost-btn" onClick={onBack}>Back</button>
-          <button className="primary-btn" onClick={handleSignIn} disabled={busy}>
-            {busy ? "Signing in…" : "Sign In"}
+          <button className="primary-btn" onClick={handleSend} disabled={busy}>
+            {busy ? "Sending…" : "Send me a link"}
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Shown after a magic link is sent, for both sign-up and sign-in — the
+   student's next move is the same either way: check their email. Session
+   establishment happens automatically when they tap the link and return;
+   this screen just gives them somewhere calm to wait and a way back. */
+function CheckEmailPage({ email, onBack }) {
+  return (
+    <div className="onboard">
+      <div className="ob-card fade-in">
+        <div className="brand-mark-sm"><WhiteboardLogo width={132} /></div>
+        <h2 className="ob-question">Check your email</h2>
+        <p className="muted small" style={{ textAlign: "center", marginBottom: 14 }}>
+          We've sent a link to <strong>{email}</strong>. Tap it to continue — you can close this tab.
+        </p>
+        <div className="ob-nav" style={{ marginTop: 16, justifyContent: "center" }}>
+          <button className="ghost-btn" onClick={onBack}>Use a different email</button>
         </div>
       </div>
     </div>
@@ -2414,20 +2404,105 @@ async function saveKey(key, value) {
   }
 }
 
-/* Wipe all student-specific data from storage. Called when a NEW account is
-   created so the new student starts clean — never inheriting another student's
-   word bank, lesson history, diary, or Leo's memories of someone else.
-   Preserves esl-accounts (the account list) and esl-auth-session (just written
-   by signup). Everything else under the esl- prefix is student data. */
+/* Wipe all student-specific data from storage. Called when a NEW or
+   DIFFERENT student's session is established, so a student never inherits
+   another student's word bank, lesson history, diary, or Leo's memories.
+   Preserves esl-active-student-id (written right after by the caller,
+   marking whose data is now local). Everything else under the esl- prefix
+   is student data. Auth itself lives in Supabase now, not in local keys. */
 async function clearStudentData() {
   try {
     const result = await store.list("esl-");
-    const keep = new Set(["esl-accounts", "esl-auth-session"]);
+    const keep = new Set(["esl-active-student-id"]);
     const keys = (result && result.keys) || [];
     await Promise.all(keys.filter((k) => !keep.has(k)).map((k) => store.delete(k)));
   } catch (e) {
     console.error("[clearStudentData] storage wipe failed", e);
   }
+}
+
+/* ================================================================
+   SUPABASE — server-side persistence (magic link auth + memory sync)
+   The anon/publishable key is safe to expose client-side by design —
+   Row Level Security in Postgres is the real security boundary (a
+   student can only ever read/write their own row, enforced by
+   Supabase regardless of what this client code does or doesn't check).
+   localStorage stays as the fast local cache. Supabase is the source
+   of truth: it survives a device change, localStorage does not.
+   ================================================================ */
+const SUPABASE_URL = "https://cthinyrynytjdnvgquxp.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_jJY2f9_VK-8LZCfFs-HJTA_Hoz0aSiC";
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Set once a session is established (magic link click or restored session
+// on reload). Module-level because saveMemoryStore is a plain function, not
+// a hook — this lets it reach the current student without prop-drilling an
+// id through every one of its many call sites.
+let currentStudentId = null;
+
+async function sendMagicLink(email) {
+  try {
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim().toLowerCase(),
+      options: { emailRedirectTo: (typeof window !== "undefined" ? window.location.origin : undefined) },
+    });
+    return error ? error.message : null;
+  } catch (e) {
+    return (e && e.message) || "Something went wrong sending the link. Please try again.";
+  }
+}
+
+async function fetchStudentMemory(studentId) {
+  try {
+    const { data, error } = await supabase
+      .from("student_memory")
+      .select("memory_json")
+      .eq("student_id", studentId)
+      .maybeSingle();
+    if (error) { console.error("[Supabase] fetchStudentMemory failed", error); return null; }
+    return data ? data.memory_json : null;
+  } catch (e) {
+    console.error("[Supabase] fetchStudentMemory threw", e);
+    return null;
+  }
+}
+
+// Reads all five synced pieces fresh from localStorage at push time, rather
+// than taking a snapshot when scheduled. If a profile write and a word-save
+// both happen inside the same debounce window, a snapshot would only carry
+// whichever call scheduled last; reading fresh at the moment the debounce
+// fires always reflects everything written since, regardless of how many
+// separate calls triggered it.
+async function pushStudentMemory(studentId) {
+  if (!studentId) return;
+  try {
+    const [memoryStore, profile, words, diaryPages, activity] = await Promise.all([
+      loadKey("esl-memory-store", DEFAULT_MEMORY_STORE),
+      loadKey("esl-profile", null),
+      loadKey("esl-words", []),
+      loadKey("esl-diary-pages", {}),
+      loadKey("esl-activity", []),
+    ]);
+    const blob = { memoryStore, profile, words, diaryPages, activity };
+    const { error } = await supabase
+      .from("student_memory")
+      .upsert({ student_id: studentId, memory_json: blob, updated_at: new Date().toISOString() }, { onConflict: "student_id" });
+    if (error) console.error("[Supabase] pushStudentMemory failed", error);
+  } catch (e) {
+    console.error("[Supabase] pushStudentMemory threw", e);
+  }
+}
+
+// Debounced: a burst of updates (several word-mastery bumps across one
+// lesson, a profile edit, a diary save) collapses into a single write
+// instead of hammering Supabase on every small change. 2s is short enough
+// that a closed tab rarely loses anything — most updates are followed by
+// more app activity, not an immediate close.
+let _memoryPushTimer = null;
+function scheduleMemoryPush(studentId) {
+  if (!studentId) return;
+  clearTimeout(_memoryPushTimer);
+  _memoryPushTimer = setTimeout(() => pushStudentMemory(studentId), 2000);
 }
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -2718,6 +2793,11 @@ function saveMemoryStore(store, prev) {
   const { lessonLog, ...rest } = store;
   saveKey("esl-memory-store", rest);
   if (!prev || prev.lessonLog !== lessonLog) saveKey(LESSON_LOG_KEY, lessonLog || []);
+  // Server-side sync (Part 4/5 of the persistence build): every memory
+  // update — word mastery, lesson log, sequencer state — schedules a
+  // debounced push to Supabase. Covers lesson-complete automatically,
+  // since finish() advances the sequencer through this same function.
+  if (currentStudentId) scheduleMemoryPush(currentStudentId);
 }
 
 // A word progresses new -> seen -> practised -> confident -> mastered on a
@@ -3259,6 +3339,7 @@ function DiaryPage({ profile, memory, leoMemory, pages, setPages, markActivity, 
     const next = { ...pages, [current]: { ...page, ...patch } };
     setPages(next);
     await saveKey("esl-diary-pages", next);
+    if (currentStudentId) scheduleMemoryPush(currentStudentId);
     if (activity) await markActivity();
   };
 
@@ -7845,6 +7926,7 @@ function DictionaryPage({ profile, words, setWords, markActivity, onAskLeo, leoM
         if (!words.find((w) => w.word.toLowerCase() === r.word.toLowerCase())) {
           const next = [{ word: r.word, date: todayStr() }, ...words].slice(0, WORD_BANK_CAP);
           setWords(next); await saveKey("esl-words", next);
+          if (currentStudentId) scheduleMemoryPush(currentStudentId);
           leoMemory.touchWord(r.word);
         }
       } else {
@@ -8950,6 +9032,7 @@ export {
 export default function App() {
   const [authUser, setAuthUser] = useState(undefined); // undefined = loading, null = not signed in, object = signed in
   const [authView, setAuthView] = useState("landing"); // "landing" | "signup" | "signin"
+  const [magicLinkEmail, setMagicLinkEmail] = useState(null); // set once a link is sent; shows CheckEmailPage
   // Owned here, not in WelcomeLanding: that component unmounts when authView
   // changes, so Back must find the step the student actually left from.
   const [landingSlide, setLandingSlide] = useState(0);
@@ -8995,14 +9078,10 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
-      // Demo mode: clear session on startup so the artifact always begins
-      // at the landing page. Remove when moving to real auth.
-      await saveKey("esl-auth-session", null);
-      await saveKey("esl-profile", null);
-      await saveKey("esl-placement", null);
-
-      const [session, p, e, w, h, a, el, tc, tt, vd, ms, ld, pl] = await Promise.all([
-        loadKey("esl-auth-session", null),
+      // Load whatever's cached locally first — this is the fast path and
+      // covers the common case (same device, same student) without waiting
+      // on a network round trip to Supabase.
+      const [p, e, w, h, a, el, tc, tt, vd, ms, ld, pl] = await Promise.all([
         loadKey("esl-profile", null),
         loadKey("esl-diary-pages", {}),
         loadKey("esl-words", []),
@@ -9016,21 +9095,96 @@ export default function App() {
         loadKey("esl-lessondone:" + todayStr(), false),
         loadKey("esl-placement", null),
       ]);
-      setAuthUser(session); setProfile(p); setDiaryPages(e); setWords(w); setHeard(h); setActivity(a); setErrorLog(el); setTaskCount(tc);
+      setProfile(p); setDiaryPages(e); setWords(w); setHeard(h); setActivity(a); setErrorLog(el); setTaskCount(tc);
       setPlacementDone(!!pl);
       // C1: daily lesson completion is a sticky per-day flag, independent of the
       // current lesson draft. Fall back to a legacy finished draft so learners
       // who completed today under the old scheme still show as done.
       setTodayDone({ task: !!(ld || (tt && tt.status && tt.status.done)), vocab: !!(vd && vd.done) });
       setMemoryStore(ms);
+
+      // Now resolve the real session from Supabase. This is the source of
+      // truth for WHO is signed in — local data above is provisional until
+      // this confirms whose data it actually is.
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) await handleSessionEstablished(session);
+      else setAuthUser(null);
+
+      supabase.auth.onAuthStateChange(async (event, newSession) => {
+        if (event === "SIGNED_IN" && newSession) await handleSessionEstablished(newSession);
+        else if (event === "SIGNED_OUT") {
+          currentStudentId = null;
+          await saveKey("esl-active-student-id", null);
+          setAuthUser(null);
+        }
+      });
     })();
   }, []);
+
+  // Called whenever a session is confirmed — on startup (restored session)
+  // or the moment a magic link is tapped (fresh sign-in). Handles both a
+  // returning student on the SAME device (skip the wipe, just refresh
+  // memory from Supabase) and a student on a NEW or SHARED device (wipe
+  // local data first — Defect 2's protection, generalised past sign-up).
+  const handleSessionEstablished = useCallback(async (session) => {
+    const studentId = session.user.id;
+    const cachedId = await loadKey("esl-active-student-id", null);
+    const isDifferentStudent = cachedId && cachedId !== studentId;
+
+    if (isDifferentStudent || !cachedId) {
+      await clearStudentData();
+      setWords([]); setHeard([]); setDiaryPages({}); setActivity([]);
+      setErrorLog({}); setTaskCount(0); setTodayDone({ task: false, vocab: false });
+      setProfile(null); setPlacementDone(false); setMemoryStore(DEFAULT_MEMORY_STORE);
+      await saveKey("esl-active-student-id", studentId);
+    }
+
+    currentStudentId = studentId;
+
+    // Supabase is the source of truth. Fetch and hydrate all five synced
+    // pieces — but write straight to state + localStorage without going
+    // through saveMemoryStore/scheduleMemoryPush, so receiving data doesn't
+    // immediately schedule a push of the same data straight back.
+    //
+    // The blob is { memoryStore, profile, words, diaryPages, activity }.
+    // Any row written before this field expanded holds the flat memoryStore
+    // object directly at the top level instead — detected by the absence of
+    // a `memoryStore` key, handled below so an old row doesn't get
+    // misread as a missing memoryStore. Either shape: a field genuinely
+    // ABSENT from what we received is left alone locally rather than
+    // overwritten with null — only a field that's PRESENT (even if its
+    // value is null, e.g. no profile yet) is applied.
+    const remoteMemory = await fetchStudentMemory(studentId);
+    if (remoteMemory) {
+      const isWrapped = typeof remoteMemory === "object" && "memoryStore" in remoteMemory;
+      const remoteStore = isWrapped ? remoteMemory.memoryStore : remoteMemory;
+      if (remoteStore !== undefined) {
+        setMemoryStore(remoteStore);
+        saveKey("esl-memory-store", remoteStore);
+      }
+      if (isWrapped) {
+        if (remoteMemory.profile !== undefined) { setProfile(remoteMemory.profile); saveKey("esl-profile", remoteMemory.profile); }
+        if (remoteMemory.words !== undefined) { setWords(remoteMemory.words); saveKey("esl-words", remoteMemory.words); }
+        if (remoteMemory.diaryPages !== undefined) { setDiaryPages(remoteMemory.diaryPages); saveKey("esl-diary-pages", remoteMemory.diaryPages); }
+        if (remoteMemory.activity !== undefined) { setActivity(remoteMemory.activity); saveKey("esl-activity", remoteMemory.activity); }
+      }
+    } else if (isDifferentStudent || !cachedId) {
+      // No memory row exists yet AND this wasn't already the locally-active
+      // student — genuinely the first session, not just a new device for a
+      // returning student. Only now does the "meet Leo" reveal make sense.
+      setShowLeoReveal(true);
+    }
+
+    setAuthUser(session.user);
+  }, []);
+
 
   const markActivity = useCallback(async () => {
     setActivity((prev) => {
       if (prev.includes(todayStr())) return prev;
       const next = [...prev, todayStr()].slice(-90);
       saveKey("esl-activity", next);
+      if (currentStudentId) scheduleMemoryPush(currentStudentId);
       return next;
     });
   }, []);
@@ -9062,26 +9216,13 @@ export default function App() {
     return (
       <div className="app">
         <style>{CSS}</style>
-        {authView === "landing" && <WelcomeLanding slide={landingSlide} setSlide={setLandingSlide} onSignUp={() => setAuthView("signup")} onSignIn={() => setAuthView("signin")} />}
-        {authView === "signup" && <SignUpPage onBack={() => setAuthView("landing")} onComplete={async (user) => {
-          // A new account must start clean — never inherit another student's
-          // word bank, lesson history, diary, error patterns, or Leo's memories.
-          // Storage first (persistent), then in-memory state (React).
-          await clearStudentData();
-          setWords([]); setHeard([]); setDiaryPages({}); setActivity([]);
-          setErrorLog({}); setTaskCount(0); setMemoryStore(DEFAULT_MEMORY_STORE);
-          setTodayDone({ task: false, vocab: false });
-          setAuthUser(user); setShowLeoReveal(true); setProfile(null); setPlacementDone(false);
-        }} />}
-        {authView === "signin" && <SignInPage onBack={() => setAuthView("landing")} onComplete={async (user) => {
-          setAuthUser(user);
-          const [savedProfile, savedPlacement] = await Promise.all([
-            loadKey("esl-profile", null),
-            loadKey("esl-placement", null),
-          ]);
-          setProfile(savedProfile);
-          setPlacementDone(!!savedPlacement);
-        }} />}
+        {magicLinkEmail
+          ? <CheckEmailPage email={magicLinkEmail} onBack={() => { setMagicLinkEmail(null); setAuthView("landing"); }} />
+          : <>
+              {authView === "landing" && <WelcomeLanding slide={landingSlide} setSlide={setLandingSlide} onSignUp={() => setAuthView("signup")} onSignIn={() => setAuthView("signin")} />}
+              {authView === "signup" && <SignUpPage onBack={() => setAuthView("landing")} onLinkSent={(email) => setMagicLinkEmail(email)} />}
+              {authView === "signin" && <SignInPage onBack={() => setAuthView("landing")} onLinkSent={(email) => setMagicLinkEmail(email)} />}
+            </>}
       </div>
     );
 
@@ -9114,6 +9255,7 @@ export default function App() {
              whether or not React batches the two updates together. */
           if (!wantsPlacement) await saveKey("esl-placement", { skipped: true, selfReported: p.level });
           await saveKey("esl-profile", p);
+          if (currentStudentId) scheduleMemoryPush(currentStudentId);
           setPlacementDone(!wantsPlacement);
           setProfile(p);
         }} />
@@ -9143,6 +9285,7 @@ export default function App() {
               const updatedProfile = { ...profile, level: r.overall };
               setProfile(updatedProfile);
               await saveKey("esl-profile", updatedProfile);
+              if (currentStudentId) scheduleMemoryPush(currentStudentId);
             }
             // ═══ PLACEMENT → ENTRY UNIT (Phase 3, Part B) ═══
             // Map the placement score to an entry unit and set the sequencer state.
@@ -9270,6 +9413,7 @@ export default function App() {
       if ((words || []).find((x) => x.word.toLowerCase() === w.toLowerCase())) return; // already saved
       const next = [{ word: w, date: todayStr() }, ...words].slice(0, WORD_BANK_CAP);
       setWords(next); await saveKey("esl-words", next);
+      if (currentStudentId) scheduleMemoryPush(currentStudentId);
       updateMemory((prev) => memTouchWord(prev, w));
     },
     /* Batched save for lesson completion. saveWord reads the `words` state
@@ -9295,6 +9439,7 @@ export default function App() {
       if (!fresh.length) return;
       const next = [...fresh, ...words].slice(0, WORD_BANK_CAP);
       setWords(next); await saveKey("esl-words", next);
+      if (currentStudentId) scheduleMemoryPush(currentStudentId);
     },
   };
 
