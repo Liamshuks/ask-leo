@@ -9613,8 +9613,8 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 /* ---- Completion feedback (every scored stage) ---- */
 .stage-complete{display:flex; flex-direction:column; align-items:center; text-align:center; padding:18px 10px 6px; gap:4px;}
 .sc-tick{margin-bottom:4px;}
-.sc-tick-ring{stroke:var(--euca); stroke-dasharray:145; stroke-dashoffset:145; animation:scRing .5s ease-out forwards;}
-.sc-tick-mark{stroke:var(--euca); stroke-dasharray:40; stroke-dashoffset:40; animation:scMark .35s .38s ease-out forwards;}
+.sc-tick-ring{stroke:var(--leo-green); stroke-dasharray:145; stroke-dashoffset:145; animation:scRing .5s ease-out forwards;}
+.sc-tick-mark{stroke:var(--leo-green); stroke-dasharray:40; stroke-dashoffset:40; animation:scMark .35s .38s ease-out forwards;}
 @keyframes scRing{to{stroke-dashoffset:0;}}
 @keyframes scMark{to{stroke-dashoffset:0;}}
 .sc-title{font-family:'Fraunces',serif; font-size:23px; font-weight:650; color:var(--euca-deep); margin:2px 0 0; animation:scRise .4s .35s both ease-out;}
