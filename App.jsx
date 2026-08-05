@@ -4311,6 +4311,100 @@ function VocabReviewExercise({ exercises, vocab, onVocabTap, onDone }) {
    A short press with no movement selects a word; tapping a meaning then matches
    it. Keyboard users get the identical two-step via Enter/Space. */
 /* ================================================================
+   parseIPA — derive syllable count and stressed syllable from IPA
+   ================================================================ */
+function parseIPA(ipa) {
+  if (!ipa) return null;
+  const clean = ipa.replace(/^[/\[]|[/\]]$/g, "").trim();
+  if (!clean) return null;
+  const parts = clean.split(".");
+  if (parts.length < 1) return null;
+  let stressIdx = -1;
+  const syllables = parts.map((p, i) => {
+    if (p.includes("\u02C8")) stressIdx = i;
+    return p.replace(/[\u02C8\u02CC]/g, "").trim();
+  });
+  if (stressIdx < 0 && syllables.length === 1) stressIdx = 0;
+  return { syllables, stressIdx, count: syllables.length };
+}
+
+/* ================================================================
+   PRON CARD — pronunciation-focused step-through card (§1)
+   No meaning, no example, no POS. Stress pattern, L1 note, pairs.
+   ================================================================ */
+function PronCard({ word, ipa, index, total, pronunciation, stressLabel, onNext, onVocabTap, lastLabel }) {
+  const [heard, setHeard] = useState("");
+  const isLast = index === total - 1;
+  const parsed = parseIPA(ipa);
+  return (
+    <div className="word-card" key={word + "-pron-" + index}>
+      <div className="wc-progress">
+        <span className="wc-progress-text">Sound {index + 1} of {total}</span>
+        <span className="wc-dots">{Array.from({ length: total }, (_, i) => (
+          <span key={i} className={"wc-dot" + (i < index ? " wc-dot-done" : i === index ? " wc-dot-current" : "")} />
+        ))}</span>
+      </div>
+      <div className="wc-word"><VocabToken word={word} onTap={onVocabTap} /></div>
+      {ipa && <div className="wc-ipa">{ipa}</div>}
+      {parsed && parsed.count > 1 && parsed.stressIdx >= 0 && (
+        <div className="pron-stress-row">
+          {parsed.syllables.map((syl, i) => (
+            <div key={i} className="pron-stress-item">
+              <span className={i === parsed.stressIdx ? "pron-stress-dot-filled" : "pron-stress-dot-outline"} />
+              <span className={i === parsed.stressIdx ? "pron-stress-label-stressed" : "pron-stress-label"}>{syl}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {pronunciation && (pronunciation.description || pronunciation.instructions) && (
+        <div className="pron-l1-note">
+          <p style={{ margin: 0, fontSize: 15, lineHeight: 1.5, color: "var(--text-primary)" }}>
+            {pronunciation.instructions || pronunciation.description}
+          </p>
+        </div>
+      )}
+      {pronunciation && pronunciation.correct && (
+        <div className="pron-pair">
+          <div className="pron-pair-correct">
+            <span>{"\u2713"} {Array.isArray(pronunciation.correct) ? pronunciation.correct.join(" \u00b7 ") : pronunciation.correct}</span>
+            {TTS_OK && <button className="link-btn small" onClick={() => speakText(String(Array.isArray(pronunciation.correct) ? pronunciation.correct[0] : pronunciation.correct))}>{"\uD83D\uDD0A"}</button>}
+          </div>
+          {pronunciation.incorrect && (
+            <div className="pron-pair-incorrect">
+              <span><s>{Array.isArray(pronunciation.incorrect) ? pronunciation.incorrect.join(" \u00b7 ") : pronunciation.incorrect}</s></span>
+              {TTS_OK && <button className="link-btn small" onClick={() => speakText(String(Array.isArray(pronunciation.incorrect) ? pronunciation.incorrect[0] : pronunciation.incorrect))}>{"\uD83D\uDD0A"}</button>}
+            </div>
+          )}
+        </div>
+      )}
+      {pronunciation && pronunciation.practiceWords && pronunciation.practiceWords.length > 0 && (
+        <div className="wc-practise-row">
+          <span className="muted small">Practise: </span>
+          {pronunciation.practiceWords.map((pw, j) => (
+            <span key={j}>{TTS_OK ? <button className="link-btn small" onClick={() => speakText(pw)}>{pw}</button> : <span className="small">{pw}</span>}{j < pronunciation.practiceWords.length - 1 ? " \u00b7 " : ""}</span>
+          ))}
+        </div>
+      )}
+      <div className="wc-actions">
+        {TTS_OK && <button className="ghost-btn wc-action-btn" onClick={() => speakText(word)}>{"\uD83D\uDD0A"} Hear it</button>}
+        <MicButton className="ghost-btn wc-action-btn" label="\uD83C\uDF99\uFE0F Say it" onText={(t) => setHeard(t)} />
+      </div>
+      {heard && <p className="wc-heard">I heard: "{heard}"</p>}
+      <button className="primary-btn wide wc-next" onClick={onNext}>{isLast ? (lastLabel || "Continue") : "Next \u2192"}</button>
+    </div>
+  );
+}
+function PronCardSequence({ words, onComplete, onVocabTap, lastLabel }) {
+  const [idx, setIdx] = useState(0);
+  const w = words[idx];
+  if (!w) return null;
+  return <PronCard key={w.word + "-" + idx} word={w.word} ipa={w.ipa} index={idx} total={words.length}
+    pronunciation={w._pronunciation || null} stressLabel={w.stress}
+    onNext={() => { if (idx < words.length - 1) setIdx(idx + 1); else onComplete(); }}
+    onVocabTap={onVocabTap} lastLabel={lastLabel} />;
+}
+
+/* ================================================================
    WORD CARD — step-through vocabulary/pronunciation card (§1–§11)
    Spec: WORD_CARD_SPECIFICATION.md. One word per screen. Tap Next.
    ================================================================ */
@@ -4684,7 +4778,7 @@ function PronunciationSection({ bp, onVocabTap, onSkip, onDone }) {
     <SectionShell title="Say it like a local"
       blurb={bp.pronunciation && bp.pronunciation.focus ? `Today\u2019s focus: ${bp.pronunciation.focus}.` : undefined}
       onSkip={onSkip}>
-      <WordCardSequence
+      <PronCardSequence
         words={enrichedWords}
         onComplete={() => setDone(true)}
         onVocabTap={onVocabTap}
@@ -5238,19 +5332,27 @@ function GrammarBoard({ boards, grammar, vocab, onVocabTap }) {
 function SummarySection({ bp, section, vocab, onVocabTap, onFinish }) {
   const s = section;
   return (
-    <Card className="leo-card">
-      <div className="lesson-head leo-accent"><h3 style={{ margin: 0 }}>That's today's lesson</h3></div>
-      <p className="text-leo"><VocabText text={s.praise} vocab={vocab} onTap={onVocabTap} /></p>
-      <div className="card" style={{ marginTop: "var(--space-3)", marginBottom: "var(--space-3)" }}>
+    <div className="summary-flow">
+      {/* §2.2.1 Drawn tick */}
+      <div className="sc-tick-wrap" style={{ animation: "scRise .4s ease-out both" }}>
+        <svg className="sc-tick" viewBox="0 0 52 52"><circle className="sc-ring" cx="26" cy="26" r="22" /><path className="sc-mark" d="M15 27l7 7 15-15" /></svg>
+      </div>
+      <h3 className="summary-heading" style={{ animation: "scRise .4s ease-out both", animationDelay: "0.5s", opacity: 0 }}>That's today done</h3>
+      <p className="text-leo summary-praise" style={{ animation: "scRise .4s ease-out both", animationDelay: "0.8s", opacity: 0 }}><VocabText text={s.praise} vocab={vocab} onTap={onVocabTap} /></p>
+      <div className="card summary-built" style={{ animation: "scRise .4s ease-out both", animationDelay: "1.1s", opacity: 0 }}>
         <p className="gram-section-label">What you built today</p>
         <p className="muted"><VocabText text={s.summary} vocab={vocab} onTap={onVocabTap} /></p>
       </div>
-      <p className="text-leo"><strong>Your strength today:</strong> {s.strength}</p>
-      <p className="text-leo"><strong>One thing to work on:</strong> {s.improvement}</p>
-      <div className="mission-box"><span className="mission-icon">🌏</span><p><VocabText text={bp.mission} vocab={vocab} onTap={onVocabTap} /></p></div>
-      <p className="lesson-tomorrow"><strong>Next time:</strong> {s.tomorrowPreview}</p>
-      <button className="primary-btn wide" style={{ marginTop: "var(--space-4)" }} onClick={onFinish}>Finish lesson</button>
-    </Card>
+      <div style={{ animation: "scRise .4s ease-out both", animationDelay: "1.4s", opacity: 0 }}>
+        <p className="text-leo"><strong>{"\uD83D\uDCAA"} Your strength:</strong> {s.strength}</p>
+        <p className="text-leo"><strong>{"\uD83C\uDFAF"} One thing to work on:</strong> {s.improvement}</p>
+      </div>
+      <div className="mission-box" style={{ animation: "scRise .4s ease-out both", animationDelay: "1.7s", opacity: 0 }}>
+        <span className="mission-icon">{"\uD83C\uDF0F"}</span><p><VocabText text={bp.mission} vocab={vocab} onTap={onVocabTap} /></p>
+      </div>
+      {s.tomorrowPreview && <p className="lesson-tomorrow" style={{ animation: "scRise .4s ease-out both", animationDelay: "2.0s", opacity: 0 }}><strong>Next time:</strong> {s.tomorrowPreview}</p>}
+      <button className="primary-btn wide" style={{ marginTop: "var(--space-5)", animation: "scRise .4s ease-out both", animationDelay: "2.3s", opacity: 0 }} onClick={onFinish}>Finish lesson</button>
+    </div>
   );
 }
 
@@ -7464,16 +7566,61 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
     );
   }
 
-  if (phase === "done") return (
-    <div>
-      <SectionTitle>Leo's Lesson</SectionTitle>
-      <Card>
-        <div className="lesson-head leo-accent"><h3 style={{ margin: 0 }}>Lesson complete! 🎉</h3></div>
-        <p className="muted">Great work today{bp ? ` on “${bp.context}”` : ""}. Small steps every day add up — Leo's proud of you.</p>
-        <button className="primary-btn wide" style={{ marginTop: 14 }} onClick={async () => { setLesson(null); await saveKey("esl-task:" + todayStr(), null); setPhase("chooser"); }}>Do another lesson</button>
-      </Card>
-    </div>
-  );
+  if (phase === "done") {
+    const unitRec = currentUnitRecord;
+    const store = leoMemory && leoMemory.store;
+    const unitNum = store && store.currentUnit;
+    const lessonNum = store && store.lessonInUnit;
+    const lastHistory = store && store.unitHistory && store.unitHistory[store.unitHistory.length - 1];
+    const justCompleted = lastHistory && lastHistory.unit === (unitNum ? unitNum - 1 : 0) && (lastHistory.status === "complete" || lastHistory.status === "force_complete");
+    const completedUnit = justCompleted && UNIT_RECORDS.find(r => r.unit === lastHistory.unit);
+    const nextUnit = unitNum && UNIT_RECORDS.find(r => r.unit === unitNum);
+    const resetLesson = async () => { setLesson(null); await saveKey("esl-task:" + todayStr(), null); setPhase("chooser"); };
+    const goHome = () => { setLesson(null); setPhase("loading"); };
+    return (
+      <div>
+        <SectionTitle>Leo’s Lesson</SectionTitle>
+        <div className="summary-flow">
+          <div className="sc-tick-wrap" style={{ animation: "scRise .4s ease-out both" }}>
+            <svg className="sc-tick" viewBox="0 0 52 52"><circle className="sc-ring" cx="26" cy="26" r="22" /><path className="sc-mark" d="M15 27l7 7 15-15" /></svg>
+          </div>
+          <h3 className="summary-heading" style={{ animation: "scRise .4s ease-out both", animationDelay: "0.5s", opacity: 0 }}>Lesson complete</h3>
+          {unitRec && store ? (
+            <div className="card" style={{ textAlign: "left", margin: "var(--space-4) 0", animation: "scRise .4s ease-out both", animationDelay: "0.8s", opacity: 0 }}>
+              {justCompleted && completedUnit ? (
+                <>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <p style={{ fontSize: 17, fontWeight: 600, margin: 0, color: "var(--text-primary)" }}>Unit {completedUnit.unit}: {completedUnit.theme}</p>
+                    <span className="gram-section-label" style={{ margin: 0 }}>Complete ✓</span>
+                  </div>
+                  <div className="step-dots" style={{ justifyContent: "flex-start", margin: "var(--space-2) 0" }}>
+                    {Array.from({ length: lastHistory.lessonsSpent || 1 }, (_, i) => (<span key={i} className="step-dot step-dot-done" />))}
+                  </div>
+                  {nextUnit && nextUnit.unit <= 22 && <p className="muted small" style={{ margin: "var(--space-2) 0 0" }}>Next unit: {nextUnit.theme}</p>}
+                  {unitNum > 22 && <p className="muted small" style={{ margin: "var(--space-2) 0 0" }}>You’ve completed the A1 programme.</p>}
+                </>
+              ) : (
+                <>
+                  <p style={{ fontSize: 17, fontWeight: 600, margin: 0, color: "var(--text-primary)" }}>Unit {unitRec.unit}: {unitRec.theme}</p>
+                  {lessonNum && <p className="muted small" style={{ margin: "var(--space-1) 0 0" }}>Lesson {lessonNum} of this unit</p>}
+                  <div className="step-dots" style={{ justifyContent: "flex-start", margin: "var(--space-2) 0" }}>
+                    {Array.from({ length: Math.min(5, lessonNum || 1) }, (_, i) => (<span key={i} className={"step-dot" + (i < (lessonNum || 1) ? " step-dot-done" : "")} />))}
+                  </div>
+                  {unitRec.grammar && <p className="muted small" style={{ margin: "var(--space-1) 0 0" }}>Coming up: {unitRec.grammar.point}</p>}
+                </>
+              )}
+            </div>
+          ) : (
+            <p className="muted" style={{ animation: "scRise .4s ease-out both", animationDelay: "0.8s", opacity: 0 }}>Great work today{bp ? ` on "${bp.context}"` : ""}. Small steps every day add up.</p>
+          )}
+          <div style={{ animation: "scRise .4s ease-out both", animationDelay: "1.1s", opacity: 0, display: "flex", flexDirection: "column", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
+            <button className="primary-btn wide" onClick={resetLesson}>Do another lesson</button>
+            <button className="ghost-btn wide" onClick={goHome}>Back to home</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // phase === "lesson"
   const stage = LESSON_STAGES[lesson.stage];
@@ -9557,6 +9704,27 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .wc-pron-incorrect{font-size:15px; color:var(--text-secondary); opacity:0.5; margin:0;}
 .wc-practise-row{margin-bottom:var(--space-2);}
 .wc-next{margin-top:var(--space-5);}
+
+/* ═══ PRON CARD CSS (THREE_DESIGN_BRIEFS §1) ═══ */
+.pron-stress-row{display:flex; gap:12px; justify-content:center; align-items:flex-end; margin:var(--space-4) 0;}
+.pron-stress-item{display:flex; flex-direction:column; align-items:center; gap:4px;}
+.pron-stress-dot-filled{width:14px; height:14px; border-radius:50%; background:var(--leo-green);}
+.pron-stress-dot-outline{width:10px; height:10px; border-radius:50%; border:1.5px solid var(--text-tertiary); box-sizing:border-box;}
+.pron-stress-label-stressed{font-size:13px; font-weight:600; color:var(--leo-green);}
+.pron-stress-label{font-size:13px; font-weight:400; color:var(--text-secondary);}
+.pron-l1-note{background:#FFF7E6; border-left:3px solid var(--wattle); border-radius:0 10px 10px 0; padding:12px 14px; margin:var(--space-4) 0;}
+.pron-pair{margin:var(--space-3) 0;}
+.pron-pair-correct{display:flex; align-items:center; gap:8px; font-size:16px; font-weight:500; color:var(--leo-green); margin-bottom:var(--space-1);}
+.pron-pair-incorrect{display:flex; align-items:center; gap:8px; font-size:16px; font-weight:400; color:var(--text-secondary); opacity:0.5;}
+
+/* ═══ SUMMARY FLOW CSS (THREE_DESIGN_BRIEFS §2) ═══ */
+.summary-flow{text-align:center; padding:var(--space-4) 0;}
+.summary-heading{font-family:'Fraunces',serif; font-size:22px; font-weight:600; color:var(--text-primary); margin:var(--space-3) 0;}
+.summary-praise{text-align:left; margin:var(--space-4) 0;}
+.summary-built{text-align:left; margin:var(--space-4) 0;}
+.sc-tick-wrap{display:flex; justify-content:center;}
+.sc-tick{width:52px; height:52px;}
+@media(prefers-reduced-motion:reduce){.summary-flow [style*="animationDelay"]{animation:none !important; opacity:1 !important;}}
 @media(prefers-reduced-motion:reduce){.word-card{animation:none; opacity:1; transform:translateY(0);}}
 
 /* ═══ VISUAL REDESIGN CSS (FULL_VISUAL_REDESIGN_SPECIFICATION) ═══ */
