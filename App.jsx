@@ -9106,7 +9106,10 @@ export default function App() {
         loadKey("esl-placement", null),
       ]);
       setProfile(p); setDiaryPages(e); setWords(w); setHeard(h); setActivity(a); setErrorLog(el); setTaskCount(tc);
-      setPlacementDone(!!pl);
+      // Same Continuity Integrity fix as the remote hydrate below: don't let
+      // placementDone depend solely on the esl-placement local key. If the
+      // locally-cached profile already carries a level, placement is done.
+      setPlacementDone(!!pl || !!(p && p.level));
       // C1: daily lesson completion is a sticky per-day flag, independent of the
       // current lesson draft. Fall back to a legacy finished draft so learners
       // who completed today under the old scheme still show as done.
@@ -9173,7 +9176,17 @@ export default function App() {
         saveKey("esl-memory-store", remoteStore);
       }
       if (isWrapped) {
-        if (remoteMemory.profile !== undefined) { setProfile(remoteMemory.profile); saveKey("esl-profile", remoteMemory.profile); }
+        if (remoteMemory.profile !== undefined) {
+          setProfile(remoteMemory.profile);
+          saveKey("esl-profile", remoteMemory.profile);
+          // Continuity Integrity fix: placementDone must never depend solely on
+          // the separately-tracked esl-placement key. Any hydrate that brings in
+          // a profile with a level already set means placement is done, full
+          // stop — regardless of what the local placementDone flag says. This is
+          // what stops a fully-onboarded returning student being routed back
+          // through the placement gate on a new/different device.
+          if (remoteMemory.profile && remoteMemory.profile.level) setPlacementDone(true);
+        }
         if (remoteMemory.words !== undefined) { setWords(remoteMemory.words); saveKey("esl-words", remoteMemory.words); }
         if (remoteMemory.diaryPages !== undefined) { setDiaryPages(remoteMemory.diaryPages); saveKey("esl-diary-pages", remoteMemory.diaryPages); }
         if (remoteMemory.activity !== undefined) { setActivity(remoteMemory.activity); saveKey("esl-activity", remoteMemory.activity); }
