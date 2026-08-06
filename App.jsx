@@ -9109,7 +9109,14 @@ export default function App() {
       // Same Continuity Integrity fix as the remote hydrate below: don't let
       // placementDone depend solely on the esl-placement local key. If the
       // locally-cached profile already carries a level, placement is done.
-      setPlacementDone(!!pl || !!(p && p.level));
+      // Functional update, not a plain set: this local-storage load and the
+      // remote Supabase hydrate in handleSessionEstablished both run on
+      // mount as independent async effects with no ordering guarantee. If
+      // the remote hydrate already confirmed placementDone === true (it
+      // fetched the real profile from Supabase), this local read — which
+      // only knows what's in local storage, empty on a fresh device — must
+      // never downgrade that back to false. Once confirmed true, stays true.
+      setPlacementDone((prev) => prev === true ? true : (!!pl || !!(p && p.level)));
       // C1: daily lesson completion is a sticky per-day flag, independent of the
       // current lesson draft. Fall back to a legacy finished draft so learners
       // who completed today under the old scheme still show as done.
