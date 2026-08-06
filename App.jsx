@@ -4586,6 +4586,15 @@ function VocabularySection({ bp, onVocabTap, leoMemory, onSkip, onDone }) {
     let s = 7919;
     for (const ch of (bp.context || "")) s = (s * 31 + ch.charCodeAt(0)) & 0x7fffffff;
     for (let i = arr.length - 1; i > 0; i--) { s = (s * 1103515245 + 12345) & 0x7fffffff; const j = s % (i + 1); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+    // Derangement guarantee: no position may hold its own original item — a
+    // student must never be able to read row N's meaning as row N's word.
+    // A Fisher-Yates shuffle CAN legitimately leave a position unmoved by
+    // chance (more likely on short lists). If it does, fall back to a full
+    // rotation: since every item is distinct, rotating by 1 guarantees
+    // position i now holds items[(i+1) % n] — never items[i] — for n > 1.
+    if (arr.length > 1 && arr.some((it, i) => it === items[i])) {
+      return [...items.slice(1), items[0]];
+    }
     return arr;
   });
   const [matched, setMatched] = useState({});      // word -> defIndex (0 is valid!)
@@ -4823,25 +4832,26 @@ function VocabularySection({ bp, onVocabTap, leoMemory, onSkip, onDone }) {
 
 /* ---------- Stage 3: Pronunciation — model, listen, try ---------- */
 function PronunciationSection({ bp, onVocabTap, onSkip, onDone }) {
-  // §10.2: word cards for ALL vocabulary words, with pronunciation data attached
-  // where a matching focusSection exists.
+  // Defect 4 fix: cards are built DIRECTLY from focusSections — each one
+  // already carries everything a card needs (targetWord, ipa, instructions,
+  // practiceWords, correct, incorrect). No backward matching onto
+  // bp.vocabulary: the prompt explicitly allows a focus word to come from a
+  // grammar example or functional-language phrase, not just the vocabulary
+  // set, so matching against vocabulary alone silently dropped real data.
   const focusSections = bp.pronunciation && bp.pronunciation.focusSections;
-  const vocabItems = (bp.vocabulary || []).slice(0, 8);
   const [done, setDone] = useState(false);
   const [everSpoke, setEverSpoke] = useState(false);
 
-  // Enrich vocab items with pronunciation data where a focus section matches
-  const enrichedWords = React.useMemo(() => {
-    return vocabItems.map((v) => {
-      if (!focusSections) return v;
-      // Match by targetWord or by checking if the word appears in practiceWords
-      const match = focusSections.find((fs) =>
-        (fs.targetWord && fs.targetWord.toLowerCase() === v.word.toLowerCase()) ||
-        (fs.targetWords && fs.targetWords.some(tw => tw.word && tw.word.toLowerCase() === v.word.toLowerCase()))
-      );
-      return match ? { ...v, _pronunciation: match } : v;
-    });
-  }, [vocabItems, focusSections]);
+  const cards = React.useMemo(() => {
+    if (focusSections && focusSections.length > 0) {
+      return focusSections
+        .filter((fs) => fs.targetWord)
+        .map((fs) => ({ word: fs.targetWord, ipa: fs.ipa, _pronunciation: fs }));
+    }
+    // No focus data at all — fall back to bare vocabulary cards, same as
+    // before this fix (word + IPA + Hear it + Next, no pronunciation block).
+    return (bp.vocabulary || []).slice(0, 8);
+  }, [bp.vocabulary, focusSections]);
 
   if (done) return (
     <SectionShell title="Say it like a local" onSkip={onSkip}>
@@ -4860,7 +4870,7 @@ function PronunciationSection({ bp, onVocabTap, onSkip, onDone }) {
       blurb={bp.pronunciation && bp.pronunciation.focus ? `Today\u2019s focus: ${bp.pronunciation.focus}.` : undefined}
       onSkip={onSkip}>
       <PronCardSequence
-        words={enrichedWords}
+        words={cards}
         onComplete={() => setDone(true)}
         onVocabTap={onVocabTap}
         lastLabel="Continue"
@@ -6913,7 +6923,7 @@ function buildTeacherContext({ profile, memoryStore, words, heard, diaryPages, a
   return lines.filter((l) => l !== "").join("\n");
 }
 
-function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, activity, errorLog, stats, markActivity, bumpTasks }) {
+function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, activity, errorLog, stats, markActivity, bumpTasks, onExit }) {
   const level = levelFor(profile);
 
   const [phase, setPhase] = useState("loading");   // loading | chooser | planning | lesson | done
@@ -7657,7 +7667,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
     const completedUnit = justCompleted && UNIT_RECORDS.find(r => r.unit === lastHistory.unit);
     const nextUnit = unitNum && UNIT_RECORDS.find(r => r.unit === unitNum);
     const resetLesson = async () => { setLesson(null); await saveKey("esl-task:" + todayStr(), null); setPhase("chooser"); };
-    const goHome = () => { setLesson(null); setPhase("loading"); };
+    const goHome = () => { setLesson(null); onExit(); };
     return (
       <div>
         <SectionTitle>Leo’s Lesson</SectionTitle>
@@ -9175,6 +9185,15 @@ export default function App() {
       setShowLeoReveal(true);
     }
 
+    // Defect 1: a session re-establishing on an already-mounted app (page
+    // reload, magic link tap) does not unmount the app, so page/tab state
+    // from before simply sits there — including "task" (mid-lesson). Always
+    // return to home on (re)establishment. This does NOT touch placementDone
+    // or profile: if either is genuinely incomplete, that gate is correct
+    // behaviour, not a navigation bug, and must still show.
+    setPage(null);
+    setTab("today");
+
     setAuthUser(session.user);
   }, []);
 
@@ -9465,7 +9484,7 @@ export default function App() {
             )}
             {page === "progress" && <ProgressPage stats={stats} />}
             {page === "diary" && <DiaryPage profile={profile} memory={memory} leoMemory={leoMemory} pages={diaryPages} setPages={setDiaryPages} markActivity={markActivity} addErrors={addErrors} />}
-            {page === "task" && <LessonPage profile={profile} memory={memory} leoMemory={leoMemory} words={words} heard={heard} diaryPages={diaryPages} activity={activity} errorLog={errorLog} stats={stats} markActivity={markActivity} bumpTasks={bumpTasks} />}
+            {page === "task" && <LessonPage profile={profile} memory={memory} leoMemory={leoMemory} words={words} heard={heard} diaryPages={diaryPages} activity={activity} errorLog={errorLog} stats={stats} markActivity={markActivity} bumpTasks={bumpTasks} onExit={() => goTo(null)} />}
             {page === "questions" && <QuestionsPage profile={profile} memory={memory} leoMemory={leoMemory} pendingAsk={pendingAsk} onPendingHandled={() => setPendingAsk(null)} markActivity={markActivity} onOpenAustralia={(term) => { setAusQuery(term); goTo("australia"); }} />}
             {page === "dictionary" && <DictionaryPage profile={profile} words={words} setWords={setWords} markActivity={markActivity} onAskLeo={askLeo} leoMemory={leoMemory} />}
             {page === "vocab" && <ReviewPage profile={profile} memory={memory} leoMemory={leoMemory} words={words} heard={heard} diaryPages={diaryPages} markActivity={markActivity} />}
