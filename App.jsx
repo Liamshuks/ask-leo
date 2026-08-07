@@ -6867,8 +6867,8 @@ const LESSON_STAGES = [
 function buildTeacherContext({ profile, memoryStore, words, heard, diaryPages, activity, errorLog, stats }) {
   const level = levelFor(profile);
   const lang = LANGS[profile.lang].english;
-  const lastLesson = memoryStore.lessonLog[0];
-  const last3 = memoryStore.lessonLog.slice(0, 3);
+  const lastLesson = (memoryStore.lessonLog || [])[0];
+  const last3 = (memoryStore.lessonLog || []).slice(0, 3);
   const recentScores = last3.filter((l) => typeof l.score === "number").map((l) => `${l.scenario}: ${l.score}/${l.total}`);
   const recentDiary = memoryStore.diaryFeedbackLog.slice(0, 2);
   const recentQuestions = (memoryStore.questionLog || []).slice(0, 4).map((q) => q.text);
@@ -9127,10 +9127,12 @@ export default function App() {
       // truth for WHO is signed in — local data above is provisional until
       // this confirms whose data it actually is.
       const { data: { session } } = await supabase.auth.getSession();
+      console.log(`[DIAG] getSession() resolved at ${Date.now()}, session=${session ? 'YES, access_token present: ' + !!session.access_token : 'null'}`);
       if (session) await handleSessionEstablished(session);
       else setAuthUser(null);
 
       supabase.auth.onAuthStateChange(async (event, newSession) => {
+        console.log(`[DIAG] onAuthStateChange fired at ${Date.now()}, event=${event}, hasSession=${!!newSession}`);
         if (event === "SIGNED_IN" && newSession) await handleSessionEstablished(newSession);
         else if (event === "SIGNED_OUT") {
           currentStudentId = null;
@@ -9174,7 +9176,9 @@ export default function App() {
     // ABSENT from what we received is left alone locally rather than
     // overwritten with null — only a field that's PRESENT (even if its
     // value is null, e.g. no profile yet) is applied.
+    console.log(`[DIAG] fetchStudentMemory firing at ${Date.now()} for studentId=${studentId}`);
     const remoteMemory = await fetchStudentMemory(studentId);
+    console.log(`[DIAG] fetchStudentMemory resolved at ${Date.now()}, result=${remoteMemory ? 'DATA' : 'NULL/EMPTY'}`);
     if (remoteMemory) {
       const isWrapped = typeof remoteMemory === "object" && "memoryStore" in remoteMemory;
       const remoteStore = isWrapped ? remoteMemory.memoryStore : remoteMemory;
@@ -9359,7 +9363,7 @@ export default function App() {
   };
   const masteryCounts = Object.values(memoryStore.wordMastery).reduce((acc, e) => { acc[e.stage] = (acc[e.stage] || 0) + 1; return acc; }, {});
   const strongWords = (masteryCounts.confident || 0) + (masteryCounts.mastered || 0);
-  const lastLesson = memoryStore.lessonLog[0];
+  const lastLesson = (memoryStore.lessonLog || [])[0];
   // H3: words the learner has met (incl. Heard Today) but not yet mastered, so
   // Leo can recycle them into lessons/recommendations. M6: their recent questions.
   const recycleWords = Object.entries(memoryStore.wordMastery)
