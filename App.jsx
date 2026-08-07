@@ -6867,8 +6867,8 @@ const LESSON_STAGES = [
 function buildTeacherContext({ profile, memoryStore, words, heard, diaryPages, activity, errorLog, stats }) {
   const level = levelFor(profile);
   const lang = LANGS[profile.lang].english;
-  const lastLesson = memoryStore.lessonLog[0];
-  const last3 = memoryStore.lessonLog.slice(0, 3);
+  const lastLesson = (memoryStore.lessonLog || [])[0];
+  const last3 = (memoryStore.lessonLog || []).slice(0, 3);
   const recentScores = last3.filter((l) => typeof l.score === "number").map((l) => `${l.scenario}: ${l.score}/${l.total}`);
   const recentDiary = memoryStore.diaryFeedbackLog.slice(0, 2);
   const recentQuestions = (memoryStore.questionLog || []).slice(0, 4).map((q) => q.text);
@@ -9363,7 +9363,7 @@ export default function App() {
   };
   const masteryCounts = Object.values(memoryStore.wordMastery).reduce((acc, e) => { acc[e.stage] = (acc[e.stage] || 0) + 1; return acc; }, {});
   const strongWords = (masteryCounts.confident || 0) + (masteryCounts.mastered || 0);
-  const lastLesson = memoryStore.lessonLog[0];
+  const lastLesson = (memoryStore.lessonLog || [])[0];
   // H3: words the learner has met (incl. Heard Today) but not yet mastered, so
   // Leo can recycle them into lessons/recommendations. M6: their recent questions.
   const recycleWords = Object.entries(memoryStore.wordMastery)
