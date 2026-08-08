@@ -4925,8 +4925,6 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
   const [phase, setPhase] = useState("speak"); // "speak" | "critical" | "done"
-  // Auto-play opener on mount so the student hears Leo's first line immediately.
-  React.useEffect(() => { if (TTS_OK) speakText(opener); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const leoTurns = turns.filter((t) => t.role === "leo").length;
   const youTurns = turns.filter((t) => t.role === "you").length;
 
@@ -4941,7 +4939,7 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
         `You are Leo, one of Australia's best ELICOS teachers, in a speaking practice about "${bp.context}" with your student (${memory}).\nObjective: ${bp.communicativeObjective}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\nFinal task they are building toward: ${bp.finalTask || bp.communicativeObjective}\nEmotional objective: ${bp.emotionalObjective || "build confidence"}${discussionCtx}\n\nBehave like a real teacher: respond to WHAT they said, sound curious and warm, ask ONE genuine follow-up question. Encourage communication over perfection. If they make a predicted mistake, gently recast it — but never interrupt the flow. Keep it to 2-3 natural sentences.\n\n${convo}\n\nThe student just said: "${said}"\n\nReply as the teacher in plain text only.${narrationGuidance(bp.cefr, "corrective")}`,
         { intent: "speaking_reply" }
       );
-      setTurns((t) => { const updated = [...t, { role: "leo", text: raw }]; if (TTS_OK) speakText(raw); return updated; });
+      setTurns((t) => [...t, { role: "leo", text: raw }]);
     } catch {
       setTurns((t) => [...t, { role: "leo", text: "Good — keep going! What would you say next?" }]);
     }
