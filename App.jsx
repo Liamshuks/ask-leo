@@ -9127,12 +9127,10 @@ export default function App() {
       // truth for WHO is signed in — local data above is provisional until
       // this confirms whose data it actually is.
       const { data: { session } } = await supabase.auth.getSession();
-      console.log(`[DIAG] getSession() resolved at ${Date.now()}, session=${session ? 'YES, access_token present: ' + !!session.access_token : 'null'}`);
       if (session) await handleSessionEstablished(session);
       else setAuthUser(null);
 
       supabase.auth.onAuthStateChange(async (event, newSession) => {
-        console.log(`[DIAG] onAuthStateChange fired at ${Date.now()}, event=${event}, hasSession=${!!newSession}`);
         if (event === "SIGNED_IN" && newSession) await handleSessionEstablished(newSession);
         else if (event === "SIGNED_OUT") {
           currentStudentId = null;
@@ -9176,9 +9174,7 @@ export default function App() {
     // ABSENT from what we received is left alone locally rather than
     // overwritten with null — only a field that's PRESENT (even if its
     // value is null, e.g. no profile yet) is applied.
-    console.log(`[DIAG] fetchStudentMemory firing at ${Date.now()} for studentId=${studentId}`);
     const remoteMemory = await fetchStudentMemory(studentId);
-    console.log(`[DIAG] fetchStudentMemory resolved at ${Date.now()}, result=${remoteMemory ? 'DATA' : 'NULL/EMPTY'}`);
     if (remoteMemory) {
       const isWrapped = typeof remoteMemory === "object" && "memoryStore" in remoteMemory;
       const remoteStore = isWrapped ? remoteMemory.memoryStore : remoteMemory;
@@ -9309,7 +9305,14 @@ export default function App() {
   // accessing the app. Returning students who already have results skip straight
   // to the home screen. The assessed CEFR level overwrites the self-reported one
   // so every future lesson targets the right difficulty from day one.
-  if (placementDone === false)
+  // Defensive gate: don't trust placementDone alone. Its value depends on
+  // multiple hydrate/wipe paths racing on mount, and even with those fixed,
+  // no single flag should be the last line of defence for something this
+  // important. If the student's profile already carries a level, placement
+  // is done by definition, however placementDone got set. Same "derive from
+  // profile.level, don't trust a separate flag" principle already applied
+  // at the two hydrate paths above — now also applied at the gate itself.
+  if (placementDone === false && !(profile && profile.level))
     return (
       <div className="app">
         <style>{CSS}</style>
