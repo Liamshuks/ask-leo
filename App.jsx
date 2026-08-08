@@ -2702,8 +2702,8 @@ function buildUnitContext(unitRecord, lessonInUnit, store) {
         `From Unit ${r.unit} (${r.theme}): ${r.items.join(", ")} [${r.type}]`
       ).join("\n")
     : "No specific recycling targets for this lesson.";
-  const feedsForwardBlock = u.feedsForward.length
-    ? "WHERE TODAY'S LANGUAGE RETURNS:\n" + u.feedsForward.map(f =>
+  const feedsForwardBlock = (u.feedsForward || []).length
+    ? "WHERE TODAY'S LANGUAGE RETURNS:\n" + (u.feedsForward || []).map(f =>
         `Unit ${f.unit}: ${f.items.join(", ")} \u2192 ${f.what}`
       ).join("\n")
     : "";
@@ -2714,7 +2714,7 @@ function buildUnitContext(unitRecord, lessonInUnit, store) {
   const isFirst = (store.lessonsCompleted || 0) === 0;
   const firstNote = isFirst ? "\nThis is the student's first lesson with Leo. Do not reference prior Leo interactions." : "";
 
-  return `\n\u2550\u2550\u2550 TODAY'S UNIT \u2550\u2550\u2550\n\nUnit ${u.unit}: ${u.theme} (Block: ${u.block})\nLesson ${lessonInUnit} of this unit.\n\nCAN-DO OUTCOMES for this unit:\n${u.canDo.map(c => "- " + c).join("\n")}\n\nGRAMMAR FOCUS: ${u.grammar.point}\n${u.grammar.relatedPoints.length ? "Related (recycled, NOT new): " + u.grammar.relatedPoints.join(", ") : ""}\n${u.grammar.homeUnit ? "This unit is the HOME UNIT for this grammar point \u2014 teach it as new." : "This grammar point was introduced in an earlier unit \u2014 recycle it, do not re-teach from scratch."}\n\nCORE VOCABULARY (teach to every student, 4\u20138 per lesson from this pool):\n${u.coreVocab.join(", ")}\n\nEXTENSION VOCABULARY (teach only when the personalisation test passes):\n${u.extensionVocab.join(", ")}\n\nExpected cards this lesson: ${u.expectedCards}. Do not pad beyond this range.\n\nFUNCTIONAL LANGUAGE: ${u.functionalLanguage.join(" \u00b7 ")}\n\nPRONUNCIATION FOCUS: ${u.pronunciation.focus} \u2014 ${u.pronunciation.detail}\n\n${recycleBlock}\n\n${feedsForwardBlock}\n\nPERSONALISATION: ${u.personalisationNotes}\n${pBlock}${firstNote}\n\nYOUR FREEDOM WITHIN THIS UNIT: Choose the communicative SITUATION that brings the can-do outcomes alive for THIS student. The unit says WHAT to teach; you decide the scenario, the authentic material, the memorable moment, and the mission.\n\nYOUR CONSTRAINT: do not teach grammar, vocabulary, or pronunciation outside what this unit specifies. If today's student needs something outside this unit, note it in your analysis as \"needed but belongs in Unit X\" \u2014 the sequencer will get them there.\n`;
+  return `\n\u2550\u2550\u2550 TODAY'S UNIT \u2550\u2550\u2550\n\nUnit ${u.unit}: ${u.theme} (Block: ${u.block})\nLesson ${lessonInUnit} of this unit.\n\nCAN-DO OUTCOMES for this unit:\n${(u.canDo || []).map(c => "- " + c).join("\n")}\n\nGRAMMAR FOCUS: ${(u.grammar || {}).point}\n${((u.grammar || {}).relatedPoints || []).length ? "Related (recycled, NOT new): " + ((u.grammar || {}).relatedPoints || []).join(", ") : ""}\n${(u.grammar || {}).homeUnit ? "This unit is the HOME UNIT for this grammar point \u2014 teach it as new." : "This grammar point was introduced in an earlier unit \u2014 recycle it, do not re-teach from scratch."}\n\nCORE VOCABULARY (teach to every student, 4\u20138 per lesson from this pool):\n${(u.coreVocab || []).join(", ")}\n\nEXTENSION VOCABULARY (teach only when the personalisation test passes):\n${(u.extensionVocab || []).join(", ")}\n\nExpected cards this lesson: ${u.expectedCards}. Do not pad beyond this range.\n\nFUNCTIONAL LANGUAGE: ${(u.functionalLanguage || []).join(" \u00b7 ")}\n\nPRONUNCIATION FOCUS: ${(u.pronunciation || {}).focus} \u2014 ${(u.pronunciation || {}).detail}\n\n${recycleBlock}\n\n${feedsForwardBlock}\n\nPERSONALISATION: ${u.personalisationNotes}\n${pBlock}${firstNote}\n\nYOUR FREEDOM WITHIN THIS UNIT: Choose the communicative SITUATION that brings the can-do outcomes alive for THIS student. The unit says WHAT to teach; you decide the scenario, the authentic material, the memorable moment, and the mission.\n\nYOUR CONSTRAINT: do not teach grammar, vocabulary, or pronunciation outside what this unit specifies. If today's student needs something outside this unit, note it in your analysis as \"needed but belongs in Unit X\" \u2014 the sequencer will get them there.\n`;
 }
 
 
@@ -6870,20 +6870,20 @@ function buildTeacherContext({ profile, memoryStore, words, heard, diaryPages, a
   const lastLesson = (memoryStore.lessonLog || [])[0];
   const last3 = (memoryStore.lessonLog || []).slice(0, 3);
   const recentScores = last3.filter((l) => typeof l.score === "number").map((l) => `${l.scenario}: ${l.score}/${l.total}`);
-  const recentDiary = memoryStore.diaryFeedbackLog.slice(0, 2);
+  const recentDiary = (memoryStore.diaryFeedbackLog || []).slice(0, 2);
   const recentQuestions = (memoryStore.questionLog || []).slice(0, 4).map((q) => q.text);
-  const masteryEntries = Object.entries(memoryStore.wordMastery);
+  const masteryEntries = Object.entries(memoryStore.wordMastery || {});
   const mastered = masteryEntries.filter(([, e]) => e.stage === "mastered" || e.stage === "confident");
   const weak = masteryEntries.filter(([, e]) => e.stage === "new" || e.stage === "seen").slice(0, 8);
   const practised = masteryEntries.filter(([, e]) => e.stage === "practised").slice(0, 5);
   const streak = computeStreak(activity);
   // Lifetime facts, never derived from the trimmed log — see DEFAULT_MEMORY_STORE.
   const totalLessons = Number.isFinite(memoryStore.lessonsCompleted)
-    ? memoryStore.lessonsCompleted : memoryStore.lessonLog.length;
+    ? memoryStore.lessonsCompleted : (memoryStore.lessonLog || []).length;
   const firstDate = memoryStore.firstLessonDate
-    || (memoryStore.lessonLog[memoryStore.lessonLog.length - 1] || {}).date || todayStr();
+    || ((memoryStore.lessonLog || [])[(memoryStore.lessonLog || []).length - 1] || {}).date || todayStr();
   const daysSinceFirst = totalLessons ? Math.max(1, Math.floor((Date.now() - new Date(firstDate).getTime()) / 86400000)) : 0;
-  const scenariosDone = [...new Set(memoryStore.lessonLog.map((l) => l.scenario).filter(Boolean))];
+  const scenariosDone = [...new Set((memoryStore.lessonLog || []).map((l) => l.scenario).filter(Boolean))];
   const tp = diaryPages[todayStr()];
   const todayDiary = tp && (tp.notes || tp.skillsDetail || tp.homework) ? (tp.notes || tp.skillsDetail || tp.homework).slice(0, 200) : "";
 
