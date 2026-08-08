@@ -2714,7 +2714,7 @@ function buildUnitContext(unitRecord, lessonInUnit, store) {
   const isFirst = (store.lessonsCompleted || 0) === 0;
   const firstNote = isFirst ? "\nThis is the student's first lesson with Leo. Do not reference prior Leo interactions." : "";
 
-  return `\n\u2550\u2550\u2550 TODAY'S UNIT \u2550\u2550\u2550\n\nUnit ${u.unit}: ${u.theme} (Block: ${u.block})\nLesson ${lessonInUnit} of this unit.\n\nCAN-DO OUTCOMES for this unit:\n${(u.canDo || []).map(c => "- " + c).join("\n")}\n\nGRAMMAR FOCUS: ${(u.grammar || {}).point}\n${((u.grammar || {}).relatedPoints || []).length ? "Related (recycled, NOT new): " + ((u.grammar || {}).relatedPoints || []).join(", ") : ""}\n${(u.grammar || {}).homeUnit ? "This unit is the HOME UNIT for this grammar point \u2014 teach it as new." : "This grammar point was introduced in an earlier unit \u2014 recycle it, do not re-teach from scratch."}\n\nCORE VOCABULARY (teach to every student, 4\u20138 per lesson from this pool):\n${(u.coreVocab || []).join(", ")}\n\nEXTENSION VOCABULARY (teach only when the personalisation test passes):\n${(u.extensionVocab || []).join(", ")}\n\nExpected cards this lesson: ${u.expectedCards}. Do not pad beyond this range.\n\nFUNCTIONAL LANGUAGE: ${(u.functionalLanguage || []).join(" \u00b7 ")}\n\nPRONUNCIATION FOCUS: ${(u.pronunciation || {}).focus} \u2014 ${(u.pronunciation || {}).detail}\n\n${recycleBlock}\n\n${feedsForwardBlock}\n\nPERSONALISATION: ${u.personalisationNotes}\n${pBlock}${firstNote}\n\nYOUR FREEDOM WITHIN THIS UNIT: Choose the communicative SITUATION that brings the can-do outcomes alive for THIS student. The unit says WHAT to teach; you decide the scenario, the authentic material, the memorable moment, and the mission.\n\nYOUR CONSTRAINT: do not teach grammar, vocabulary, or pronunciation outside what this unit specifies. If today's student needs something outside this unit, note it in your analysis as \"needed but belongs in Unit X\" \u2014 the sequencer will get them there.\n`;
+  return `\n\u2550\u2550\u2550 TODAY'S UNIT \u2550\u2550\u2550\n\nUnit ${u.unit}: ${u.theme} (Block: ${u.block})\nLesson ${lessonInUnit} of this unit.\n\nCAN-DO OUTCOMES for this unit:\n${(u.canDo || []).map(c => "- " + c).join("\n")}\n\nGRAMMAR FOCUS: ${(u.grammar || {}).point}\n${((u.grammar || {}).relatedPoints || []).length ? "Related (recycled, NOT new): " + ((u.grammar || {}).relatedPoints || []).join(", ") : ""}\n${(u.grammar || {}).homeUnit ? "This unit is the HOME UNIT for this grammar point \u2014 teach it as new." : "This grammar point was introduced in an earlier unit \u2014 recycle it, do not re-teach from scratch."}\n\nCORE VOCABULARY (teach to every student, 4\u20138 per lesson from this pool):\n${(u.coreVocab || []).join(", ")}\n\nEXTENSION VOCABULARY (teach only when the personalisation test passes):\n${(u.extensionVocab || []).join(", ")}\n\nExpected cards this lesson: ${u.expectedCards}. Do not pad beyond this range.\n\nFUNCTIONAL LANGUAGE: ${(u.functionalLanguage || []).join(" \u00b7 ")}\n\nPRONUNCIATION FOCUS: ${(u.pronunciation || {}).focus} \u2014 ${(u.pronunciation || {}).detail}\n\n${recycleBlock}\n\n${feedsForwardBlock}\n\nPERSONALISATION: ${u.personalisationNotes}\n${pBlock}${firstNote}\n\nYOUR FREEDOM WITHIN THIS UNIT: Choose the communicative SITUATION that brings the can-do outcomes alive for THIS student. The unit says WHAT to teach; you decide the scenario, the authentic material, the memorable moment, and the mission.\n\nYOUR CONSTRAINT: do not teach grammar, vocabulary, or pronunciation outside what this unit specifies. If today's student needs something outside this unit, note it in your analysis as \\"needed but belongs in Unit X\\" \\u2014 the sequencer will get them there.\\n\\nPERSONALISATION CHECK: before choosing today's situation, name ONE specific fact about THIS student from what you know about them (an interest, their job, something from a recent lesson or diary entry, a mission they tried) \\u2014 then let it visibly shape the scenario. If there is genuinely nothing specific to draw on yet (a very new student), say so plainly and choose the most useful generic version of the unit's theme instead of inventing a personal detail. Never fabricate a fact about the student.\\n\\nAUSTRALIAN TEXTURE CHECK: a scenario is not Australian because it contains Australian vocabulary. It is Australian because of what actually happens \\u2014 the specific small moment a person in this exact situation would experience here and nowhere else. Before finalising today's scenario, name the ONE detail that makes it unmistakably a Melbourne/Sydney/Perth/regional kitchen, supermarket, GP visit, rental inspection \\u2014 not a generic version of that situation. Examples of texture, not vocabulary: a new kitchenhand is handed a laminated allergy chart on day one and asked to read it back; a checkout operator's first 'how's your day going' comes from a customer, not a script; a GP receptionist asks for a Medicare card before anything else. If you cannot name a genuine textural detail for today's situation, that is a signal the scenario is too generic \\u2014 choose a narrower one.\\n`;
 }
 
 
@@ -3713,29 +3713,34 @@ const TTS_OK = typeof window !== "undefined" && !!window.speechSynthesis;
 function useVoiceInput(onResult) {
   const recRef = React.useRef(null);
   const [listening, setListening] = useState(false);
+  const [micError, setMicError] = useState(false);
   const supported = typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
   const start = () => {
     if (!supported || listening) return;
+    setMicError(false);
     try {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       const rec = new SR();
       rec.lang = "en-AU"; rec.interimResults = false; rec.maxAlternatives = 1;
-      rec.onresult = (e) => onResult(e.results[0][0].transcript);
+      rec.onresult = (e) => { setMicError(false); onResult(e.results[0][0].transcript); };
       rec.onend = () => setListening(false);
-      rec.onerror = () => setListening(false);
+      rec.onerror = () => { setListening(false); setMicError(true); };
       recRef.current = rec; setListening(true); rec.start();
-    } catch { setListening(false); }
+    } catch { setListening(false); setMicError(true); }
   };
-  return { supported, listening, start };
+  return { supported, listening, micError, start };
 }
 
 function MicButton({ onText }) {
-  const { supported, listening, start } = useVoiceInput(onText);
+  const { supported, listening, micError, start } = useVoiceInput(onText);
   if (!supported) return null;
   return (
-    <button className={"mic-btn" + (listening ? " mic-on" : "")} onClick={start} aria-label="Answer by voice" title="Answer by voice">
-      🎤{listening ? " Listening…" : ""}
-    </button>
+    <>
+      <button className={"mic-btn" + (listening ? " mic-on" : "")} onClick={start} aria-label="Answer by voice" title="Answer by voice">
+        🎤{listening ? " Listening…" : ""}
+      </button>
+      {micError && <span className="muted small" style={{ marginLeft: 6 }}>Didn't catch that — try again or type it.</span>}
+    </>
   );
 }
 
@@ -4085,7 +4090,7 @@ First, classify the answer:
 
 Then write ONE reply line, maximum 35 words, ${cefr} English, warm Australian teacher's voice:
 - skip: reply with exactly this and nothing more: No problem — let's move on.
-- minimal: acknowledge the short answer warmly, connect it to today's lesson context, and ask ONE follow-up question that is EASIER than the original prompt (a choice question or yes/no question works well).
+- minimal: acknowledge the short answer warmly and connect it to today's lesson context in ONE short additional sentence that adds something — a fact, a link to today, or a light observation — WITHOUT asking a question. The student cannot reply to a follow-up here, so a question is a dead end for them. Land your line as a complete, satisfying response on its own.
 - attempt: respond to something SPECIFIC the student said — name it in your reply — then connect it to today's lesson.
 
 The generic-praise test: if your line would make equal sense no matter what the student typed, rewrite it. Never invent details the student did not give you. Never praise a skip.
@@ -4920,6 +4925,8 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
   const [phase, setPhase] = useState("speak"); // "speak" | "critical" | "done"
+  // Auto-play opener on mount so the student hears Leo's first line immediately.
+  React.useEffect(() => { if (TTS_OK) speakText(opener); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const leoTurns = turns.filter((t) => t.role === "leo").length;
   const youTurns = turns.filter((t) => t.role === "you").length;
 
@@ -4934,7 +4941,7 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
         `You are Leo, one of Australia's best ELICOS teachers, in a speaking practice about "${bp.context}" with your student (${memory}).\nObjective: ${bp.communicativeObjective}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\nFinal task they are building toward: ${bp.finalTask || bp.communicativeObjective}\nEmotional objective: ${bp.emotionalObjective || "build confidence"}${discussionCtx}\n\nBehave like a real teacher: respond to WHAT they said, sound curious and warm, ask ONE genuine follow-up question. Encourage communication over perfection. If they make a predicted mistake, gently recast it — but never interrupt the flow. Keep it to 2-3 natural sentences.\n\n${convo}\n\nThe student just said: "${said}"\n\nReply as the teacher in plain text only.${narrationGuidance(bp.cefr, "corrective")}`,
         { intent: "speaking_reply" }
       );
-      setTurns((t) => [...t, { role: "leo", text: raw }]);
+      setTurns((t) => { const updated = [...t, { role: "leo", text: raw }]; if (TTS_OK) speakText(raw); return updated; });
     } catch {
       setTurns((t) => [...t, { role: "leo", text: "Good — keep going! What would you say next?" }]);
     }
@@ -6403,7 +6410,7 @@ const PLAN_FAIL_LINE = (fail) => {
     : "I could not finish today's lesson.";
 };
 
-const BLUEPRINT_JSON_SHAPE = `{"teacherReflection":"summarise your thinking in 2-3 sentences","communicativeObjective":"one can-do from your needs assessment","context":"the Australian situation you chose","cefr":"the student's CEFR level","lessonRationale":"why THIS lesson TODAY from your reasoning","predictedDifficulties":["2-3 mistakes from your analysis"],"emotionalObjective":"from your needs assessment","memorableMoment":"the one thing from your assessment","authenticMaterial":"the actual Australian text you wrote in your assessment","scaffoldingStrategy":"how you will build toward the final task","explanation":"2-3 warm sentences introducing today. Name the student. Set a SITUATION, not a learning objective — 'today you're meeting someone at a footy club' not 'today we learn about families'. Anchor in something Australian or specific to the student's life. Must NOT read as a curriculum description or a language-app prompt. Max 25 words.","warmUpActivities":[{"type":"one of: context_discussion|prediction|finish_sentence|mini_task|mcq|best_response|true_false|is_this_correct|spot_mistake|complete_dialogue|unscramble|order_conversation","instruction":"how to do it, one line","prompt":"the question or task, contextualised to TODAY","text":"optional supporting text or dialogue","options":["choice types ONLY: 2-4 options"],"answer":"choice types ONLY: exact text of the correct option","tokens":["sequence types ONLY: the words or lines IN THE CORRECT ORDER"],"note":"the teaching point, in Leo's voice"}],"vocabulary":[{"word":"","pos":"","meaning":"simple definition","ipa":"","example":"in today's situation","examples":["one more"],"related":["2-3"],"collocations":["1-2"]}],"grammar":{"point":"","meaning":"","form":"","usage":"when Australians use this","examples":["2 in today's situation"]},"pronunciation":{"focus":"max 5 words, student-facing","focusSections":[{"targetWord":"from today's lesson","ipa":"/IPA/","instructions":"1-2 sentences, sub-A1, what to do with mouth, max 25 words","practiceWords":["2-3 from today"],"correct":"simplified guide: bruh-ZIL","incorrect":"predicted L1 error: BRA-zil"}]},"mainSkill":"reading or listening","finalTask":"the role-play climax from your assessment","mission":"one doable real-world task","tomorrowConnection":"how today leads to tomorrow","learningOutcome":"what they can now do","canDosAddressed":["which can-do outcomes from the unit this lesson practises"]}`;
+const BLUEPRINT_JSON_SHAPE = `{"teacherReflection":"summarise your thinking in 2-3 sentences","communicativeObjective":"ONE plain sentence, spoken directly to the student, saying what they will be able to DO by the end of today — not a label, not meta-language ('today's objective is...', 'you will learn...'). Second person. Concrete and checkable: the student should be able to tell for themselves, at the end of the lesson, whether it happened. Max 20 words. Example shape: 'By the end, you'll be able to introduce yourself to a new workmate and ask about their day.'","context":"the Australian situation you chose","cefr":"the student's CEFR level","lessonRationale":"why THIS lesson TODAY from your reasoning","predictedDifficulties":["2-3 mistakes from your analysis"],"emotionalObjective":"from your needs assessment","memorableMoment":"the one thing from your assessment","authenticMaterial":"the actual Australian text you wrote in your assessment","scaffoldingStrategy":"how you will build toward the final task","explanation":"2-3 warm sentences introducing today. Name the student. Set a SITUATION, not a learning objective — 'today you're meeting someone at a footy club' not 'today we learn about families'. Anchor in something Australian or specific to the student's life. Must NOT read as a curriculum description or a language-app prompt. Max 25 words.","warmUpActivities":[{"type":"one of: context_discussion|prediction|finish_sentence|mini_task|mcq|best_response|true_false|is_this_correct|spot_mistake|complete_dialogue|unscramble|order_conversation","instruction":"how to do it, one line","prompt":"the question or task, contextualised to TODAY","text":"optional supporting text or dialogue","options":["choice types ONLY: 2-4 options"],"answer":"choice types ONLY: exact text of the correct option","tokens":["sequence types ONLY: the words or lines IN THE CORRECT ORDER"],"note":"the teaching point, in Leo's voice"}],"vocabulary":[{"word":"","pos":"","meaning":"simple definition","ipa":"","example":"in today's situation","examples":["one more"],"related":["2-3"],"collocations":["1-2"]}],"grammar":{"point":"","meaning":"","form":"","usage":"when Australians use this","examples":["2 in today's situation"]},"pronunciation":{"focus":"max 5 words, student-facing","focusSections":[{"targetWord":"from today's lesson","ipa":"/IPA/","instructions":"1-2 sentences, sub-A1, what to do with mouth, max 25 words","practiceWords":["2-3 from today"],"correct":"simplified guide: bruh-ZIL","incorrect":"predicted L1 error: BRA-zil"}]},"mainSkill":"reading or listening","finalTask":"the role-play climax from your assessment","mission":"one doable real-world task","tomorrowConnection":"how today leads to tomorrow","learningOutcome":"what they can now do","canDosAddressed":["which can-do outcomes from the unit this lesson practises"]}`;
 
 /* Proper-noun helpers for the vocabulary selection standard.
    The country set is built from COUNTRIES — the same 200-plus entry list the
@@ -8012,17 +8019,19 @@ function HeardPage({ profile, heard, setHeard, markActivity, onAskLeo, leoMemory
   const [input, setInput] = useState("");
   const [busyId, setBusyId] = useState(null);
   const [listening, setListening] = useState(false);
+  const [micError, setMicError] = useState(false);
   const recRef = React.useRef(null);
   const voiceOK = typeof window !== "undefined" && (window.SpeechRecognition || window.webkitSpeechRecognition);
 
   const startVoice = () => {
     if (!voiceOK) { alert("Voice input isn't supported in this browser. Please type instead."); return; }
+    setMicError(false);
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const rec = new SR();
     rec.lang = "en-AU"; rec.interimResults = false; rec.maxAlternatives = 1;
-    rec.onresult = (e) => setInput(e.results[0][0].transcript);
+    rec.onresult = (e) => { setMicError(false); setInput(e.results[0][0].transcript); };
     rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
+    rec.onerror = () => { setListening(false); setMicError(true); };
     recRef.current = rec;
     setListening(true);
     rec.start();
@@ -8068,6 +8077,7 @@ function HeardPage({ profile, heard, setHeard, markActivity, onAskLeo, leoMemory
         <button className="primary-btn" onClick={add}><Plus size={16} /></button>
       </div>
       {listening && <p className="muted small center">🎤 Listening… say a word or phrase.</p>}
+      {micError && <p className="muted small center">Didn't catch that — try again or type it.</p>}
 
       {heard.map((h) => (
         <Card key={h.id}>
