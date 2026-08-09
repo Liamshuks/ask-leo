@@ -447,17 +447,29 @@ const GRAMMAR_PARADIGM_FALLBACK = `\nIf the Form above contains multiple person 
 // prompt and (once Genesis rules) the summary retry can never drift apart.
 // Static text, no interpolation.
 const SUMMARY_HONESTY_RULES = `WHAT YOU KNOW, AND WHAT YOU DO NOT
-The Performance line above is your only evidence about what this student did today. Where it reads "not attempted", that stage did not happen: do not mention it, do not praise it, do not imply it took place. You have scores and a turn count — you did not see or hear anything they produced. Never describe the quality of their English.
+You have been given: (1) a Performance line with scores and a speaking turn count; (2) today's vocabulary list — the specific words from bp.vocabulary that were taught, not invented; (3) the speaking transcript — the actual exchange between you and the student, marked Leo: and Student:. These are your only sources. Anything not present in these three sources did not happen in this lesson: do not mention it, do not praise it, do not imply it occurred.
 
-- Praise SPECIFIC effort, drawn from the Performance line: a score, a number of speaking turns, a stage completed. If little was attempted, praise the fact that they came and finished, and say nothing further about performance.
-- Do NOT tell the student what they can now do. One lesson does not make a skill, and nothing above tells you they acquired anything. Name what they PRACTISED, then point forward to where it gets used: "Today you practised X — next time you're in that situation, try one line of it."
-- Name one strength the Performance line actually shows. If it shows nothing, name the strength of finishing, and nothing else.
-- Suggest ONE improvement drawn from the predicted difficulties. These were predicted BEFORE the lesson and you did not observe them: frame each as worth practising, never as something the student got wrong.
-- Reference the memorable moment only as part of today's lesson — never as something you saw them enjoy, notice or understand.
-- Connect today to their journey ONLY if the prior-lesson context above is non-empty. If it is empty this is their first lesson with you: say so warmly, and never imply a history that does not exist.
-- Preview tomorrow as your intention, not as a promise of specific content.
-- Every field must leave the student with something to do or somewhere to go next. A closing screen that only grades is a receipt, not teaching.
-- Do NOT say the student LEARNED, MASTERED, ACQUIRED, or NOW KNOWS anything. One lesson does not make a skill. You can observe that words were PRESENTED and PRACTISED — say that. "You worked with 6 new words today" is honest. "You learned 6 new words" is not.`;
+USING THE TRANSCRIPT
+The transcript is real evidence — use it:
+- Ground your praise in what the student actually said. Cite specific Student: turns where they tried something.
+- If you made a correction during the conversation (a recast or direct correction in a Leo: turn), you may reference it — that correction happened and the student deserves to know it was noticed.
+- Do not correct an error that does not appear in a Student: turn. If you find yourself writing a correction, locate it in the transcript first — if it is not there, remove it.
+- Name only people and roles who genuinely appeared in the transcript. If no names were used, no names appear in the summary.
+- Do not describe the quality of the student's English in general terms. Describe what happened: what they tried, how many times they spoke, what situation they practised.
+- If speaking was not attempted (turn count is 0 or transcript is absent), do not mention the speaking content — acknowledge only that it is there whenever they are ready.
+
+USING THE VOCABULARY LIST
+The vocabulary list names the specific words that were taught today — use these words, do not invent others. You may say "today you worked with words like X and Y" using words from this list. You may not say "you used X correctly" or "you struggled with Y" unless the transcript contains direct evidence of this. The vocabulary list is not a usage record; it is a record of what was presented.
+
+WHAT YOU MAY AND MAY NOT CLAIM
+- Do NOT say the student LEARNED, MASTERED, ACQUIRED, or NOW KNOWS anything. One lesson does not make a skill. Words were PRESENTED and PRACTISED — say that.
+- Do NOT tell the student what they can now do. Name what they PRACTISED, then point forward: "Today you practised X — next time you're in that situation, try one line of it."
+- Name one strength the evidence actually shows — from the Performance line or the transcript. If neither shows a clear strength, name the strength of finishing.
+- Suggest ONE thing to work on, drawn from the predicted difficulties — framed as something worth practising next time, never as a correction of something observed unless the transcript shows it directly.
+- Reference the memorable moment only as part of today's lesson — never as something you personally watched the student enjoy or understand.
+- Connect today to their journey ONLY if the prior-lesson context above is non-empty. If it is empty, this is their first lesson: say so warmly, and never imply a history that does not exist.
+- Preview tomorrow as your intention, not a promise of specific content.
+- Every field must leave the student with something to do or somewhere to go next. A closing screen that only grades is a receipt, not teaching.`;
 // Shared mock content packs: one pack = one coherent real-life situation.
 // Every mock lesson branch (blueprint, reading, listening, grammar, summary)
 // draws from the SAME pack so offline lessons never mix scenarios.
