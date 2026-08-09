@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Check, X, Search, Send, Plus, Trash2, Loader2, ChevronLeft, ChevronRight, ExternalLink, Repeat,
   Home, TrendingUp, PenLine, GraduationCap, RotateCcw,
   AlertTriangle, Waves, Sun, CreditCard, Stethoscope, Briefcase,
-  User, UserCheck, Users, Box
+  User, UserCheck, Users, Box, Volume2
 } from "lucide-react";
 
 /* ============================================================
@@ -5568,12 +5568,12 @@ function PronCard({ word, ipa, index, total, pronunciation, stressLabel, onNext,
         <div className="pron-pair">
           <div className="pron-pair-correct">
             <span>{"\u2713"} {Array.isArray(pronunciation.correct) ? pronunciation.correct.join(" \u00b7 ") : pronunciation.correct}</span>
-            {TTS_OK && <button className="link-btn small" onClick={() => speakText(String(Array.isArray(pronunciation.correct) ? pronunciation.correct[0] : pronunciation.correct))}>{"\uD83D\uDD0A"}</button>}
+            <SpeakButton text={String(Array.isArray(pronunciation.correct) ? pronunciation.correct[0] : pronunciation.correct)} className="speak-btn-sm" />
           </div>
           {pronunciation.incorrect && (
             <div className="pron-pair-incorrect">
               <span><s>{Array.isArray(pronunciation.incorrect) ? pronunciation.incorrect.join(" \u00b7 ") : pronunciation.incorrect}</s></span>
-              {TTS_OK && <button className="link-btn small" onClick={() => speakText(String(Array.isArray(pronunciation.incorrect) ? pronunciation.incorrect[0] : pronunciation.incorrect))}>{"\uD83D\uDD0A"}</button>}
+              <SpeakButton text={String(Array.isArray(pronunciation.incorrect) ? pronunciation.incorrect[0] : pronunciation.incorrect)} className="speak-btn-sm" />
             </div>
           )}
         </div>
@@ -5587,7 +5587,7 @@ function PronCard({ word, ipa, index, total, pronunciation, stressLabel, onNext,
         </div>
       )}
       <div className="wc-actions">
-        {TTS_OK && <button className="ghost-btn wc-action-btn" onClick={() => speakText(word)}>{"\uD83D\uDD0A"} Hear it</button>}
+        {TTS_OK && <button className="ghost-btn wc-action-btn" onClick={() => speakText(word)}><Volume2 size={16} aria-hidden="true" /> Hear it</button>}
         <MicButton className="ghost-btn wc-action-btn" label="\uD83C\uDF99\uFE0F Say it" onText={(t) => setHeard(t)} />
       </div>
       {heard && <p className="wc-heard">I heard: "{heard}"</p>}
@@ -5631,7 +5631,7 @@ function WordCard({ word, ipa, pos, meaning, example, index, total, pronunciatio
       {example && <div className="wc-example">{example}</div>}
       {/* §5 Action buttons */}
       <div className="wc-actions">
-        {TTS_OK && <button className="ghost-btn wc-action-btn" onClick={() => speakText(word + ". " + (example || ""))}>{"\uD83D\uDD0A"} Hear it</button>}
+        {TTS_OK && <button className="ghost-btn wc-action-btn" onClick={() => speakText(word + ". " + (example || ""))}><Volume2 size={16} aria-hidden="true" /> Hear it</button>}
         <MicButton className="ghost-btn wc-action-btn" label="\uD83C\uDF99\uFE0F Say it" onText={(t) => setHeard(t)} />
       </div>
       {heard && <p className="wc-heard">I heard: "{heard}"</p>}
@@ -5959,8 +5959,38 @@ function PronunciationSection({ bp, onVocabTap, onSkip, onDone, header }) {
   // grammar example or functional-language phrase, not just the vocabulary
   // set, so matching against vocabulary alone silently dropped real data.
   const focusSections = bp.pronunciation && bp.pronunciation.focusSections;
+  /* §3d — authored lessons carry `targets`, which may include PAIR
+     items (the stress shift is the content). Without this the authored
+     pronunciation stage silently fell back to bare vocabulary cards
+     and the shift — the actual teaching point — never rendered. */
+  const targets = (bp.pronunciation && bp.pronunciation.targets) || null;
   const [done, setDone] = useState(false);
   const [everSpoke, setEverSpoke] = useState(false);
+  const [pairIdx, setPairIdx] = useState(0);
+
+  if (targets && targets.length > 0) {
+    const t = targets[pairIdx];
+    const isLast = pairIdx + 1 >= targets.length;
+    if (!t) return null;
+    return (
+      <SectionShell header={header} title="Say it like a local" onSkip={onSkip}>
+        <ExerciseChrome index={pairIdx} total={targets.length} label="Sound" />
+        {t.type === "pair"
+          ? <PronPairCard pair={t} />
+          : <div className="pp-card"><div className="pp-rows">
+              <div className="pp-word">
+                <div className="pp-syls">{(t.syllables || [t.word]).map((s, i) => (
+                  <span key={i} className={"pp-syl" + (i === t.stressIndex ? " pp-syl-on" : "")}>{s}</span>))}</div>
+                <p className="pp-ipa">{t.ipa}</p>
+                <SpeakButton text={t.word} label={`Hear ${t.word}`} />
+              </div>
+            </div>{t.note && <p className="pp-note">{t.note}</p>}</div>}
+        <button className="primary-btn wide" onClick={() => (isLast ? onDone() : setPairIdx(pairIdx + 1))}>
+          {isLast ? "Finish practice" : "Next →"}
+        </button>
+      </SectionShell>
+    );
+  }
 
   const cards = React.useMemo(() => {
     if (focusSections && focusSections.length > 0) {
@@ -6023,6 +6053,120 @@ function SentenceFramesPanel({ frames, label }) {
 }
 
 /* ---------- Stage 4: Speaking — conversation, discussion, critical thinking ---------- */
+/* ================================================================
+   PHASE 9 — SPEAKER SYSTEM, PAIR CARD, LISTENING (§4.1, §3d, §3g)
+   ================================================================ */
+
+/* §4.1 — one speaker component, product-wide. lucide Volume2, not the
+   emoji: emoji is Leo's VOICE, not UI chrome.
+
+   When TTS is unavailable the button DOES NOT RENDER. Never a disabled
+   speaker — a dead control teaches the student to stop trying
+   controls, and a pronunciation card without sound still teaches
+   stress and IPA.
+
+   No persistent played-state: hearing again is always equally invited. */
+function SpeakButton({ text, label, className }) {
+  const [playing, setPlaying] = useState(false);
+  if (!TTS_OK || !text) return null;
+  const speak = () => {
+    setPlaying(true);
+    speakText(text);
+    /* The utterance has no reliable end event across browsers, so the
+       dimmed state is time-boxed rather than pretending to track it. */
+    setTimeout(() => setPlaying(false), Math.min(6000, 900 + String(text).length * 55));
+  };
+  return (
+    <button type="button" className={"speak-btn" + (className ? " " + className : "") + (playing ? " speak-btn-on" : "")}
+      onClick={speak} aria-label={label || `Hear "${text}"`}>
+      <Volume2 size={20} aria-hidden="true" />
+    </button>
+  );
+}
+
+/* §3d — the pronunciation pair card. The stress SHIFT is the content,
+   so both words share ONE card and the shift is drawn. The syllable
+   that GAINS the stress renders in --marker-orange: the marker points
+   at what moved (§2a.4's rule). One card is one item in the sequence. */
+function PronPairCard({ pair }) {
+  if (!pair || !pair.from || !pair.to) return null;
+  const row = (w, highlightShift) => (
+    <div className="pp-word">
+      <div className="pp-dots" aria-hidden="true">
+        {(w.syllables || []).map((s, i) => (
+          <span key={i} className={"pp-dot" + (i === w.stressIndex ? (highlightShift ? " pp-dot-moved" : " pp-dot-on") : "")} />
+        ))}
+      </div>
+      <div className="pp-syls">
+        {(w.syllables || []).map((s, i) => (
+          <span key={i} className={"pp-syl" + (i === w.stressIndex ? (highlightShift ? " pp-syl-moved" : " pp-syl-on") : "")}>{s}</span>
+        ))}
+      </div>
+      <p className="pp-ipa">{w.ipa}</p>
+      <SpeakButton text={w.word} label={`Hear ${w.word}`} />
+    </div>
+  );
+  /* The stress only "moves" if the index actually changes — otherwise
+     orange would claim a shift that did not happen. */
+  const moved = pair.from.stressIndex !== pair.to.stressIndex;
+  return (
+    <div className="pp-card">
+      <div className="pp-rows">
+        {row(pair.from, false)}
+        <span className="pp-arrow" aria-hidden="true">&rarr;</span>
+        {row(pair.to, moved)}
+      </div>
+      {pair.note && <p className="pp-note">{pair.note}</p>}
+    </div>
+  );
+}
+
+/* §3g — the listening player.
+   NO SCRUBBER: a scrubber invites hunting for the answer inside the
+   audio; at A1 the utterance is the unit, so replay is whole-utterance.
+
+   NO REPLAY COUNT, overruling the brief with reasoning that Genesis
+   ratified: a counter is a score in disguise — a student who has
+   played four times reads "4" as their failure whatever tone it is set
+   in, and the app has no pedagogical use for them seeing it. The
+   POLICY is displayed instead, as permission. */
+function ListeningPlayer({ text, onPlayed }) {
+  const [playing, setPlaying] = useState(false);
+  const [playedOnce, setPlayedOnce] = useState(false);
+  if (!TTS_OK) {
+    return (
+      <div className="lp-card">
+        <p className="muted small">Audio isn't available on this device, so the transcript is below instead.</p>
+      </div>
+    );
+  }
+  const play = () => {
+    if (playing) {
+      /* Pausing mid-utterance is allowed; resuming restarts the
+         utterance, because the utterance is the unit. */
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      setPlaying(false);
+      return;
+    }
+    setPlaying(true);
+    setPlayedOnce(true);
+    speakText(String(text || "").replace(/\n/g, ". "));
+    if (onPlayed) onPlayed();
+    setTimeout(() => setPlaying(false), Math.min(60000, 1200 + String(text || "").length * 55));
+  };
+  return (
+    <div className="lp-card">
+      <button className="lp-play" onClick={play} aria-label={playing ? "Pause the audio" : (playedOnce ? "Play again" : "Play the audio")}>
+        {playing ? <span className="lp-glyph">&#10073;&#10073;</span> : <span className="lp-glyph">&#9654;</span>}
+      </button>
+      <p className="lp-label">{playedOnce ? "Play again" : "Play the audio"}</p>
+      {/* This line IS the display of unlimited replays — permission,
+          without the surveillance a counter would bring. */}
+      <p className="lp-permission">Listen as many times as you like.</p>
+    </div>
+  );
+}
+
 function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone, header }) {
   const notes = bp._teacherNotes ? bp._teacherNotes.slice(0, 200) : "";
   // Capability: use discussion questions as prompts when available
@@ -6129,7 +6273,7 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone, header
           <div key={i} className={"speak-turn " + (t.role === "leo" ? "speak-leo" : "speak-you")}>
             
             <p><VocabText text={t.text} vocab={vocab} onTap={onVocabTap} /></p>
-            {t.role === "leo" && TTS_OK && <button className="link-btn" onClick={() => speakText(t.text)}>🔊</button>}
+            {t.role === "leo" && <SpeakButton text={t.text} />}
           </div>
         ))}
         {thinking && <Spinner label="Leo is listening…" />}
@@ -6221,14 +6365,8 @@ function SkillSection({ bp, section, vocab, onVocabTap, onSkip, onDone, header }
   if (isDual && phase === "listening") {
     return (
       <SectionShell header={header} title="Listening" blurb="Listen carefully and fill in the missing words." onSkip={onSkip}>
-        <div className="listen-box">
-          {TTS_OK && (
-            <button className="primary-btn" style={{ marginBottom: 10 }} onClick={() => { speakText(listenScript.replace(/\n/g, ". ")); setPlayedOnce(true); }}>
-              🔊 {playedOnce ? "Play again" : "Play the recording"}
-            </button>
-          )}
-          {!TTS_OK && <p className="muted small">(Audio isn't available — read the text and fill in the blanks.)</p>}
-        </div>
+        {/* §3g — whole-utterance replay, no scrubber, no count. */}
+        <ListeningPlayer text={listenScript} onPlayed={() => setPlayedOnce(true)} />
         {bp.listeningGapFill ? (
           <ListeningGapFillExercise gaps={bp.listeningGapFill}
             onDone={(c, t) => onDone(readScore.correct + c, readScore.total + t)} />
@@ -6246,13 +6384,9 @@ function SkillSection({ bp, section, vocab, onVocabTap, onSkip, onDone, header }
     <SectionShell header={header} title={isListening ? "Listening" : "Reading"} blurb={isListening ? "Listen first for the general idea, then answer. You can replay as often as you like." : "Skim it once for the main idea, then read again for detail."} onSkip={onSkip}>
       {isListening ? (
         <div className="listen-box">
-          {TTS_OK ? (
-            <button className="primary-btn" onClick={() => { speakText(section.passage.replace(/\n/g, ". ")); setPlayedOnce(true); }}>
-              🔊 {playedOnce ? "Play again" : "Play the conversation"}
-            </button>
-          ) : (
-            <p className="muted small">Audio isn't available on this device, so read the transcript below as a listening substitute.</p>
-          )}
+          {/* §3g — one 56px control, whole-utterance replay, permission
+              line instead of a count. */}
+          <ListeningPlayer text={section.passage} onPlayed={() => setPlayedOnce(true)} />
           {(revealed || !TTS_OK) ? (
             <p className="passage"><VocabText text={section.passage} vocab={vocab} onTap={onVocabTap} /></p>
           ) : (
@@ -6350,14 +6484,7 @@ function GrammarBlockParadigm({ block }) {
             <span className="gb-para-full">{r.full}</span>
             <span className="gb-para-short">{r.short}</span>
             <span className="gb-para-sound">
-              {/* Existing 🔊 affordance. §4.1's SpeakButton (lucide Volume2)
-                  replaces every emoji-glyph call site in ONE deliberate
-                  migration in Phase 9 — adding a second pattern here would
-                  make that migration two jobs instead of one. */}
-              {TTS_OK && (
-                <button className="link-btn small" aria-label={`Hear ${r.short}`}
-                  onClick={() => speakText(r.short)}>{"\uD83D\uDD0A"}</button>
-              )}
+              <SpeakButton text={r.short} label={`Hear ${r.short}`} className="speak-btn-sm" />
             </span>
           </div>
         ))}
@@ -7314,7 +7441,7 @@ function AskLeoExercise({ exercise, bp, onDone }) {
         ? <p className="ex-instruction">Ask Leo: <strong className="ex-answer">{item.stem}</strong></p>
         : <div className="bubble bubble-bot">
             {item.stem}
-            {TTS_OK && <button className="link-btn" onClick={() => speakText(item.stem)}>{"\uD83D\uDD0A"}</button>}
+            <SpeakButton text={item.stem} />
           </div>}
 
       <div className="speak-thread">
@@ -7322,7 +7449,7 @@ function AskLeoExercise({ exercise, bp, onDone }) {
           <div key={i} className={"speak-turn " + (t.role === "leo" ? "speak-leo" : "speak-you")}>
             <p>{t.text}</p>
             {t.role === "leo" && !t._failed && TTS_OK && (
-              <button className="link-btn" onClick={() => speakText(t.text)}>{"\uD83D\uDD0A"}</button>
+              <SpeakButton text={t.text} />
             )}
           </div>
         ))}
@@ -12306,6 +12433,36 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .aims-card{background:var(--leo-green-light); border-radius:10px; padding:14px 16px; margin-top:var(--space-3);}
 .aims-row{font-size:15px; font-weight:400; color:var(--text-primary); margin:0 0 var(--space-2); line-height:1.5;}
 .aims-row:last-child{margin-bottom:0;}
+
+/* ===== Phase 9 — speaker, pair card, listening (§4.1, §3d, §3g) ===== */
+/* §4.1 — 20px glyph inside a 44px target. Dimmed while playing;
+   no persistent played-state, because hearing again is always
+   equally invited. */
+.speak-btn{display:inline-flex; align-items:center; justify-content:center; min-width:44px; min-height:44px; background:none; border:none; color:var(--leo-green); cursor:pointer; padding:0; flex-shrink:0;}
+.speak-btn-on{opacity:.6;}
+.speak-btn-sm{min-width:36px; min-height:36px;}
+/* §3d — the pair card. Orange marks the syllable that GAINED stress. */
+.pp-card{background:var(--bg-card); border:1px solid var(--divider); border-radius:12px; padding:var(--space-5) var(--space-4); margin:var(--space-4) 0;}
+.pp-rows{display:flex; align-items:center; justify-content:center; gap:var(--space-4); flex-wrap:wrap;}
+.pp-word{display:flex; flex-direction:column; align-items:center; gap:6px;}
+.pp-dots{display:flex; gap:6px;}
+.pp-dot{width:10px; height:10px; border-radius:50%; border:1.5px solid var(--text-tertiary); box-sizing:border-box;}
+.pp-dot-on{background:var(--leo-green); border-color:var(--leo-green);}
+.pp-dot-moved{background:var(--marker-orange); border-color:var(--marker-orange);}
+.pp-syls{display:flex; gap:4px; align-items:baseline;}
+.pp-syl{font-size:17px; color:var(--text-secondary);}
+.pp-syl-on{font-weight:700; color:var(--leo-green);}
+.pp-syl-moved{font-weight:700; color:var(--marker-orange);}
+.pp-ipa{font-size:14px; color:var(--text-tertiary); margin:0;}
+.pp-arrow{font-size:20px; color:var(--text-tertiary);}
+.pp-note{font-size:15px; color:var(--text-secondary); text-align:center; margin:var(--space-4) 0 0;}
+/* §3g — one control. No scrubber, no count. */
+.lp-card{display:flex; flex-direction:column; align-items:center; gap:8px; background:var(--bg-card); border:1px solid var(--divider); border-radius:12px; padding:var(--space-6) var(--space-4); margin:var(--space-4) 0;}
+.lp-play{width:56px; height:56px; border-radius:50%; background:var(--leo-green); border:none; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center;}
+.lp-glyph{font-size:20px; line-height:1;}
+.lp-label{font-size:14px; font-weight:500; color:var(--text-secondary); margin:0;}
+/* The permission line IS the display of unlimited replays. */
+.lp-permission{font-size:13px; font-weight:400; color:var(--text-tertiary); margin:0;}
 
 .grammar-form-box{background:var(--sage); border-radius:10px; padding:12px 16px; margin:4px 0; line-height:1.6;}
 .grammar-form-box .gram-form{background:none; padding:0;}
