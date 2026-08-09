@@ -277,6 +277,13 @@ const ERROR_TYPES = ["articles", "verb tense", "prepositions", "word order", "sp
    ============================================================ */
 const USE_MOCK_AI = false;
 
+/* ---- Cost-logging: lesson grouping key ----
+   Set to "lesson-{timestamp}" at the start of each plan() run, sent as an
+   x-lesson-id header on every proxy call, so Vercel logs can group all AI
+   calls belonging to one lesson generation together for cost analysis.
+   Diagnostic only — REMOVE once per-lesson cost figures are established. */
+let _currentLessonId = "no-lesson-id";
+
 /* ================================================================
    AI FAILURE TAXONOMY — so the next failure names itself.
    The silent-lesson defect survived every debugging attempt because the
@@ -341,7 +348,7 @@ async function liveAskClaude(prompt, opts) {
   try {
     res = await fetch("https://ask-leo-proxy.vercel.app/api/claude", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-lesson-id": _currentLessonId },
       body: JSON.stringify({ prompt, intent }),
     });
   } catch (networkErr) {
@@ -4925,8 +4932,6 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
   const [phase, setPhase] = useState("speak"); // "speak" | "critical" | "done"
-  // Auto-play opener on mount so the student hears Leo's first line immediately.
-  React.useEffect(() => { if (TTS_OK) speakText(opener); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const leoTurns = turns.filter((t) => t.role === "leo").length;
   const youTurns = turns.filter((t) => t.role === "you").length;
 
@@ -4941,7 +4946,7 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
         `You are Leo, one of Australia's best ELICOS teachers, in a speaking practice about "${bp.context}" with your student (${memory}).\nObjective: ${bp.communicativeObjective}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\nFinal task they are building toward: ${bp.finalTask || bp.communicativeObjective}\nEmotional objective: ${bp.emotionalObjective || "build confidence"}${discussionCtx}\n\nBehave like a real teacher: respond to WHAT they said, sound curious and warm, ask ONE genuine follow-up question. Encourage communication over perfection. If they make a predicted mistake, gently recast it — but never interrupt the flow. Keep it to 2-3 natural sentences.\n\n${convo}\n\nThe student just said: "${said}"\n\nReply as the teacher in plain text only.${narrationGuidance(bp.cefr, "corrective")}`,
         { intent: "speaking_reply" }
       );
-      setTurns((t) => { const updated = [...t, { role: "leo", text: raw }]; if (TTS_OK) speakText(raw); return updated; });
+      setTurns((t) => [...t, { role: "leo", text: raw }]);
     } catch {
       setTurns((t) => [...t, { role: "leo", text: "Good — keep going! What would you say next?" }]);
     }
@@ -5433,7 +5438,7 @@ function SummarySection({ bp, section, vocab, onVocabTap, onFinish }) {
     <div className="summary-flow">
       {/* §2.2.1 Drawn tick */}
       <div className="sc-tick-wrap" style={{ animation: "scRise .4s ease-out both" }}>
-        <svg className="sc-tick" viewBox="0 0 52 52"><circle className="sc-ring" cx="26" cy="26" r="22" /><path className="sc-mark" d="M15 27l7 7 15-15" /></svg>
+        <svg className="sc-tick" viewBox="0 0 52 52"><circle className="sc-tick-ring" cx="26" cy="26" r="22" /><path className="sc-tick-mark" d="M15 27l7 7 15-15" /></svg>
       </div>
       <h3 className="summary-heading" style={{ animation: "scRise .4s ease-out both", animationDelay: "0.5s", opacity: 0 }}>That's today done</h3>
       <p className="text-leo summary-praise" style={{ animation: "scRise .4s ease-out both", animationDelay: "0.8s", opacity: 0 }}><VocabText text={s.praise} vocab={vocab} onTap={onVocabTap} /></p>
@@ -7149,6 +7154,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
   };
 
   const plan = async (requests) => {
+    _currentLessonId = "lesson-" + Date.now();
     setPhase("planning");
     // ═══ STEP 0: Determine unit (sequencer runs first, §B.5) ═══
     const { unitRecord, lessonInUnit, isFirstLesson, isConsolidating } = getUnitAssignment(leoMemory.store);
@@ -7680,7 +7686,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
         <SectionTitle>Leo’s Lesson</SectionTitle>
         <div className="summary-flow">
           <div className="sc-tick-wrap" style={{ animation: "scRise .4s ease-out both" }}>
-            <svg className="sc-tick" viewBox="0 0 52 52"><circle className="sc-ring" cx="26" cy="26" r="22" /><path className="sc-mark" d="M15 27l7 7 15-15" /></svg>
+            <svg className="sc-tick" viewBox="0 0 52 52"><circle className="sc-tick-ring" cx="26" cy="26" r="22" /><path className="sc-tick-mark" d="M15 27l7 7 15-15" /></svg>
           </div>
           <h3 className="summary-heading" style={{ animation: "scRise .4s ease-out both", animationDelay: "0.5s", opacity: 0 }}>Lesson complete</h3>
           {unitRec && store ? (
