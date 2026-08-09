@@ -5914,7 +5914,10 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
   return (
     <SectionShell title="Speaking practice" blurb="Answer out loud with the mic, or type. This is about communicating, not being perfect." onSkip={onSkip}>
       {/* Capability: sentence frames scaffold when available */}
-      <SentenceFramesPanel frames={speakFrames || discFrames} label="sentence frames" />
+      {/* §3e — frames are persistent chips above the input, tap to
+          insert, dismissible as a group for this session only. The old
+          show/hide panel made scaffolding a decision with a cost; at A1
+          the frames must simply be there. */}
       <div className="speak-thread">
         {turns.map((t, i) => (
           <div key={i} className={"speak-turn " + (t.role === "leo" ? "speak-leo" : "speak-you")}>
@@ -5925,6 +5928,7 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
         ))}
         {thinking && <Spinner label="Leo is listening…" />}
       </div>
+      <FrameChips frames={speakFrames || discFrames} onInsert={(f) => setInput((v) => (v ? v + " " : "") + String(f).replace(/_+/g, "").trim())} />
       <div className="input-row">
         <input className="text-input" placeholder="Say or type your reply…" value={input}
           onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} />
@@ -5932,7 +5936,10 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
       </div>
       <div className="btn-row">
         <button className="primary-btn" onClick={send} disabled={thinking || !input.trim()}>Reply</button>
-        {leoTurns >= 3 && (
+        {/* §3e — finishing is available, never pushed. The authored
+            minimum decides when it appears; 3 is the fallback for
+            generated lessons, which carry no such figure. */}
+        {leoTurns >= (bp.speakingMinExchanges || 3) && (
           <button className="ghost-btn" onClick={() => {
             if (hasCriticalThinking) setPhase("critical");
             else setPhase("done");
@@ -6488,12 +6495,16 @@ const EXERCISE_RENDERERS = {
   own_word: OwnWordExercise,
   word_order: WordOrderExercise,
   correct_the_mistake: CorrectMistakeExercise,
+  ask_leo: AskLeoExercise,
+  answer_leo: AskLeoExercise,
 };
-function renderAuthoredExercise(exercise, onDone) {
+/* bp is passed through because the conversation types read the
+   lesson's sentence frames; the other renderers ignore it. */
+function renderAuthoredExercise(exercise, onDone, bp) {
   if (!exercise || !exercise.exerciseType) return null;
   const R = EXERCISE_RENDERERS[exercise.exerciseType];
   if (!R) return null;
-  return <R exercise={exercise} onDone={onDone} />;
+  return <R exercise={exercise} bp={bp} onDone={onDone} />;
 }
 
 /* Runs an authored lesson's grammar practice. Exercises whose renderer
@@ -6515,7 +6526,7 @@ function AuthoredGrammarPractice({ bp, section, vocab, onVocabTap, onDone }) {
         {renderAuthoredExercise(ex, (c, t) => {
           setScore((s) => ({ correct: s.correct + c, total: s.total + t }));
           setStep(step + 1);
-        })}
+        }, bp)}
       </div>
     );
   }
@@ -6976,6 +6987,139 @@ function CorrectMistakeExercise({ exercise, onDone }) {
               </LeoFeedback>}
           <button className="primary-btn" onClick={next}>{q.index + 1 >= q.total ? "Finish practice" : "Next \u2192"}</button>
         </>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================
+   PHASE 6 — TYPE 8 + SPEAKING DELTAS (§2b.8, §3e)
+
+   One build serving two stages. The continuity is deliberate and
+   total: the student practises the CONVERSATION SURFACE here with
+   scaffolding, then meets the identical surface in speaking without
+   it. Same bubbles, same input row, same mic parity.
+
+   DIRECTION NOTE. §2b.8 specifies Leo asking and the student
+   answering. The authored lesson's Ex9 INVERTS this: the student
+   asks, Leo answers — because in a 1-to-1 app Leo is the partner, and
+   that is where genuine QUESTION production comes from. Both
+   directions are the same surface with the roles swapped, so this
+   component serves both rather than shipping a second renderer with
+   no content behind it.
+   ================================================================ */
+
+/* §3e — sentence frames as persistent chips above the input.
+   At A1 the frames are scaffolding and must survive the whole
+   conversation; an adult who has stopped needing them may clear the
+   row. Dismissal is SESSION-ONLY — scaffolding decisions belong to
+   the syllabus, not to one impatient afternoon. */
+function FrameChips({ frames, onInsert }) {
+  const [dismissed, setDismissed] = useState(false);
+  if (!frames || !frames.length || dismissed) return null;
+  return (
+    <div className="frame-chips">
+      <div className="frame-chips-row">
+        {frames.map((f, i) => (
+          <button key={i} className="frame-chip" onClick={() => onInsert(f.frame || f)}>{f.frame || f}</button>
+        ))}
+      </div>
+      <button className="frame-chips-x" onClick={() => setDismissed(true)} aria-label="Hide the sentence frames">&times;</button>
+    </div>
+  );
+}
+
+/* §2b.8 — the bridge to conversation. Bubbles, mic parity, and the
+   model answer gated behind an attempt: production first is the
+   pedagogy, and the design enforces it by simple absence. */
+function AskLeoExercise({ exercise, bp, onDone }) {
+  const items = exercise.items || [];
+  const studentAsks = !!exercise.studentAsks;
+  const [idx, setIdx] = useState(0);
+  const [turns, setTurns] = useState([]);
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [attempted, setAttempted] = useState(false);
+  const [example, setExample] = useState(null);
+  const item = items[idx];
+
+  if (!item) {
+    /* Conversation doesn't tick per turn — it responds. The
+       set-complete tick still closes the whole set. */
+    return <StageComplete correct={items.length} total={items.length} onContinue={() => onDone(items.length, items.length)} />;
+  }
+
+  const send = async () => {
+    if (!input.trim() || busy) return;
+    const said = input.trim();
+    setTurns((t) => t.concat([{ role: "you", text: said }]));
+    setInput("");
+    setAttempted(true);
+    setBusy(true);
+    try {
+      const prompt = studentAsks
+        ? `${AUSTRALIAN_SPELLING}You are Leo, an ELICOS teacher in Australia. Your A1 student asked you: "${said}".\n` +
+          `${item.leoGuidance ? "Guidance: " + item.leoGuidance + "\n" : ""}` +
+          `Answer their question honestly and briefly as yourself. Then, if their question had a small error, model the correct question with the target form in **bold** — warmly, never as a correction notice. Max 25 words. Plain text only.`
+        : `${AUSTRALIAN_SPELLING}You are Leo, an ELICOS teacher. You asked your A1 student: "${item.stem}". They answered: "${said}".\n` +
+          `Reply warmly to WHAT THEY SAID in one or two short sentences, with the target form in **bold**. If they made an error, recast it correctly inside your reply — never interrupt the flow with a correction notice. Max 25 words. Plain text only.`;
+      const raw = await askClaude(prompt, { intent: "ask_leo_reply" });
+      setTurns((t) => t.concat([{ role: "leo", text: String(raw || "").trim() }]));
+    } catch {
+      /* Honest failure: Leo does not invent a reply he never computed.
+         The student's turn still counts and the path forward is named. */
+      setTurns((t) => t.concat([{ role: "leo", text: "I couldn't reply just then \u2014 but I heard you. Let's keep going.", _failed: true }]));
+    } finally { setBusy(false); }
+  };
+
+  const next = () => { setIdx(idx + 1); setTurns([]); setInput(""); setAttempted(false); setExample(null); };
+  const frames = (bp && bp.sentenceFrames && bp.sentenceFrames.speaking) || [];
+
+  return (
+    <div className="ex-item" key={idx}>
+      <ExerciseChrome index={idx} total={items.length} label={studentAsks ? "Question" : "Question"} />
+      {/* When the student asks, the prompt IS their line to produce —
+          shown as an instruction, not as a Leo bubble he already said. */}
+      {studentAsks
+        ? <p className="ex-instruction">Ask Leo: <strong className="ex-answer">{item.stem}</strong></p>
+        : <div className="bubble bubble-bot">
+            {item.stem}
+            {TTS_OK && <button className="link-btn" onClick={() => speakText(item.stem)}>{"\uD83D\uDD0A"}</button>}
+          </div>}
+
+      <div className="speak-thread">
+        {turns.map((t, i) => (
+          <div key={i} className={"speak-turn " + (t.role === "leo" ? "speak-leo" : "speak-you")}>
+            <p>{t.text}</p>
+            {t.role === "leo" && !t._failed && TTS_OK && (
+              <button className="link-btn" onClick={() => speakText(t.text)}>{"\uD83D\uDD0A"}</button>
+            )}
+          </div>
+        ))}
+        {busy && <Spinner label="Leo is listening…" />}
+      </div>
+
+      {!turns.some((t) => t.role === "leo") && (
+        <>
+          {frames.length > 0 && <FrameChips frames={frames} onInsert={(f) => setInput((v) => (v ? v + " " : "") + f.replace(/_+/g, "").trim())} />}
+          <div className="input-row">
+            <input className="text-input" value={input} placeholder={studentAsks ? "Type your question\u2026" : "Type or speak\u2026"}
+              onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()}
+              disabled={busy} {...EXERCISE_INPUT_PROPS} />
+            <MicButton onText={(t) => setInput(t)} />
+            <button className="primary-btn" onClick={send} disabled={busy || !input.trim()}>Send</button>
+          </div>
+          {/* §2b.8 — model answer AFTER attempting, never before. */}
+          {attempted && !example && !studentAsks && (
+            <button className="ex-showme" onClick={() => setExample(item.model || item.answer || null)}>Show an example</button>
+          )}
+        </>
+      )}
+      {example && <div className="bubble bubble-bot stage-enter">For example: {example}</div>}
+      {turns.some((t) => t.role === "leo") && (
+        <button className="primary-btn" onClick={next}>
+          {idx + 1 >= items.length ? "Finish practice" : "Next \u2192"}
+        </button>
       )}
     </div>
   );
@@ -11863,6 +12007,16 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .cm-beat{font-size:15px; color:var(--leo-green); text-align:center; margin:var(--space-3) 0;}
 .cm-hint{font-size:15px; color:var(--text-secondary); text-align:center; margin:var(--space-3) 0;}
 @media(prefers-reduced-motion:reduce){.cm-beat,.wo-line{animation:none;}}
+
+/* ===== Phase 6 — conversation surface (§2b.8, §3e) ===== */
+/* Frames persist above the input; the row scrolls rather than wraps,
+   so the input never gets pushed off the thumb's reach (§4.6). */
+.frame-chips{display:flex; align-items:center; gap:8px; margin-bottom:var(--space-2);}
+.frame-chips-row{display:flex; gap:8px; overflow-x:auto; flex:1; padding-bottom:2px; scrollbar-width:none;}
+.frame-chips-row::-webkit-scrollbar{display:none;}
+.frame-chip{flex-shrink:0; min-height:36px; font-size:14px; font-weight:500; color:var(--text-primary); background:var(--leo-green-light); border:none; border-radius:8px; padding:8px 12px; cursor:pointer; white-space:nowrap; font-family:inherit;}
+/* 36px chip inside a 44px hit area (§4.5). */
+.frame-chips-x{flex-shrink:0; min-width:44px; min-height:44px; background:none; border:none; color:var(--text-tertiary); font-size:20px; cursor:pointer; line-height:1;}
 
 .grammar-form-box{background:var(--sage); border-radius:10px; padding:12px 16px; margin:4px 0; line-height:1.6;}
 .grammar-form-box .gram-form{background:none; padding:0;}
