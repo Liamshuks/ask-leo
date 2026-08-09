@@ -4616,7 +4616,84 @@ function MicButton({ onText }) {
 }
 
 /* ---------- Shared stage shell: title, purpose, uniform Skip ---------- */
-function SectionShell({ title, blurb, onSkip, stageIndex, totalStages, children }) {
+/* ================================================================
+   PHASE 7 — THE LESSON ARC (§1)
+   ================================================================ */
+
+/* §1.3 — one header for all seven stages. The EYEBROW does the naming,
+   which frees the TITLE to teach: "GRAMMAR" above "Saying who you are"
+   rather than burying the stage name in a metadata line.
+   A student who cannot read the title still knows a new stage began —
+   from the dots, the position, and the precedent of lesson one. The
+   layout carries the meaning first. */
+function StageHeader({ eyebrow, title, purpose, onSkip, stageIndex, totalStages }) {
+  return (
+    <div className="stage-header">
+      {typeof stageIndex === "number" && totalStages > 0 && (
+        <div className="step-dots" aria-hidden="true">
+          {Array.from({ length: totalStages }, (_, i) => (
+            <span key={i} className={"step-dot" + (i < stageIndex ? " step-dot-done" : i === stageIndex ? " step-dot-current" : "")} />
+          ))}
+        </div>
+      )}
+      <div className="sh-row">
+        {eyebrow && <span className="sh-eyebrow">{eyebrow}</span>}
+        {/* §4.3 — never button-styled (prominence would be an
+            invitation), never absent (its absence on one stage would
+            imply that stage is mandatory and the others optional). */}
+        {onSkip && <button className="sh-skip" onClick={onSkip} aria-label={`Skip ${title || eyebrow || "this stage"}`}>Skip</button>}
+      </div>
+      {title && <h3 className="sh-title">{title}</h3>}
+      {/* Absent purpose renders NOTHING — never a placeholder. */}
+      {purpose && <p className="sh-purpose">{purpose}</p>}
+    </div>
+  );
+}
+
+/* Resolve a stage's header from the authored lesson, falling back to
+   the system label. The fallback is honest — just plainer. */
+function stageHeaderFor(bp, stageId, systemLabel) {
+  const authored = (bp && bp.stageHeaders && bp.stageHeaders[stageId]) || null;
+  return {
+    eyebrow: (authored && authored.eyebrow) || String(systemLabel || "").toUpperCase(),
+    title: (authored && authored.title) || systemLabel,
+    purpose: (authored && authored.purpose) || null,
+  };
+}
+
+/* §1.5 — resuming is a continuity moment, not an error state.
+   The line names ONLY what the code holds: the stage is always held,
+   so "we were in the middle of grammar" is always honest. Never "you
+   left", never elapsed-time guilt. The word "back" is as far as it
+   goes. */
+function ResumeInterstitial({ stageLabel, stageIndex, totalStages, onContinue }) {
+  return (
+    <div className="resume-card">
+      <div className="step-dots" aria-hidden="true">
+        {Array.from({ length: totalStages }, (_, i) => (
+          <span key={i} className={"step-dot" + (i < stageIndex ? " step-dot-done" : i === stageIndex ? " step-dot-current" : "")} />
+        ))}
+      </div>
+      <p className="leo-accent text-leo resume-line">
+        Welcome back. We were in the middle of {String(stageLabel || "your lesson").toLowerCase()} — let's pick it up from there.
+      </p>
+      <button className="primary-btn wide" onClick={onContinue}>Continue</button>
+    </div>
+  );
+}
+
+function SectionShell({ title, blurb, onSkip, stageIndex, totalStages, header, children }) {
+  /* §1.3 — when the lesson supplies an authored header, it replaces the
+     old title + metadata line. Generated lessons pass no header and
+     render exactly as before. */
+  if (header) {
+    return (
+      <Card>
+        <StageHeader {...header} onSkip={onSkip} stageIndex={stageIndex} totalStages={totalStages} />
+        <div className="stage-enter-delayed">{children}</div>
+      </Card>
+    );
+  }
   return (
     <Card>
       <div className="stage-head">
@@ -4775,12 +4852,13 @@ function completionMessage(correct, total) {
   return { title: "Great effort!", sub: `${correct} out of ${total} — the ones you missed will come back for more practice.` };
 }
 
-function StageComplete({ correct, total, message, onContinue, delay = 2200 }) {
+/* §1.1 / §2b.0 — NOTHING AUTO-ADVANCES. The countdown timer and its
+   progress bar are removed: the hold between the tick and Continue
+   belongs to the student, who taps when ready. On a train, control is
+   calm. The `delay` prop is accepted and ignored so existing call
+   sites keep working; it can be dropped once none pass it. */
+function StageComplete({ correct, total, message, onContinue, delay }) {
   const msg = message || completionMessage(correct, total);
-  useEffect(() => {
-    const t = setTimeout(() => onContinue(), delay);
-    return () => clearTimeout(t);
-  }, []);
   return (
     <div className="stage-complete" role="status" aria-live="polite">
       <div className="sc-tick" aria-hidden="true">
@@ -4791,7 +4869,6 @@ function StageComplete({ correct, total, message, onContinue, delay = 2200 }) {
       </div>
       <h4 className="sc-title">{msg.title}</h4>
       <p className="sc-sub">{msg.sub}</p>
-      <div className="sc-bar" aria-hidden="true"><span style={{ animationDuration: delay + "ms" }} /></div>
       <button className="primary-btn" onClick={onContinue}>Continue</button>
     </div>
   );
@@ -5108,7 +5185,7 @@ function WarmUpActivity({ activity, vocab, onVocabTap, onDone, context, cefr }) 
 }
 
 /* ---------- Stage 1: Introduction — context, objective, varied warm-up ---------- */
-function IntroductionSection({ bp, vocab, onVocabTap, onSkip, onDone }) {
+function IntroductionSection({ bp, vocab, onVocabTap, onSkip, onDone, header }) {
   const [idx, setIdx] = useState(-1); // -1 = the intro card
   const [score, setScore] = useState({ ok: 0, done: 0 });
   const [finished, setFinished] = useState(false);
@@ -5126,14 +5203,14 @@ function IntroductionSection({ bp, vocab, onVocabTap, onSkip, onDone }) {
   };
 
   if (finished) return (
-    <SectionShell title="Warm-up" onSkip={onSkip}>
+    <SectionShell header={header} title="Warm-up" onSkip={onSkip}>
       <StageComplete message={{ title: "Warmed up!", sub: "You're switched into English — now let's build today's language." }}
         onContinue={() => onDone(score.done)} />
     </SectionShell>
   );
 
   if (idx === -1) return (
-    <SectionShell title="Today's lesson" onSkip={onSkip}>
+    <SectionShell header={header} title="Today's lesson" onSkip={onSkip}>
       <div className="lesson-head leo-accent" style={{ animation: "scRise .4s ease-out both" }}>
         <p className="lesson-greeting text-leo"><VocabText text={bp.explanation} vocab={vocab} onTap={onVocabTap} /></p>
       </div>
@@ -5144,7 +5221,7 @@ function IntroductionSection({ bp, vocab, onVocabTap, onSkip, onDone }) {
   const a = activities[idx];
   const meta = WARMUP_TYPES[a.type] || WARMUP_TYPES.context_discussion;
   return (
-    <SectionShell title="Warm-up" blurb={a.instruction} onSkip={onSkip}>
+    <SectionShell header={header} title="Warm-up" blurb={a.instruction} onSkip={onSkip}>
       <div className="wu-head">
         <span className="wu-badge">{meta.label}</span>
         <span className="muted small">{idx + 1} of {activities.length}</span>
@@ -5274,13 +5351,18 @@ function VocabReviewExercise({ exercises, vocab, onVocabTap, onDone }) {
           onDone={(ok) => {
             if (ok) setGfCorrect((c) => c + 1);
             setGfChecked(true);
-            setTimeout(() => {
-              setGfChecked(false);
-              if (gfIdx + 1 < gapfill.length) setGfIdx(gfIdx + 1);
-              else setPhase("done");
-            }, 1800);
           }}
         />
+        {/* §1.1 — nothing auto-advances. This previously jumped after
+            1800ms, which is less time than an A1 student needs to read
+            the feedback they just earned. */}
+        {gfChecked && (
+          <button className="primary-btn" onClick={() => {
+            setGfChecked(false);
+            if (gfIdx + 1 < gapfill.length) setGfIdx(gfIdx + 1);
+            else setPhase("done");
+          }}>{gfIdx + 1 < gapfill.length ? "Next \u2192" : "Finish practice"}</button>
+        )}
       </div>
     );
   }
@@ -5479,7 +5561,7 @@ function WordCardSequence({ words, onComplete, onVocabTap, lastLabel }) {
   );
 }
 
-function VocabularySection({ bp, onVocabTap, leoMemory, onSkip, onDone }) {
+function VocabularySection({ bp, onVocabTap, leoMemory, onSkip, onDone, header }) {
   // Authored lessons declare matchVocab (a curated subset of up to 8 words for
   // the matching exercise). AI-generated lessons use the first 8 from vocabulary.
   // The full vocabulary array is always available for tokens, cards, and review.
@@ -5648,7 +5730,7 @@ function VocabularySection({ bp, onVocabTap, leoMemory, onSkip, onDone }) {
   );
 
   if (done) return (
-    <SectionShell title="Today's vocabulary" onSkip={onSkip}>
+    <SectionShell header={header} title="Today's vocabulary" onSkip={onSkip}>
       <StageComplete correct={correct} total={items.length}
         onContinue={() => {
           if (hasReview) {
@@ -5663,7 +5745,7 @@ function VocabularySection({ bp, onVocabTap, leoMemory, onSkip, onDone }) {
 
     // §10.1: word cards run before the matching exercise
   if (vocabPhase === "cards") return (
-    <SectionShell title="Today's vocabulary" blurb="Let's meet today's words." onSkip={onSkip}>
+    <SectionShell header={header} title="Today's vocabulary" blurb="Let's meet today's words." onSkip={onSkip}>
       <WordCardSequence
         words={items}
         onComplete={() => setVocabPhase("matching")}
@@ -5674,7 +5756,7 @@ function VocabularySection({ bp, onVocabTap, leoMemory, onSkip, onDone }) {
   );
 
   return (
-    <SectionShell title="Today's vocabulary"
+    <SectionShell header={header} title="Today's vocabulary"
       blurb={selected ? `“${selected}” is selected — now choose its meaning.` : "Drag a line from each word to its meaning — or tap a word, then tap its meaning."}
       onSkip={onSkip}>
       <div className="match-progress" aria-live="polite">
@@ -5745,7 +5827,7 @@ function VocabularySection({ bp, onVocabTap, leoMemory, onSkip, onDone }) {
 }
 
 /* ---------- Stage 3: Pronunciation — model, listen, try ---------- */
-function PronunciationSection({ bp, onVocabTap, onSkip, onDone }) {
+function PronunciationSection({ bp, onVocabTap, onSkip, onDone, header }) {
   // Defect 4 fix: cards are built DIRECTLY from focusSections — each one
   // already carries everything a card needs (targetWord, ipa, instructions,
   // practiceWords, correct, incorrect). No backward matching onto
@@ -5768,7 +5850,7 @@ function PronunciationSection({ bp, onVocabTap, onSkip, onDone }) {
   }, [bp.vocabulary, focusSections]);
 
   if (done) return (
-    <SectionShell title="Say it like a local" onSkip={onSkip}>
+    <SectionShell header={header} title="Say it like a local" onSkip={onSkip}>
       <StageComplete message={
         everSpoke
           ? { title: "You had a go out loud.",
@@ -5780,7 +5862,7 @@ function PronunciationSection({ bp, onVocabTap, onSkip, onDone }) {
   );
 
   return (
-    <SectionShell title="Say it like a local"
+    <SectionShell header={header} title="Say it like a local"
       blurb={bp.pronunciation && bp.pronunciation.focus ? `Today\u2019s focus: ${bp.pronunciation.focus}.` : undefined}
       onSkip={onSkip}>
       <PronCardSequence
@@ -5817,7 +5899,7 @@ function SentenceFramesPanel({ frames, label }) {
 }
 
 /* ---------- Stage 4: Speaking — conversation, discussion, critical thinking ---------- */
-function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
+function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone, header }) {
   const notes = bp._teacherNotes ? bp._teacherNotes.slice(0, 200) : "";
   // Capability: use discussion questions as prompts when available
   const discussionQs = bp.discussionQuestions || [];
@@ -5856,7 +5938,7 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
   };
 
   if (phase === "done") return (
-    <SectionShell title="Speaking practice" onSkip={onSkip}>
+    <SectionShell header={header} title="Speaking practice" onSkip={onSkip}>
       {/* Part B rev 2. "Excellent!" was awarded before anything was known and
           fired for "s". "N turns of REAL CONVERSATION" attached a fabricated
           adjective to a true number — a count is observation, its quality is
@@ -5912,7 +5994,7 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
   }
 
   return (
-    <SectionShell title="Speaking practice" blurb="Answer out loud with the mic, or type. This is about communicating, not being perfect." onSkip={onSkip}>
+    <SectionShell header={header} title="Speaking practice" blurb="Answer out loud with the mic, or type. This is about communicating, not being perfect." onSkip={onSkip}>
       {/* Capability: sentence frames scaffold when available */}
       {/* §3e — frames are persistent chips above the input, tap to
           insert, dismissible as a group for this session only. The old
@@ -5986,7 +6068,7 @@ function ListeningGapFillExercise({ gaps, onDone }) {
   );
 }
 
-function SkillSection({ bp, section, vocab, onVocabTap, onSkip, onDone }) {
+function SkillSection({ bp, section, vocab, onVocabTap, onSkip, onDone, header }) {
   const isListening = bp.mainSkill === "listening";
   const hasListening = !!(bp.listeningScript || bp.listeningGapFill);
   const hasReading = !!(section && section.passage);
@@ -6001,7 +6083,7 @@ function SkillSection({ bp, section, vocab, onVocabTap, onSkip, onDone }) {
   // Phase: reading first, then listening (if dual)
   if (isDual && phase === "listening") {
     return (
-      <SectionShell title="Listening" blurb="Listen carefully and fill in the missing words." onSkip={onSkip}>
+      <SectionShell header={header} title="Listening" blurb="Listen carefully and fill in the missing words." onSkip={onSkip}>
         <div className="listen-box">
           {TTS_OK && (
             <button className="primary-btn" style={{ marginBottom: 10 }} onClick={() => { speakText(listenScript.replace(/\n/g, ". ")); setPlayedOnce(true); }}>
@@ -6024,7 +6106,7 @@ function SkillSection({ bp, section, vocab, onVocabTap, onSkip, onDone }) {
   }
 
   return (
-    <SectionShell title={isListening ? "Listening" : "Reading"} blurb={isListening ? "Listen first for the general idea, then answer. You can replay as often as you like." : "Skim it once for the main idea, then read again for detail."} onSkip={onSkip}>
+    <SectionShell header={header} title={isListening ? "Listening" : "Reading"} blurb={isListening ? "Listen first for the general idea, then answer. You can replay as often as you like." : "Skim it once for the main idea, then read again for detail."} onSkip={onSkip}>
       {isListening ? (
         <div className="listen-box">
           {TTS_OK ? (
@@ -7125,7 +7207,7 @@ function AskLeoExercise({ exercise, bp, onDone }) {
   );
 }
 
-function GrammarSection({ bp, section, vocab, onVocabTap, onSkip, onDone }) {
+function GrammarSection({ bp, section, vocab, onVocabTap, onSkip, onDone, header }) {
   const g = bp.grammar || {};
   const hasPractice = section.questions && section.questions.length >= 3 && !section.explanationOnly;
   const [practising, setPractising] = useState(false);
@@ -7141,7 +7223,7 @@ function GrammarSection({ bp, section, vocab, onVocabTap, onSkip, onDone }) {
   const alreadySeen = !!(section && section.presented);
 
   if (!practising && hasBlocks) return (
-    <SectionShell title={`Grammar: ${g.point}`} blurb="One point, straight from today's situation — never grammar for its own sake." onSkip={onSkip}>
+    <SectionShell header={header} title={`Grammar: ${g.point}`} blurb="One point, straight from today's situation — never grammar for its own sake." onSkip={onSkip}>
       <GrammarPresentation
         blocks={blocks}
         alreadySeen={alreadySeen}
@@ -7151,7 +7233,7 @@ function GrammarSection({ bp, section, vocab, onVocabTap, onSkip, onDone }) {
   );
 
   if (practising && hasBlocks) return (
-    <SectionShell title={`Grammar: ${g.point}`} onSkip={onSkip}>
+    <SectionShell header={header} title={`Grammar: ${g.point}`} onSkip={onSkip}>
       <AuthoredGrammarPractice bp={bp} section={section} vocab={vocab} onVocabTap={onVocabTap} onDone={onDone} />
       {/* §2a.5 — reference reachable without leaving the task. */}
       <ReviewBoardLink onOpen={() => setBoardOpen(true)} />
@@ -7169,7 +7251,7 @@ function GrammarSectionGenerated({ bp, section, vocab, onVocabTap, onSkip, onDon
   const g = bp.grammar || {};
   const hasPractice = section.questions && section.questions.length >= 3 && !section.explanationOnly;
   if (!practising) return (
-    <SectionShell title={`Grammar: ${g.point}`} blurb="One point, straight from today's situation — never grammar for its own sake." onSkip={onSkip}>
+    <SectionShell header={header} title={`Grammar: ${g.point}`} blurb="One point, straight from today's situation — never grammar for its own sake." onSkip={onSkip}>
       <div className="grammar-card">
         <p className="gram-section-label">Meaning</p>
         <p><VocabText text={g.meaning} vocab={vocab} onTap={onVocabTap} /></p>
@@ -7213,7 +7295,7 @@ function GrammarSectionGenerated({ bp, section, vocab, onVocabTap, onSkip, onDon
     </SectionShell>
   );
   return (
-    <SectionShell title={`Grammar: ${g.point}`} onSkip={onSkip}>
+    <SectionShell header={header} title={`Grammar: ${g.point}`} onSkip={onSkip}>
       <McqQuiz questions={section.questions} vocab={vocab} onVocabTap={onVocabTap} onDone={onDone} />
     </SectionShell>
   );
@@ -8955,6 +9037,9 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
   const level = levelFor(profile);
 
   const [phase, setPhase] = useState("loading");   // loading | chooser | planning | lesson | done
+  /* §1.5 — true only when a lesson already under way was restored from
+     storage. Cleared by the student's tap; never set between stages. */
+  const [resuming, setResuming] = useState(false);
   const [planFailCount, setPlanFailCount] = useState(0);
   // What Leo actually observed when planning stopped. Observed and Forward:
   // the closing surface may name only this, and must point somewhere next.
@@ -9017,7 +9102,15 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
   useEffect(() => {
     (async () => {
       const saved = await loadKey("esl-task:" + todayStr(), null);
-      if (saved && saved.blueprint) { setLesson(saved); setPhase(saved.status && saved.status.done ? "done" : "lesson"); }
+      if (saved && saved.blueprint) {
+        setLesson(saved);
+        const done = !!(saved.status && saved.status.done);
+        setPhase(done ? "done" : "lesson");
+        /* §1.5 — the interstitial appears only when RETURNING to a
+           lesson already under way from outside it. Moving between
+           stages inside a session never shows it. */
+        if (!done && saved.stage > 0) setResuming(true);
+      }
       else if (saved && saved.status && saved.status.done) { setLesson(null); setPhase("done"); } // legacy finished lesson
       else setPhase("chooser");
     })();
@@ -9754,17 +9847,40 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
   const stage = LESSON_STAGES[lesson.stage];
   const section = lesson.sections[stage.id];
   const needsAI = stage.id === "skill" || stage.id === "grammar" || stage.id === "summary";
-  const stageProps = { bp, vocab: vocabWords, onVocabTap: handleVocabTap, onSkip: skip };
+  /* §1.3 — resolve this stage's header once and hand it to every
+     stage component, so the eyebrow/title/purpose treatment is
+     identical across all seven and cannot drift. */
+  const stageHeader = bp.stageHeaders
+    ? { ...stageHeaderFor(bp, stage.id, stage.label), stageIndex: lesson.stage, totalStages: LESSON_STAGES.length }
+    : null;
+  const stageProps = { bp, vocab: vocabWords, onVocabTap: handleVocabTap, onSkip: skip, header: stageHeader, stageIndex: lesson.stage, totalStages: LESSON_STAGES.length };
+
+  /* §1.5 — one line, one button, claiming only state the code holds. */
+  if (resuming) return (
+    <div>
+      <SectionTitle>Leo's Lesson</SectionTitle>
+      <ResumeInterstitial
+        stageLabel={stage.label}
+        stageIndex={lesson.stage}
+        totalStages={LESSON_STAGES.length}
+        onContinue={() => setResuming(false)}
+      />
+    </div>
+  );
 
   return (
     <div>
-      <SectionTitle sub={`${bp.context} · ${stage.label} · ${lesson.stage + 1} of ${LESSON_STAGES.length}`}>Leo's Lesson</SectionTitle>
-      {/* §5 Step indicator dots — replaces the thin progress bar */}
-      <div className="step-dots" style={{ marginTop: "var(--space-2)" }}>
-        {LESSON_STAGES.map((s, i) => (
-          <span key={s.id} className={"step-dot" + (i < lesson.stage ? " step-dot-done" : i === lesson.stage ? " step-dot-current" : "")} />
-        ))}
-      </div>
+      {/* §1.3 — when the stage renders an authored header (which
+          carries its own eyebrow, title, purpose and dots), the outer
+          title and dot row would duplicate it. */}
+      {!stageHeader && <SectionTitle sub={`${bp.context} · ${stage.label} · ${lesson.stage + 1} of ${LESSON_STAGES.length}`}>Leo's Lesson</SectionTitle>}
+      {!stageHeader && (
+        <div className="step-dots" style={{ marginTop: "var(--space-2)" }}>
+          {LESSON_STAGES.map((s, i) => (
+            <span key={s.id} className={"step-dot" + (i < lesson.stage ? " step-dot-done" : i === lesson.stage ? " step-dot-current" : "")} />
+          ))}
+        </div>
+      )}
       {STAGE_BRIDGE_TEXT[stage.id] && <p className="leo-accent text-leo" style={{ marginTop: "var(--space-5)", marginBottom: "var(--space-3)" }}>{STAGE_BRIDGE_TEXT[stage.id]}</p>}
 
       {needsAI && (!section || sectionLoading || section.skipped) && <LeoLoader label="I'm preparing this part…" level={profile.level} />}
@@ -11851,13 +11967,10 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .sc-title{font-family:'Fraunces',serif; font-size:23px; font-weight:650; color:var(--euca-deep); margin:2px 0 0; animation:scRise .4s .35s both ease-out;}
 .sc-sub{font-size:14.5px; opacity:.75; margin:0 0 12px; max-width:34ch; animation:scRise .4s .45s both ease-out;}
 @keyframes scRise{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
-.sc-bar{width:120px; height:3px; border-radius:99px; background:var(--line); overflow:hidden; margin-bottom:14px;}
-.sc-bar span{display:block; height:100%; width:100%; background:var(--wattle); transform-origin:left; animation:scCountdown linear forwards;}
-@keyframes scCountdown{from{transform:scaleX(0);} to{transform:scaleX(1);}}
+/* .sc-bar / scCountdown removed with the auto-advance (Phase 7, §1.1). */
 @media (prefers-reduced-motion: reduce){
   .sc-tick-ring,.sc-tick-mark{animation:none; stroke-dashoffset:0;}
   .sc-title,.sc-sub{animation:none;}
-  .sc-bar span{animation:none; transform:scaleX(1);}
 }
 
 /* ---- Warm-up activities ---- */
@@ -12017,6 +12130,19 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .frame-chip{flex-shrink:0; min-height:36px; font-size:14px; font-weight:500; color:var(--text-primary); background:var(--leo-green-light); border:none; border-radius:8px; padding:8px 12px; cursor:pointer; white-space:nowrap; font-family:inherit;}
 /* 36px chip inside a 44px hit area (§4.5). */
 .frame-chips-x{flex-shrink:0; min-width:44px; min-height:44px; background:none; border:none; color:var(--text-tertiary); font-size:20px; cursor:pointer; line-height:1;}
+
+/* ===== Phase 7 — the arc (§1.3, §1.5) ===== */
+.stage-header{margin-bottom:var(--space-4);}
+.sh-row{display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); margin-top:var(--space-3);}
+/* The eyebrow does the naming, which frees the title to teach. */
+.sh-eyebrow{font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--text-tertiary);}
+/* §4.3 — ghost text, never a button. Prominence would be an invitation. */
+.sh-skip{background:none; border:none; font-size:13px; font-weight:400; color:var(--text-tertiary); cursor:pointer; min-height:44px; min-width:44px; padding:0 4px;}
+.sh-title{font-family:'Fraunces',serif; font-size:22px; font-weight:600; color:var(--text-primary); margin:var(--space-1) 0 0;}
+.sh-purpose{font-size:15px; font-weight:400; color:var(--text-secondary); margin:var(--space-1) 0 0; line-height:1.5;}
+/* §1.5 — a continuity moment, never an error state. */
+.resume-card{display:flex; flex-direction:column; align-items:center; text-align:center; gap:var(--space-4); padding:var(--space-6) var(--space-4);}
+.resume-line{font-size:16px; line-height:1.6; margin:0; max-width:34ch;}
 
 .grammar-form-box{background:var(--sage); border-radius:10px; padding:12px 16px; margin:4px 0; line-height:1.6;}
 .grammar-form-box .gram-form{background:none; padding:0;}
