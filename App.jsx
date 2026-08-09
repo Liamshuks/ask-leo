@@ -9288,7 +9288,7 @@ export default function App() {
   }, []);
 
   if (splashPhase === "logo")
-    return <div className="app" style={{background:'var(--bg-warm,#FAFAF8)'}}><style>{CSS}</style><div className="wb-splash wb-logo-phase"><WhiteboardLogo width={Math.min(320, Math.round(window.innerWidth * 0.7))} animate onDone={() => setSplashPhase("done")} /></div></div>;
+    return <div className="app" style={{background:'var(--bg-warm,#FFFFFF)'}}><style>{CSS}</style><div className="wb-splash wb-logo-phase"><WhiteboardLogo width={Math.min(320, Math.round(window.innerWidth * 0.7))} animate onDone={() => setSplashPhase("done")} /></div></div>;
 
   if (authUser === undefined)
     return <div className="app"><style>{CSS}</style><div className="onboard"><LeoLoader label="Getting things ready…" /></div></div>;
@@ -9574,13 +9574,13 @@ export default function App() {
 const CSS = `
 :root{
   /* Legacy tokens (preserved for existing components) */
-  --paper:#FBFAF5; --ink:#22302A; --euca:#37624B; --euca-deep:#274A39;
+  --paper:#FFFFFF; --ink:#22302A; --euca:#37624B; --euca-deep:#274A39;
   --wattle:#E8A91D; --sage:#E9EFE7; --line:#D7E1D6; --rust:#B95737; --card:#FFFFFF;
   --sand:#F2E7CF; --sand-2:#E6D4AF; --sand-grain:#C9B287; --sand-shadow:#A98D5E;
   --thong-sole:#242424; --thong-wall:#0D0D0D; --thong-tex:#4A4A4A; --thong-rim:#6B6B6B; --thong-strap:#1A1A1A; --thong-shine:#8A8A8A;
   /* P2 Design System */
   --leo-green:#2A7C6F; --leo-green-light:#E8F4F2; --leo-neutral:#5C5248; /* warm neutral — retained for future design use */
-  --bg-warm:#FAFAF8; --bg-card:#FFFFFF;
+  --bg-warm:#FFFFFF; --bg-card:#FFFFFF;
   --text-primary:#1A1A1A; --text-secondary:#6B7280; --text-tertiary:#9CA3AF;
   --divider:#EDEDEA; /* Ruling 4 — rows inside a card, and the tab bar's top edge. Never an outer edge. */
   --color-success:#16A34A; --color-error:#DC4A3A; --color-warning:#E5A117;
@@ -9709,7 +9709,7 @@ h2{font-size:26px;} h3{font-size:17px; margin-bottom:6px;}
 .wb-letter-static{fill:var(--leo-green);}
 /* Wordmark fades in as one unit at 500ms, concurrent with tray (addendum §4.1 phase 2b). No per-letter stagger. */
 .wb-letter-anim{fill:var(--leo-green); fill-opacity:0; animation:wbFill 300ms ease-out 500ms forwards;}
-.wb-mono{font-family:'Inter',sans-serif; font-weight:700; font-size:24px; fill:var(--bg-warm, #FAFAF8);}
+.wb-mono{font-family:'Inter',sans-serif; font-weight:700; font-size:24px; fill:var(--bg-warm, #FFFFFF);}
 @keyframes wbStroke{to{stroke-dashoffset:0;}}
 @keyframes wbFill{to{fill-opacity:1;}}
 @keyframes wbFadeOut{to{opacity:0;}}
