@@ -4893,7 +4893,7 @@ function shuffleOptions(options, seed) {
   return arr;
 }
 
-function McqQuiz({ questions, vocab, onVocabTap, onDone }) {
+function McqQuiz({ questions, vocab, onVocabTap, onDone, onAdvance }) {
   const q0 = useExerciseQueue(questions);
   const [chosen, setChosen] = useState(null);
   const [shown, setShown] = useState(false);
@@ -4917,6 +4917,7 @@ function McqQuiz({ questions, vocab, onVocabTap, onDone }) {
     q0.advance(wasCorrect);
     setChosen(null);
     setShown(false);
+    if (onAdvance) onAdvance();
   };
   // Completion feedback lives in ONE place for every MCQ-based stage.
   if (q0.finished || !q) return <StageComplete correct={correct} total={questions.length} onContinue={() => onDone(correct, questions.length)} />;
@@ -4976,6 +4977,15 @@ const WARMUP_TYPES = {
   complete_dialogue:  { family: "choice",   label: "Complete the dialogue" },
   unscramble:         { family: "sequence", label: "Unscramble the sentence" },
   order_conversation: { family: "sequence", label: "Order the conversation" },
+  /* §3b — the authored warm-up shapes. Without these three registered,
+     validateWarmUpActivity rejects every authored activity and the
+     lesson falls back to generic discussion questions: the teacher's
+     warm-up would never render. All three are "open" — they accept
+     what the student offers and Leo responds, so none of them can be
+     marked wrong (a warm-up activates; it does not assess). */
+  image_recognition:  { family: "open",     label: "What is this?" },
+  personal_reveal:    { family: "open",     label: "About you" },
+  frame_drill:        { family: "open",     label: "Say it" },
 };
 const warmUpFamily = (t) => (WARMUP_TYPES[t] ? WARMUP_TYPES[t].family : null);
 
@@ -4986,6 +4996,11 @@ function validateWarmUpActivity(a) {
   if (!fam) return false;
   if (!a.prompt || typeof a.prompt !== "string") return false;
   if (fam === "free") return true;
+  /* §3b — "open" activities cannot be marked wrong, so they need only
+     something to answer. An image_recognition without a picture is
+     still a valid question ("What country is this?" answered in
+     words) — the image is support, never the task itself. */
+  if (fam === "open") return true;
   if (fam === "choice") {
     if (!Array.isArray(a.options) || a.options.length < 2) return false;
     if (new Set(a.options).size !== a.options.length) return false;
@@ -5011,6 +5026,63 @@ function warmUpFallback(bp) {
 }
 
 /* ---------- Renderer 1: FREE — communicative, never string-matched ---------- */
+/* §3b — the "open" warm-up renderer. Nothing here can be wrong: if the
+   student can't answer, Leo gives the answer warmly and moves on.
+
+   THE COUNTRY REVEAL, and its honesty constraint: the delight is that
+   the app answered their fact with their place. That only works if the
+   picture genuinely exists. If the image pipeline holds nothing for
+   the country they named, Leo still responds in words and NO empty
+   frame renders — the code never promises a picture it does not have. */
+function WarmUpOpen({ activity, vocab, onVocabTap, onDone }) {
+  const [input, setInput] = useState("");
+  const [answered, setAnswered] = useState(false);
+  const isReveal = !!activity.revealImageByAnswer;
+  const said = input.trim();
+  const image = activity.image || null;
+  /* Resolved from the pipeline, not assumed. Today nothing resolves a
+     country image, so revealSrc is null and the words-only path runs —
+     which is the honest behaviour until that pipeline exists. */
+  const revealSrc = null;
+  const confirm = activity.leoConfirmTemplate
+    ? String(activity.leoConfirmTemplate).replace(/\{answer\}/g, said)
+    : activity.leoConfirm;
+  return (
+    <div>
+      {/* Prompt image (e.g. the Australian flag), when authored. */}
+      {image && !isReveal && <LessonImage src={image.src} alt={image.alt} caption={image.alt} />}
+      <p className="q-sentence">
+        <VocabText text={activity.prompt} vocab={vocab} onTap={onVocabTap} />
+      </p>
+      {activity.frame && (
+        <div className="grammar-form-box"><p className="gb-keypoint-text">{activity.frame}</p></div>
+      )}
+      {activity.hint && !answered && <p className="ex-hint">{activity.hint}</p>}
+      {!answered ? (
+        <>
+          <div className="input-row">
+            <input className="text-input" value={input} onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && said && setAnswered(true)}
+              placeholder={"Type your answer\u2026"} {...EXERCISE_INPUT_PROPS_PROPER_NOUN} />
+            <MicButton onText={(t) => setInput(t)} />
+          </div>
+          <div className="ex-actions">
+            <button className="primary-btn" onClick={() => setAnswered(true)} disabled={!said}>Send</button>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* The reveal arrives into a frame that was NOT previously on
+              screen — the arrival is the event. Only when it exists. */}
+          {isReveal && revealSrc && <LessonImage src={revealSrc} alt={said} caption={said} />}
+          {confirm && <div className="bubble bubble-bot stage-enter">{confirm}</div>}
+          <button className="primary-btn wide" onClick={() => onDone(true)}>Next →</button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function WarmUpFree({ activity, vocab, onVocabTap, onDone, context, cefr }) {
   const [answer, setAnswer] = useState("");
   const [sent, setSent] = useState(false);
@@ -5181,10 +5253,60 @@ function WarmUpActivity({ activity, vocab, onVocabTap, onDone, context, cefr }) 
   const fam = warmUpFamily(activity.type);
   if (fam === "choice") return <WarmUpChoice activity={activity} vocab={vocab} onVocabTap={onVocabTap} onDone={onDone} />;
   if (fam === "sequence") return <WarmUpSequence activity={activity} onDone={onDone} />;
+  if (fam === "open") return <WarmUpOpen activity={activity} vocab={vocab} onVocabTap={onVocabTap} onDone={onDone} />;
   return <WarmUpFree activity={activity} vocab={vocab} onVocabTap={onVocabTap} onDone={onDone} context={context} cefr={cefr} />;
 }
 
 /* ---------- Stage 1: Introduction — context, objective, varied warm-up ---------- */
+/* ================================================================
+   PHASE 8 — READING, WARM-UP IMAGES, INTRODUCTION (§3f, §3b, §3a)
+   ================================================================ */
+
+/* §3b — the image treatment, ruled once for the product.
+   Framed by SHAPE, not chrome: radius, no border, no shadow. The
+   placeholder occupies the final size from the start, so the layout
+   never jumps — and it is a flat block, not a shimmer, because
+   nothing in this product loops while waiting.
+   On failure the block persists with the caption inside it and the
+   lesson proceeds: a missing photo never blocks teaching (§4.4). */
+function LessonImage({ src, alt, caption }) {
+  const [state, setState] = useState(src ? "loading" : "failed");
+  if (!src || state === "failed") {
+    return (
+      <div className="li-frame li-frame-empty">
+        <span className="li-caption">{caption || alt || ""}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="li-frame">
+      <img src={src} alt={alt || ""} className={"li-img" + (state === "ready" ? " li-img-in" : "")}
+        onLoad={() => setState("ready")} onError={() => setState("failed")} />
+    </div>
+  );
+}
+
+/* §3a — the aims moment. Leo says it, then a quiet list: his voice
+   carries the relationship, the list survives being half-read on a
+   train. Two or three aims maximum — more is a syllabus, not a
+   lesson. Renders nothing at all when the lesson authored no aims. */
+function AimsMoment({ aims }) {
+  if (!aims) return null;
+  const list = (aims.list || []).slice(0, 3);
+  return (
+    <>
+      {aims.spoken && (
+        <div className="bubble bubble-bot stage-enter">{aims.spoken}</div>
+      )}
+      {list.length > 0 && (
+        <div className="aims-card stage-enter-delayed">
+          {list.map((a, i) => <p key={i} className="aims-row">· {a}</p>)}
+        </div>
+      )}
+    </>
+  );
+}
+
 function IntroductionSection({ bp, vocab, onVocabTap, onSkip, onDone, header }) {
   const [idx, setIdx] = useState(-1); // -1 = the intro card
   const [score, setScore] = useState({ ok: 0, done: 0 });
@@ -5214,6 +5336,8 @@ function IntroductionSection({ bp, vocab, onVocabTap, onSkip, onDone, header }) 
       <div className="lesson-head leo-accent" style={{ animation: "scRise .4s ease-out both" }}>
         <p className="lesson-greeting text-leo"><VocabText text={bp.explanation} vocab={vocab} onTap={onVocabTap} /></p>
       </div>
+      {/* §3a — the aims moment, when the lesson authored one. */}
+      <AimsMoment aims={bp.aims} />
       <button className="primary-btn wide" style={{ marginTop: "var(--space-4)", animation: "scRise .4s ease-out both", animationDelay: "0.3s" }} onClick={() => setIdx(0)}>Let's warm up</button>
     </SectionShell>
   );
@@ -6069,6 +6193,19 @@ function ListeningGapFillExercise({ gaps, onDone }) {
 }
 
 function SkillSection({ bp, section, vocab, onVocabTap, onSkip, onDone, header }) {
+  /* §3f — the read-first gate and the scroll anchor. The anchor brings
+     each new question to the top of the viewport, which is what keeps
+     the passage exactly one upward flick away. Instant under reduced
+     motion: the movement is a convenience, never information. */
+  const [hasRead, setHasRead] = useState(false);
+  const questionsRef = React.useRef(null);
+  const scrollToQuestions = React.useCallback(() => {
+    const el = questionsRef.current;
+    if (!el || !el.scrollIntoView) return;
+    const reduce = typeof window !== "undefined" && window.matchMedia
+      && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+  }, []);
   const isListening = bp.mainSkill === "listening";
   const hasListening = !!(bp.listeningScript || bp.listeningGapFill);
   const hasReading = !!(section && section.passage);
@@ -6125,15 +6262,26 @@ function SkillSection({ bp, section, vocab, onVocabTap, onSkip, onDone, header }
       ) : (
         <p className="passage"><VocabText text={section.passage} vocab={vocab} onTap={onVocabTap} /></p>
       )}
-      <McqQuiz questions={section.questions} vocab={vocab} onVocabTap={onVocabTap}
-        onDone={(c, t) => {
-          if (isDual) {
-            setReadScore({ correct: c, total: t });
-            setPhase("listening");
-          } else {
-            onDone(c, t);
-          }
-        }} />
+      {/* §3f — one thing at a time: the passage renders alone first.
+          Only after the student says they've read it do the questions
+          arrive, with the passage retained above — re-reading is the
+          task working, and it must cost one flick, not a decision. */}
+      {!isListening && !hasRead ? (
+        <button className="primary-btn wide" onClick={() => setHasRead(true)}>I've read it →</button>
+      ) : (
+        <div ref={questionsRef}>
+          <McqQuiz questions={section.questions} vocab={vocab} onVocabTap={onVocabTap}
+            onAdvance={scrollToQuestions}
+            onDone={(c, t) => {
+              if (isDual) {
+                setReadScore({ correct: c, total: t });
+                setPhase("listening");
+              } else {
+                onDone(c, t);
+              }
+            }} />
+        </div>
+      )}
     </SectionShell>
   );
 }
@@ -12143,6 +12291,21 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 /* §1.5 — a continuity moment, never an error state. */
 .resume-card{display:flex; flex-direction:column; align-items:center; text-align:center; gap:var(--space-4); padding:var(--space-6) var(--space-4);}
 .resume-line{font-size:16px; line-height:1.6; margin:0; max-width:34ch;}
+
+/* ===== Phase 8 — images, aims (§3b, §3a) ===== */
+/* Framed by shape, not chrome. The placeholder holds the final size
+   from the start so the layout never jumps, and it is a flat block —
+   nothing in this product loops while waiting. */
+.li-frame{position:relative; width:100%; aspect-ratio:3/2; border-radius:12px; overflow:hidden; background:var(--leo-green-light); margin:var(--space-4) 0;}
+.li-frame-empty{display:flex; align-items:center; justify-content:center; padding:var(--space-4); text-align:center;}
+.li-caption{font-size:14px; color:var(--text-secondary);}
+.li-img{width:100%; height:100%; object-fit:cover; object-position:center; opacity:0; transition:opacity .3s ease-out;}
+.li-img-in{opacity:1;}
+@media(prefers-reduced-motion:reduce){.li-img{transition:none;} .li-img-in{opacity:1;}}
+/* §3a — the quiet list beside Leo's voice. */
+.aims-card{background:var(--leo-green-light); border-radius:10px; padding:14px 16px; margin-top:var(--space-3);}
+.aims-row{font-size:15px; font-weight:400; color:var(--text-primary); margin:0 0 var(--space-2); line-height:1.5;}
+.aims-row:last-child{margin-bottom:0;}
 
 .grammar-form-box{background:var(--sage); border-radius:10px; padding:12px 16px; margin:4px 0; line-height:1.6;}
 .grammar-form-box .gram-form{background:none; padding:0;}
