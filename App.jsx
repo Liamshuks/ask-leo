@@ -4977,7 +4977,7 @@ function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone }) {
           : { title: `You spoke ${youTurns} times.`,
               sub: "Speaking is the hardest skill to practise on your own. Next time, aim for one more turn than today — that's how the habit builds." }
       }
-        onContinue={() => onDone(youTurns)} />
+        onContinue={() => onDone(youTurns, turns)} />
     </SectionShell>
   );
 
@@ -7387,6 +7387,14 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
     ].filter(Boolean).join("\n");
     const perf = base.perf || {};
     const perfLine = `Performance: vocab ${perf.vocab || "not attempted"}, comprehension ${perf.skill || "not attempted"}, grammar ${perf.grammar || "not attempted"}, speaking turns ${perf.speak || 0}`;
+    // Grounding data for the summary: the actual speaking conversation and the vocabulary set.
+    // Without these, the model invents exchanges and characters that never happened.
+    const speakingTranscript = Array.isArray(perf.speakingTranscript) && perf.speakingTranscript.length > 0
+      ? "\nSpeaking transcript (what actually happened — refer ONLY to this):\n" + perf.speakingTranscript.map(t => (t.role === "leo" ? "Leo: " : "Student: ") + t.text).join("\n")
+      : "";
+    const vocabList = Array.isArray(bp.vocabulary) && bp.vocabulary.length > 0
+      ? "\nToday's vocabulary set: " + bp.vocabulary.map(v => v.word).join(", ")
+      : "";
     try {
       let raw, data;
       if (stageId === "skill") {
@@ -7403,7 +7411,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
         data.questions = validateQuestions(data.questions);
         if (data.questions.length < 3) throw new Error("grammar section invalid");
       } else {
-        raw = await askClaude(`${AUSTRALIAN_SPELLING}You are Leo, an experienced ELICOS teacher, writing the closing reflection for today's lesson.\nContext: ${bp.context}\nObjective: ${bp.communicativeObjective}\nEmotional objective: ${bp.emotionalObjective || "build confidence"}\nToday's objective — what the lesson aimed at, NOT an achievement to certify: ${bp.learningOutcome}\nMemorable moment: ${bp.memorableMoment || ""}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\nTomorrow: ${bp.tomorrowConnection || ""}\nStudent: ${memory}\n${perfLine}\n${priorCtx}\n\nWrite a closing summary as a teacher who genuinely cares.\n\n${SUMMARY_HONESTY_RULES}\n\nThey should close feeling: "${bp.emotionalObjective || "more confident"}".\nRespond ONLY with JSON, no fences: {"praise":"","summary":"","strength":"","improvement":"","connection":"","tomorrowPreview":""}${narrationGuidance(bp.cefr, "framing")}`,
+        raw = await askClaude(`${AUSTRALIAN_SPELLING}You are Leo, an experienced ELICOS teacher, writing the closing reflection for today's lesson.\nContext: ${bp.context}\nObjective: ${bp.communicativeObjective}\nEmotional objective: ${bp.emotionalObjective || "build confidence"}\nToday's objective — what the lesson aimed at, NOT an achievement to certify: ${bp.learningOutcome}\nMemorable moment: ${bp.memorableMoment || ""}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\nTomorrow: ${bp.tomorrowConnection || ""}\nStudent: ${memory}\n${perfLine}${vocabList}${speakingTranscript}\n${priorCtx}\n\nWrite a closing summary as a teacher who genuinely cares.\n\n${SUMMARY_HONESTY_RULES}\n\nThey should close feeling: "${bp.emotionalObjective || "more confident"}".\nRespond ONLY with JSON, no fences: {"praise":"","summary":"","strength":"","improvement":"","connection":"","tomorrowPreview":""}${narrationGuidance(bp.cefr, "framing")}`,
           { intent: "lesson_summary" });
         data = parseJSON(raw);
         if (!data.praise) throw new Error("summary invalid");
@@ -7421,7 +7429,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
             ? `{"passage":"the text","questions":[{"stem":"","options":["four options"],"answer":"exact text of correct option","note":"one warm teaching line"}]}`
             : `{"grammarPoint":"${bp.grammar && bp.grammar.point}","questions":[{"stem":"","options":["four options"],"answer":"exact text of correct option","note":"one warm teaching line that names the rule"}]}`;
         const retryGuidance = stageId === "summary"
-          ? `\nMemorable moment: ${bp.memorableMoment || ""}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\n${perfLine}\n${priorCtx}\n\n${SUMMARY_HONESTY_RULES}`
+          ? `\nMemorable moment: ${bp.memorableMoment || ""}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\n${perfLine}${vocabList}${speakingTranscript}\n${priorCtx}\n\n${SUMMARY_HONESTY_RULES}`
           : `\nToday's lesson: "${bp.context}" (CEFR ${bp.cefr}). Objective: "${bp.communicativeObjective}". Today's vocabulary: ${(bp.vocabulary || []).map((v) => v.word).join(", ")}.\nTHE ONE GRAMMAR POINT: "${bp.grammar && bp.grammar.point}" — form: ${bp.grammar && bp.grammar.form}. Every question must drill THAT form, and every note must name the rule.`;
         try {
           const retryRaw = await askClaude(`${AUSTRALIAN_SPELLING}You are Leo, regenerating a lesson exercise. Your ${stageId} exercise was:\n${JSON.stringify(data)}\n\nIt had these problems: ${qaProblems.join("; ")}.\n\nRegenerate this exercise, fixing ALL the problems.${retryGuidance}\n\nRespond ONLY with JSON, no fences:\n${retryShape}`,
@@ -7759,7 +7767,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       {!reviewWait && stage.id === "intro" && <IntroductionSection {...stageProps} onDone={(n) => advance({ intro: n })} />}
       {stage.id === "vocab" && <VocabularySection {...stageProps} leoMemory={leoMemory} onDone={(c, t) => advance({ vocab: `${c}/${t}` })} />}
       {stage.id === "pron" && <PronunciationSection {...stageProps} onDone={() => advance({ pron: "done" })} />}
-      {stage.id === "speak" && <SpeakingSection {...stageProps} memory={memory} onDone={(n) => advance({ speak: n })} />}
+      {stage.id === "speak" && <SpeakingSection {...stageProps} memory={memory} onDone={(n, transcript) => advance({ speak: n, speakingTranscript: transcript })} />}
       {stage.id === "skill" && section && !section.skipped && <SkillSection {...stageProps} section={section} onDone={(c, t) => advance({ skill: `${c}/${t}` })} />}
       {stage.id === "grammar" && section && !section.skipped && <GrammarSection {...stageProps} section={section} onDone={(c, t) => advance({ grammar: `${c}/${t}` })} />}
       {stage.id === "summary" && section && <SummarySection bp={bp} section={section} vocab={vocabWords} onVocabTap={handleVocabTap} onFinish={finish} />}
