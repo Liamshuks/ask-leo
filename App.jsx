@@ -3705,7 +3705,13 @@ function VocabCardSheet({ card, lesson, onClose, onSave, isSaved }) {
 function speakText(text) {
   try {
     if (!window.speechSynthesis) return false;
-    const u = new SpeechSynthesisUtterance(text);
+    // Strip markdown emphasis so TTS doesn't read "star star word star star"
+    const clean = String(text)
+      .replace(/\*\*(.+?)\*\*/g, "$1")   // **bold**
+      .replace(/__(.+?)__/g, "$1")        // __bold__
+      .replace(/\*(.+?)\*/g, "$1")        // *italic*
+      .replace(/_(.+?)_/g, "$1");         // _italic_
+    const u = new SpeechSynthesisUtterance(clean);
     u.lang = "en-AU"; u.rate = 0.95;
     const voices = window.speechSynthesis.getVoices();
     const auVoices = voices.filter((v) => v.lang === "en-AU" || v.lang.startsWith("en-AU"));
