@@ -6427,6 +6427,8 @@ const PLAN_STAGE_WORDS = {
   handover_to_background: "opening today's lesson",
 };
 const PLAN_FAIL_LINE = (fail) => {
+  const isRateLimited = !!fail && (fail.status === 429 || fail.apiType === "rate_limit_error");
+  if (isRateLimited) return "Leo is busy right now — try again in a minute.";
   const step = (fail && PLAN_STAGE_WORDS[fail.stage]) || null;
   return step
     ? `I could not finish today's lesson. I got as far as ${step}, and then it stopped.`
@@ -7361,7 +7363,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
         elapsedMs: detail.ms != null ? detail.ms : null,
         error: e,
       });
-      setPlanFail({ stage: currentStage, type, message: (e && e.message) || String(e) });
+      setPlanFail({ stage: currentStage, type, message: (e && e.message) || String(e), status: detail.status != null ? detail.status : null, apiType: detail.apiType || null });
       setPlanFailCount((c) => c + 1);
       setPhase("error");
     }
