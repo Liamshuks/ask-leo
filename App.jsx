@@ -2946,6 +2946,74 @@ function LeoLoader({ label, level }) {
   return <WaitIndicator label={label} level={level} />;
 }
 
+/* Lesson Planning Wait Specification v1 (NEWDESIGN, 9 Aug 2026), §3.3.
+   A separate pool and dwell timer from LOADING_MESSAGES / WaitIndicator's
+   4s/9s ladder (§4) — that ladder is tuned for short waits (section retries,
+   chat typing) and stays untouched. This pool is for the ~2-minute blueprint
+   wait: the same "text changes -> DrawnRule redraws" mechanism, given more
+   sentences to say over a much longer silence. */
+const PLANNING_WAIT_LINES = [
+  "Let me plan something for you…",
+  "Thinking about what you need most today.",
+  "Choosing words you'll actually use.",
+  "Picking examples from real life.",
+  "Building today around where you're headed.",
+  "Getting the right words ready for you.",
+  "Making sure today follows on from last time.",
+  "Shaping this around your life.",
+  "Good lessons take a moment — nearly there.",
+  "Putting today together, just for you.",
+  "Thinking like your teacher, not a machine.",
+  "Finding the version of this that fits you.",
+];
+
+function shuffleOnce(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/* §3.3: one line visible at a time, 8s dwell, DrawnRule redraws on every
+   change via the key. Pool order is shuffled once per lesson load so two
+   students starting together don't see identical timing. Wraparound never
+   repeats the immediately-preceding line — guaranteed here because every
+   pool entry is a distinct string, so index i and i+1 (mod length) can never
+   read the same text, including the wrap from last back to first.
+   §3.5: reduced motion is handled entirely by the existing .wait-label /
+   .drawn-rule-line media query — the interval still advances every 8s
+   regardless, so the line keeps changing; only the entrance transform and
+   the stroke-draw animation are suppressed. No new CSS needed here. */
+function PlanningWaitCycle() {
+  const [order] = React.useState(() => shuffleOnce(PLANNING_WAIT_LINES));
+  const [idx, setIdx] = React.useState(0);
+  React.useEffect(() => {
+    const t = setInterval(() => setIdx((i) => (i + 1) % order.length), 8000);
+    return () => clearInterval(t);
+  }, [order.length]);
+  return (
+    <div className="wait-block" role="status" aria-live="polite">
+      <DrawnRule key={idx} />
+      <p className="wait-label text-leo" key={"pw" + idx}>{order[idx]}</p>
+    </div>
+  );
+}
+
+/* §3.2: Path B keeps the existing 400ms/4s/9s ladder untouched (rendered by
+   LeoLoader/WaitIndicator below), then hands off to PlanningWaitCycle once
+   that ladder would otherwise have gone static. */
+function PlanningWaitPathB({ label, level }) {
+  const [handoff, setHandoff] = React.useState(false);
+  React.useEffect(() => {
+    const t = setTimeout(() => setHandoff(true), 9000);
+    return () => clearTimeout(t);
+  }, []);
+  if (handoff) return <PlanningWaitCycle />;
+  return <LeoLoader label={label} level={level} />;
+}
+
 /* The whole row is gated, not just the rule: an empty padded bubble with an
    avatar beside it IS an indicator, and §3.2 says nothing at all appears
    under 400ms. The stage is owned here and passed down so the inner rule
@@ -7645,9 +7713,9 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
         <p className="plan-line plan-d3">Grammar: {currentUnitRecord.grammar.point}</p>
         <p className="plan-line plan-d4">{(currentUnitRecord.coreVocab || []).length} new words to learn</p>
         <p className="plan-line plan-d5">Pronunciation focus</p>
-        <div className="plan-line plan-d6"><div className="leo-loader-bar" /></div>
+        <div className="plan-line plan-d6" style={{ marginTop: "var(--space-5)" }}><PlanningWaitCycle /></div>
       </div>
-    ) : <LeoLoader label="I'm putting together today's lesson." level={profile.level} />}
+    ) : <PlanningWaitPathB label="I'm putting together today's lesson." level={profile.level} />}
   </div>);
 
   if (phase === "chooser") {
@@ -9914,8 +9982,6 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .grammar-form-box .gram-form{background:none; padding:0;}
 .grammar-example{display:flex; align-items:baseline; gap:10px; padding:6px 0; font-style:italic; color:var(--text-secondary);}
 .grammar-example-bar{display:inline-block; width:3px; min-height:18px; background:var(--euca); border-radius:2px; flex-shrink:0;}
-.leo-loader-bar{width:60px; height:3px; background:var(--leo-green); border-radius:2px; margin:0 auto; animation:leoLoad 1.5s ease-in-out infinite;}
-@keyframes leoLoad{0%,100%{opacity:0.3; transform:scaleX(1);} 50%{opacity:1; transform:scaleX(1.8);}}
 
 /* ═══ WORD CARD (WORD_CARD_SPECIFICATION §2–§8) ═══ */
 .word-card{animation:scRise .4s ease-out both; text-align:center;}
