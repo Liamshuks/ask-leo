@@ -6486,6 +6486,8 @@ const EXERCISE_RENDERERS = {
   gap_fill_typed: GapFillExercise,
   write_the_contraction: ContractionExercise,
   own_word: OwnWordExercise,
+  word_order: WordOrderExercise,
+  correct_the_mistake: CorrectMistakeExercise,
 };
 function renderAuthoredExercise(exercise, onDone) {
   if (!exercise || !exercise.exerciseType) return null;
@@ -6735,6 +6737,245 @@ function OwnWordExercise({ exercise, onDone }) {
         <button className="primary-btn" onClick={next}>
           {idx + 1 >= items.length ? "Finish practice" : "Next \u2192"}
         </button>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================
+   PHASE 5 — TYPES 3 AND 5 (§2b.3, §2b.5)
+   The two bespoke interactions.
+   ================================================================ */
+
+/* §2b.3 — Type 3. Word ordering (syntax awareness).
+   TAP-TO-BUILD, not drag: drag demands two-handed precision and a
+   stable surface; the design target is one thumb on a moving train.
+   Tap gives identical cognitive work — choose the next word — with
+   zero motor tax. */
+function WordOrderExercise({ exercise, onDone }) {
+  const items = exercise.items || [];
+  const q = useExerciseQueue(items);
+  const [built, setBuilt] = useState([]);      // [{tok, from}]
+  const [pool, setPool] = useState(null);
+  const [checked, setChecked] = useState(null);
+  const [attempt, setAttempt] = useState(1);
+  const [shown, setShown] = useState(false);
+  const [correct, setCorrect] = useState(0);
+  const item = q.current;
+
+  /* Pool is shuffled once per item. Derived lazily so a re-queued item
+     is genuinely re-shuffled rather than reappearing pre-solved. */
+  const tokens = item ? (item.tokens || []) : [];
+  const activePool = pool === null
+    ? shuffleOptions(tokens.map((t, i) => ({ tok: t, id: i })), textSeed((item && item.answer) || "") + attempt)
+    : pool;
+
+  if (q.finished || !item) {
+    return <StageComplete correct={correct} total={items.length} onContinue={() => onDone(correct, items.length)} />;
+  }
+
+  const settled = checked !== null || shown;
+  const takeTile = (t) => {
+    if (settled) return;
+    setBuilt(built.concat([t]));
+    setPool(activePool.filter((x) => x.id !== t.id));
+  };
+  const returnWord = (t) => {
+    if (settled) return;
+    setBuilt(built.filter((x) => x.id !== t.id));
+    setPool(activePool.concat([t]));
+  };
+  const backspace = () => {
+    if (settled || !built.length) return;
+    returnWord(built[built.length - 1]);
+  };
+  const sentenceOf = (arr) => arr.map((x) => x.tok).join(" ").replace(/\s+([?.!,])/g, "$1");
+  const check = () => {
+    if (settled) return;
+    const ok = typedAnswerMatches(sentenceOf(built), [item.answer].concat(item.alsoAccept || []));
+    setChecked(ok);
+    if (ok) setCorrect((c) => c + 1);
+  };
+  const tryAgain = () => {
+    /* One retry: their first submission was informative, and a second
+       attempt at ORDERING is genuine practice — unlike Type 1, where a
+       retry on a short option list is a coin flip. */
+    setBuilt([]); setPool(null); setChecked(null); setAttempt(attempt + 1);
+  };
+  const next = () => {
+    q.advance(checked === true);
+    setBuilt([]); setPool(null); setChecked(null); setShown(false); setAttempt(1);
+  };
+  const poolEmpty = activePool.length === 0;
+
+  return (
+    <div className="ex-item" key={q.index + "-" + attempt}>
+      <ExerciseChrome index={q.index} total={q.total} />
+      <p className="ex-instruction">Make the sentence:</p>
+      {/* The assembly line looks increasingly like a sentence, because
+          that is the point. Assembled words are words, not tiles. */}
+      <div className={"wo-line" + (checked === true ? " wo-line-ok" : "")}>
+        {built.length === 0
+          ? <span className="wo-placeholder">Tap the words in order</span>
+          : built.map((t) => (
+              <button key={t.id} className="wo-word" onClick={() => returnWord(t)} disabled={settled}>{t.tok}</button>
+            ))}
+        {built.length > 0 && !settled && (
+          <button className="wo-back" onClick={backspace} aria-label="Remove the last word">&#9003;</button>
+        )}
+      </div>
+      {!settled && (
+        <div className="wo-pool">
+          {activePool.map((t) => (
+            <button key={t.id} className="wo-tile" onClick={() => takeTile(t)}>{t.tok}</button>
+          ))}
+        </div>
+      )}
+      {/* Production deserves a deliberate submit, unlike Type 1's
+          recognition tap — so Check appears only once the pool empties. */}
+      {!settled && poolEmpty && (
+        <div className="ex-actions stage-enter"><button className="primary-btn" onClick={check}>Check</button></div>
+      )}
+      {!settled && <ShowMeLink onShow={() => setShown(true)} shown={shown} />}
+      {settled && (
+        <>
+          {shown
+            ? <CorrectAnswerReveal answer={item.answer} note={item.note} />
+            : checked
+              ? <LeoFeedback ok>{item.note || "That's the order."}</LeoFeedback>
+              : <LeoFeedback ok={false}>
+                  {/* Their sentence stays above; the model sits here.
+                      The difference IS the teaching — no red, no strike. */}
+                  The order is <strong className="ex-answer">{item.answer}</strong>. {item.note || ""}
+                </LeoFeedback>}
+          {checked === false && attempt === 1 && !shown
+            ? <button className="ghost-btn wide" onClick={tryAgain}>Try again</button>
+            : <button className="primary-btn" onClick={next}>{q.index + 1 >= q.total ? "Finish practice" : "Next \u2192"}</button>}
+        </>
+      )}
+    </div>
+  );
+}
+
+/* §2b.5 — Type 5. Correct the mistake (noticing → repair).
+   The most valuable type, and the one that must feel most like a
+   teacher at the board. Two steps with a DESIGNED MOMENT between:
+   notice, be told you noticed right, THEN repair. The pause is the
+   design, not a delay. */
+function CorrectMistakeExercise({ exercise, onDone }) {
+  const items = exercise.items || [];
+  const q = useExerciseQueue(items);
+  const [noticed, setNoticed] = useState(false);   // the wrong span is marked
+  const [misses, setMisses] = useState(0);         // wrong notices this item
+  const [pressed, setPressed] = useState(null);
+  const [repair, setRepair] = useState("");
+  const [checked, setChecked] = useState(null);
+  const [shown, setShown] = useState(false);
+  const [correct, setCorrect] = useState(0);
+  const item = q.current;
+  if (q.finished || !item) {
+    return <StageComplete correct={correct} total={items.length} onContinue={() => onDone(correct, items.length)} />;
+  }
+
+  /* Tokenise the sentence and locate the wrong span as WHOLE tokens.
+     The span may be more than one word ("You are" → "Are you"), so the
+     match is contiguous-run, not single-token equality. */
+  const toks = String(item.stem || "").split(/\s+/);
+  const wrongToks = String(item.wrongWord || "").split(/\s+/);
+  const bare = (s) => String(s).replace(/[?.!,]+$/, "");
+  let spanStart = -1;
+  for (let i = 0; i <= toks.length - wrongToks.length; i++) {
+    if (wrongToks.every((w, j) => bare(toks[i + j]) === bare(w))) { spanStart = i; break; }
+  }
+  const inSpan = (i) => spanStart >= 0 && i >= spanStart && i < spanStart + wrongToks.length;
+  /* The repair replaces the whole span, but the LAST token of that span
+     may carry the sentence's punctuation ("Japan." -> "Brazil"). Carry
+     it across, or the sentence heals into something that is no longer
+     correct English — which is the one thing this exercise must never
+     teach. */
+  const spanTail = spanStart >= 0
+    ? (String(toks[spanStart + wrongToks.length - 1] || "").match(/[?.!,]+$/) || [""])[0]
+    : "";
+  const healedText = String(item.answer || "") + spanTail;
+
+  const tapWord = (i) => {
+    if (noticed || shown) return;
+    if (inSpan(i)) { setNoticed(true); setPressed(null); return; }
+    /* A wrong notice marks nothing permanent. The hint points at the
+       CATEGORY, never the answer. */
+    setPressed(i);
+    const next = misses + 1;
+    setMisses(next);
+    /* Second wrong notice: Leo circles it for them and the repair still
+       happens — that half is what produces language. */
+    if (next >= 2) setNoticed(true);
+  };
+  const settled = checked !== null || shown;
+  const check = () => {
+    if (!repair.trim() || settled) return;
+    const ok = typedAnswerMatches(repair, [item.answer].concat(item.alsoAccept || []));
+    setChecked(ok);
+    if (ok && misses === 0) setCorrect((c) => c + 1);
+  };
+  const next = () => {
+    q.advance(checked === true && misses === 0);
+    setNoticed(false); setMisses(0); setPressed(null); setRepair(""); setChecked(null); setShown(false);
+  };
+  const options = item.options || exercise.options;
+
+  return (
+    <div className="ex-item" key={q.index}>
+      <ExerciseChrome index={q.index} total={q.total} />
+      <p className="ex-instruction">{noticed ? "What should it be?" : "Find the word that's wrong \u2014 tap it:"}</p>
+      {/* A sentence lightly cut apart — not buttons, not tiles. */}
+      <div className="cm-sentence">
+        {toks.map((t, i) => {
+          const marked = noticed && inSpan(i);
+          const healed = marked && settled;
+          /* When the span heals, the repair replaces it as ONE word —
+             the remaining tokens of a multi-word span are dropped, not
+             rendered as empty buttons. */
+          if (healed && i !== spanStart) return null;
+          return (
+            <button key={i}
+              className={"cm-word" + (marked ? " cm-word-marked" : "") + (healed ? " cm-word-healed" : "") + (pressed === i ? " cm-word-pressed" : "")}
+              onClick={() => tapWord(i)} disabled={noticed || shown}>
+              {healed ? healedText : t}
+            </button>
+          );
+        })}
+      </div>
+      {/* The moment between: told you noticed right, before repairing. */}
+      {noticed && !settled && misses === 0 && <p className="cm-beat stage-enter">That's the one.</p>}
+      {noticed && !settled && misses > 0 && <p className="cm-beat stage-enter">{"Here it is \u2014 look at the verb."}</p>}
+      {!noticed && pressed !== null && <p className="cm-hint stage-enter">Not that one. Look at the verb.</p>}
+      {noticed && !settled && (
+        <>
+          {options && options.length >= 2
+            ? <div className="ex-chips">
+                {options.map((o, i) => (
+                  <button key={i} className="ex-chip" onClick={() => { setRepair(o); setChecked(typedAnswerMatches(o, [item.answer])); if (typedAnswerMatches(o, [item.answer]) && misses === 0) setCorrect((c) => c + 1); }}>{o}</button>
+                ))}
+              </div>
+            : <div className="ex-actions">
+                <input className="ex-inline-input" value={repair} onChange={(e) => setRepair(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && check()} aria-label="Write the correction"
+                  {...EXERCISE_INPUT_PROPS} />
+                <button className="primary-btn" onClick={check} disabled={!repair.trim()}>Check</button>
+              </div>}
+          <ShowMeLink onShow={() => setShown(true)} shown={shown} />
+        </>
+      )}
+      {settled && (
+        <>
+          {shown
+            ? <CorrectAnswerReveal answer={item.answer} note={item.note} />
+            : <LeoFeedback ok={checked}>
+                {checked ? (item.note || "That's it \u2014 the sentence is right now.")
+                         : <>It should be <strong className="ex-answer">{item.answer}</strong>. {item.note || ""}</>}
+              </LeoFeedback>}
+          <button className="primary-btn" onClick={next}>{q.index + 1 >= q.total ? "Finish practice" : "Next \u2192"}</button>
+        </>
       )}
     </div>
   );
@@ -11597,6 +11838,31 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
    survives the student starting to type. */
 .ex-hint{font-size:13px; font-style:italic; color:var(--text-tertiary); text-align:center; margin:-8px 0 var(--space-4);}
 .ex-actions{display:flex; justify-content:center; margin-top:var(--space-4);}
+
+/* ===== Phase 5 — types 3 and 5 (§2b.3, §2b.5) ===== */
+.ex-instruction{font-size:15px; color:var(--text-secondary); text-align:center; margin:0 0 var(--space-3);}
+/* §2b.3 assembly line — looks increasingly like a sentence. */
+.wo-line{display:flex; flex-wrap:wrap; align-items:center; gap:2px; min-height:56px; background:var(--bg-card); border:1.5px dashed var(--divider); border-radius:10px; padding:8px 12px;}
+.wo-line-ok{border-style:solid; border-color:var(--leo-green);}
+.wo-placeholder{font-size:14px; font-style:italic; color:var(--text-tertiary);}
+/* Assembled words are WORDS, not tiles — natural sentence spacing. */
+.wo-word{background:none; border:none; font-size:17px; font-weight:500; color:var(--text-primary); padding:4px 3px; cursor:pointer; font-family:inherit;}
+.wo-word:disabled{cursor:default;}
+.wo-back{margin-left:auto; min-width:44px; min-height:44px; background:none; border:none; color:var(--text-tertiary); font-size:18px; cursor:pointer;}
+.wo-pool{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:var(--space-4);}
+.wo-tile{min-height:44px; font-size:16px; font-weight:500; color:var(--text-primary); background:var(--leo-green-light); border:none; border-radius:10px; padding:10px 16px; cursor:pointer; font-family:inherit;}
+/* §2b.5 — a sentence lightly cut apart. Not buttons, not tiles. */
+.cm-sentence{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin:var(--space-4) 0;}
+.cm-word{font-size:17px; font-weight:400; color:var(--text-primary); background:transparent; border:1.5px solid var(--divider); border-radius:8px; padding:8px 12px; min-height:44px; cursor:pointer; font-family:inherit;}
+.cm-word:disabled{cursor:default;}
+/* Orange marks LOCATION — exactly as a teacher circles a word. */
+.cm-word-marked{border-color:var(--marker-orange); border-width:2px; color:var(--marker-orange);}
+/* The payoff frame: orange mark → green repair, on the same object. */
+.cm-word-healed{border-color:transparent; color:var(--leo-green); font-weight:600;}
+.cm-word-pressed{border-color:var(--text-tertiary);}
+.cm-beat{font-size:15px; color:var(--leo-green); text-align:center; margin:var(--space-3) 0;}
+.cm-hint{font-size:15px; color:var(--text-secondary); text-align:center; margin:var(--space-3) 0;}
+@media(prefers-reduced-motion:reduce){.cm-beat,.wo-line{animation:none;}}
 
 .grammar-form-box{background:var(--sage); border-radius:10px; padding:12px 16px; margin:4px 0; line-height:1.6;}
 .grammar-form-box .gram-form{background:none; padding:0;}
