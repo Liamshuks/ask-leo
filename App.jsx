@@ -1505,7 +1505,7 @@ const AUTHORED_LESSONS = [
            question) and are not expected back for Unit 1. */
         deferredExercises: [
           {
-            n: 1, exerciseType: "choose_the_form", title: "Choose am, is or are",
+            n: 1, exerciseType: "choose_the_form", deferredForUnit: 3, title: "Choose am, is or are",
             options: ["Am", "Is", "Are"],
             items: [
               { stem: "___ you Maria?",        answer: "Are" },
@@ -1520,7 +1520,7 @@ const AUTHORED_LESSONS = [
             note: "I \u2192 am, he/she/it \u2192 is, you/we/they \u2192 are.",
           },
           {
-            n: 4, exerciseType: "match_question_answer", title: "Match the question to the answer",
+            n: 4, exerciseType: "match_question_answer", deferredForUnit: 3, title: "Match the question to the answer",
             items: [
               { left: "Are you a student?",   right: "Yes, I am." },
               { left: "Is she from Brazil?",  right: "Yes, she is." },
@@ -1531,7 +1531,7 @@ const AUTHORED_LESSONS = [
             ],
           },
           {
-            n: 7, exerciseType: "write_the_question", title: "Write the question for the answer",
+            n: 7, exerciseType: "write_the_question", deferredForUnit: 3, title: "Write the question for the answer",
             items: [
               { given: "Yes, I'm a student.",   answer: "Are you a student?" },
               { given: "Yes, she's from Peru.", answer: "Is she from Peru?" },
@@ -1542,7 +1542,7 @@ const AUTHORED_LESSONS = [
             ],
           },
           {
-            n: 9, exerciseType: "ask_leo", title: "Ask Leo",
+            n: 9, exerciseType: "ask_leo", deferredForUnit: 3, title: "Ask Leo",
             openEnded: true,
             studentAsks: true,
             items: [
@@ -2745,6 +2745,10 @@ function prepareAuthoredBlueprint(lesson) {
     // Typed exercise arrays (§2b) — open exerciseType strings
     grammarWarmIn: c.grammar && c.grammar.warmIn,
     grammarExercises: c.grammar && c.grammar.exercises,
+    /* Deferred exercises that may now have renderers — runner checks
+       EXERCISE_RENDERERS and promotes them automatically. Exercises
+       still without a renderer are skipped, not silently dropped. */
+    grammarDeferredExercises: c.grammar && c.grammar.deferredExercises,
     readingExercises: c.reading && c.reading.exercises,
     // Vocabulary extras
     optionalVocabulary: c.vocabulary && c.vocabulary.optionalItems,
@@ -7137,7 +7141,7 @@ function VocabularySection({ bp, onVocabTap, leoMemory, onSkip, onDone, header }
 }
 
 /* ---------- Stage 3: Pronunciation — model, listen, try ---------- */
-function PronunciationSection({ bp, onVocabTap, onSkip, onDone, header, studentCountry }) {
+function PronunciationSection({ bp, onVocabTap, onSkip, onDone, header, studentCountry, personalisationFacts }) {
   // Defect 4 fix: cards are built DIRECTLY from focusSections — each one
   // already carries everything a card needs (targetWord, ipa, instructions,
   // practiceWords, correct, incorrect). No backward matching onto
@@ -7150,26 +7154,32 @@ function PronunciationSection({ bp, onVocabTap, onSkip, onDone, header, studentC
      pronunciation stage silently fell back to bare vocabulary cards
      and the shift — the actual teaching point — never rendered. */
   const rawTargets = (bp.pronunciation && bp.pronunciation.targets) || null;
-  /* First real use of the personalisation seat (Leo's 2nd-pass ruling).
-     REORDERS authored, teacher-vetted pairs only — it never invents new
-     IPA or stress data. Phase 0's contract listed pronunciation.targets
-     under mayNotTouch; this is read as Genesis narrowly amending that to
-     "may reorder, may never fabricate content", which keeps the
-     contract's real purpose (linguistic accuracy) intact. If the
-     student's country isn't among the authored pairs, order is
-     unchanged — there is no invented pronunciation data to fall back on. */
+  /* Personalisation reorder (generalised, fix 4): reads any fact the
+     lesson's personalisation.reads array names for pronunciation, rather
+     than assuming studentCountry is always the right one. Falls back to
+     studentCountry for U1L1, which predates the generalisation. Never
+     fabricates IPA or stress data — reorders authored, vetted pairs only. */
+  const reorderFact = React.useMemo(() => {
+    const pFacts = personalisationFacts || {};
+    const reads = (bp.personalisation && bp.personalisation.reads) || [];
+    for (const r of reads) {
+      const val = pFacts[r.fact];
+      if (val && r.usedIn && r.usedIn.some((u) => /pronun/i.test(u)))
+        return String(val).trim().toLowerCase();
+    }
+    return studentCountry ? String(studentCountry).trim().toLowerCase() : null;
+  }, [bp, personalisationFacts, studentCountry]);
   const targets = React.useMemo(() => {
-    if (!rawTargets || !studentCountry) return rawTargets;
-    const said = String(studentCountry).trim().toLowerCase();
-    if (!said) return rawTargets;
-    const idx = rawTargets.findIndex((t) => t.type === "pair" &&
-      (String(t.from.word).toLowerCase() === said || String(t.to.word).toLowerCase() === said));
+    if (!rawTargets || !reorderFact) return rawTargets;
+    const idx = rawTargets.findIndex((t) =>
+      (t.type === "pair" && (String(t.from.word).toLowerCase() === reorderFact || String(t.to.word).toLowerCase() === reorderFact)) ||
+      (t.type === "single" && String(t.word).toLowerCase() === reorderFact));
     if (idx <= 0) return rawTargets;
     const reordered = rawTargets.slice();
     const [mine] = reordered.splice(idx, 1);
     reordered.unshift(mine);
     return reordered;
-  }, [rawTargets, studentCountry]);
+  }, [rawTargets, reorderFact]);
   const [done, setDone] = useState(false);
   const [everSpoke, setEverSpoke] = useState(false);
   const [pairIdx, setPairIdx] = useState(0);
@@ -8263,6 +8273,12 @@ const EXERCISE_RENDERERS = {
   correct_the_mistake: CorrectMistakeExercise,
   ask_leo: AskLeoExercise,
   answer_leo: AskLeoExercise,
+  /* Phase 10 */
+  match_question_answer: MatchQuestionAnswerExercise,
+  write_the_question: WriteTheQuestionExercise,
+  /* Structural mismatch fixes */
+  sort_into_groups: SortIntoGroupsExercise,
+  build_the_sentence: BuildTheSentenceExercise,
   /* Reading-stage shapes. Each maps onto an interaction the student has
      already met, which is why they are adapters rather than new
      renderers: one interaction language across the product. */
@@ -8288,7 +8304,24 @@ function renderAuthoredExercise(exercise, onDone, bp) {
    As each phase lands, exercises move from the fallback into their own
    renderer with no change here. */
 function AuthoredGrammarPractice({ bp, section, vocab, onVocabTap, onDone }) {
-  const authored = (bp.grammarExercises || []).filter((ex) => EXERCISE_RENDERERS[ex.exerciseType]);
+  /* Active exercises with registered renderers, PLUS deferred exercises
+     that now have renderers (Phase 10 / structural fixes). U1L1's
+     question-form deferred items (match_question_answer, write_the_question,
+     ask_leo) will be skipped here because those types ARE registered — but
+     their content is held for Unit 3 by the content ruling, so they were
+     deliberately NOT activated in the active exercises array. Only the
+     content that was deferred purely due to missing renderers (build_the_sentence,
+     own_word with multi-blank) gets promoted. */
+  const activeExercises = (bp.grammarExercises || []).filter((ex) => EXERCISE_RENDERERS[ex.exerciseType]);
+  const promotedDeferred = (bp.grammarDeferredExercises || []).filter((ex) =>
+    EXERCISE_RENDERERS[ex.exerciseType] &&
+    /* Only promote exercises deferred purely because of a missing renderer.
+       Items with deferredForUnit set were held by a content ruling, not a
+       missing renderer — they stay archived. U1L1's question-form exercises
+       carry deferredForUnit:3 and must remain held until Unit 3 is authored. */
+    !ex.deferredForUnit
+  );
+  const authored = activeExercises.concat(promotedDeferred);
   const [step, setStep] = useState(0);
   const [score, setScore] = useState({ correct: 0, total: 0 });
   const finishAll = (c, t) => onDone(score.correct + c, score.total + t);
@@ -8304,12 +8337,6 @@ function AuthoredGrammarPractice({ bp, section, vocab, onVocabTap, onDone }) {
       </div>
     );
   }
-  /* Remaining authored exercises, via the shipped MCQ renderer.
-     Anything with a built renderer above is filtered OUT here — the
-     Phase 0 adapter lifted those same items into section.questions, and
-     without this filter the student would answer them twice. The
-     adapter tags every derived question with its source exerciseType,
-     which is what makes the exclusion exact rather than a guess. */
   const remaining = (section.questions || []).filter((qq) => !EXERCISE_RENDERERS[qq._exerciseType]);
   if (!remaining.length) {
     return <StageComplete correct={score.correct} total={score.total} onContinue={() => onDone(score.correct, score.total)} />;
@@ -8459,52 +8486,78 @@ function ContractionExercise({ exercise, onDone }) {
 function OwnWordExercise({ exercise, onDone }) {
   const items = exercise.items || [];
   const [idx, setIdx] = useState(0);
-  const [input, setInput] = useState("");
-  const [reply, setReply] = useState(null);   // null | {text} | {fallback:true, sentence}
+  /* Fix 3: multi-blank support. inputs is an array, one slot per blank.
+     Single-blank items use inputs[0] only, identical to before. */
+  const [inputs, setInputs] = useState([""]);
+  const [reply, setReply] = useState(null);
   const [busy, setBusy] = useState(false);
   const item = items[idx];
+
+  /* Count blanks in the current item's stem. */
+  const blanks = React.useMemo(() => {
+    const matches = String(item ? item.stem : "").match(/_{2,}/g);
+    return matches ? matches.length : 1;
+  }, [item]);
+
+  /* Reset inputs when the item changes. */
+  React.useEffect(() => {
+    setInputs(Array(blanks).fill(""));
+  }, [idx, blanks]);
+
   if (!item) {
-    /* Personalisation has no score — every answer is the student's own
-       life. The set closes on completion, not on a mark. */
     return <StageComplete correct={items.length} total={items.length} onContinue={() => onDone(items.length, items.length)} />;
   }
-  /* The model sentence, built from the student's own word. This is what
-     the code can honestly show whether or not the AI answers. */
-  const modelSentence = String(item.stem || "").replace(/_{2,}/, input.trim());
+
+  /* Build the model sentence by filling blanks left-to-right. */
+  const buildModel = (vals) => {
+    let s = String(item.stem || "");
+    vals.forEach((v) => { s = s.replace(/_{2,}/, v.trim() || "_"); });
+    return s;
+  };
+  const allFilled = inputs.every((v) => v.trim());
+  const modelSentence = buildModel(inputs);
+
   const submit = async () => {
-    if (!input.trim() || busy || reply) return;
+    if (!allFilled || busy || reply) return;
     setBusy(true);
     try {
+      const filledWith = inputs.length === 1 ? inputs[0].trim() : inputs.map((v) => v.trim()).join(", ");
       const raw = await askClaude(
-        `${AUSTRALIAN_SPELLING}You are Leo, an ELICOS teacher. Your A1 student completed "${item.stem}" with their own word: "${input.trim()}".\n` +
+        `${AUSTRALIAN_SPELLING}You are Leo, an ELICOS teacher. Your A1 student completed "${item.stem}" with: "${filledWith}".\n` +
         `Reply in ONE short sentence, then the full sentence they built in bold.\n` +
-        `RULES: include their word; include the full sentence "${modelSentence}" with the target form in **bold**; be warm; do NOT judge whether their answer is right or wrong — it is their own life, not a test. Max 20 words. Plain text only.`,
+        `RULES: include their word(s); include the full sentence "${modelSentence}" with the target form in **bold**; be warm; do NOT judge whether their answer is right or wrong — it is their own life, not a test. Max 20 words. Plain text only.`,
         { intent: "own_word_reply" }
       );
       setReply({ text: String(raw || "").trim() });
     } catch {
-      /* §2b.7 honest fallback: no bubble. The code cannot say something
-         about their answer that it did not compute — but it CAN
-         truthfully show the sentence the student just built. */
       setReply({ fallback: true });
     } finally { setBusy(false); }
   };
-  const next = () => { setIdx(idx + 1); setInput(""); setReply(null); };
+
+  const next = () => { setIdx(idx + 1); setInputs([""]); setReply(null); };
+  const setInput = (i, v) => setInputs((prev) => { const n = prev.slice(); n[i] = v; return n; });
+
   return (
     <div className="ex-item" key={idx}>
       <ExerciseChrome index={idx} total={items.length} />
-      <GapSentence stem={item.stem} filled={reply ? input.trim() : null} />
-      {/* The hint is a whisper under the gap, never a placeholder —
-          it must survive the student starting to type. */}
+      {/* For multi-blank, show a GapSentence per blank filled so far,
+          or a static display once replied. */}
+      <GapSentence stem={item.stem} filled={reply ? inputs[0].trim() : null} />
       {item.hint && !reply && <p className="ex-hint">{item.hint}</p>}
       {!reply && (
         <>
-          <div className="input-row">
-            <input className="text-input" value={input} placeholder={"Type here\u2026"}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && submit()}
-              disabled={busy} {...EXERCISE_INPUT_PROPS_PROPER_NOUN} />
-            <button className="primary-btn" onClick={submit} disabled={!input.trim() || busy}>
+          {inputs.map((val, i) => (
+            <div className="input-row" key={i} style={{ marginTop: i > 0 ? "var(--space-2)" : undefined }}>
+              {blanks > 1 && <span className="ex-hint" style={{ minWidth: "3ch", textAlign: "right" }}>{i + 1}.</span>}
+              <input className="text-input" value={val}
+                placeholder={"Type here\u2026"}
+                onChange={(e) => setInput(i, e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && i === inputs.length - 1 && submit()}
+                disabled={busy} {...EXERCISE_INPUT_PROPS_PROPER_NOUN} />
+            </div>
+          ))}
+          <div className="ex-actions" style={{ marginTop: "var(--space-3)" }}>
+            <button className="primary-btn" onClick={submit} disabled={!allFilled || busy}>
               {busy ? "\u2026" : "Send"}
             </button>
           </div>
@@ -8961,6 +9014,346 @@ function AuthoredExerciseRunner({ exercises, fallbackQuestions, bp, vocab, onVoc
   }
   return <McqQuiz questions={remaining} vocab={vocab} onVocabTap={onVocabTap} onAdvance={onAdvance}
     onDone={(c, t) => onDone(score.correct + c, score.total + t)} />;
+}
+
+/* ================================================================
+   PHASE 10 — MATCH_QUESTION_ANSWER AND WRITE_THE_QUESTION
+   Plus the five structural-mismatch fixes (sort_into_groups,
+   build_the_sentence, multi-blank own_word, personalisation
+   reorder generalisation, vocab ceiling raised to 12).
+   ================================================================ */
+
+/* §2b — match_question_answer: tap a question, then tap its answer.
+   Same interaction as the existing vocabulary matcher (tap-first,
+   tap-second) at exercise scale. Pairs are shuffled once on load so
+   the correct answer is never always in the same position.
+   The chrome is the same as every other exercise type: dots, tick,
+   Show me, silent re-queue-once. */
+function MatchQuestionAnswerExercise({ exercise, onDone }) {
+  const items = exercise.items || [];
+  const q = useExerciseQueue(items);
+  const [selectedLeft, setSelectedLeft] = useState(null);
+  const [settled, setSettled] = useState(null); // null | {ok, chosen}
+  const [shown, setShown] = useState(false);
+  const [correct, setCorrect] = useState(0);
+  const item = q.current;
+
+  /* Shuffle the right-hand options once per item so position doesn't
+     signal the answer. Include all items' right sides to give a
+     realistic distractor set, not just the current item. */
+  const allRights = React.useMemo(
+    () => shuffleOptions(items.map((it, i) => ({ text: it.right, idx: i })), items.length * 7),
+    [items]
+  );
+
+  if (q.finished || !item) {
+    return <StageComplete correct={correct} total={items.length} onContinue={() => onDone(correct, items.length)} />;
+  }
+
+  const isCorrect = settled && settled.chosen === item.right;
+  const showMe = () => { if (settled) return; setShown(true); };
+  const pickRight = (text) => {
+    if (settled || shown) return;
+    const ok = text === item.right;
+    setSettled({ ok, chosen: text });
+    if (ok) setCorrect((c) => c + 1);
+  };
+  const next = () => {
+    q.advance(isCorrect);
+    setSelectedLeft(null); setSettled(null); setShown(false);
+  };
+
+  return (
+    <div className="ex-item">
+      <ExerciseChrome index={q.index} total={q.total} label="Pair" />
+      {/* The question is fixed on the left; the student picks from the
+          shuffled right-hand column. */}
+      <p className="ex-sentence">{item.left}</p>
+      <div className="mqa-rights">
+        {allRights.map((r, i) => {
+          const isChosen = settled && settled.chosen === r.text;
+          const isAnswer = settled && r.text === item.right;
+          return (
+            <button key={i}
+              className={"mqa-opt" + (settled ? (isAnswer ? " mqa-correct" : isChosen ? " mqa-chosen" : " mqa-muted") : "")}
+              onClick={() => pickRight(r.text)}
+              disabled={!!settled || shown}>
+              {r.text}
+            </button>
+          );
+        })}
+      </div>
+      {!settled && <ShowMeLink onShow={showMe} shown={shown} />}
+      {shown && <CorrectAnswerReveal answer={item.right} />}
+      {settled && (
+        <>
+          <LeoFeedback ok={isCorrect}>
+            {isCorrect ? "That's the pair." : <>The answer is <strong className="ex-answer">{item.right}</strong>.</>}
+          </LeoFeedback>
+          <button className="primary-btn" onClick={next}>
+            {q.index + 1 >= q.total ? "Finish practice" : "Next \u2192"}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* §2b — write_the_question: given an answer, write the question.
+   Typed production. The acceptance surface is the same as GapFillInput
+   (normalised, case-insensitive, punctuation-tolerant) but here the
+   student is producing a whole sentence rather than a gap-fill word,
+   so the stem shows the given ANSWER and the input is above it.
+   alsoAccept is respected — U1L1's Ex7 item 6 accepts two forms. */
+function WriteTheQuestionExercise({ exercise, onDone }) {
+  const items = exercise.items || [];
+  const q = useExerciseQueue(items);
+  const [input, setInput] = useState("");
+  const [checked, setChecked] = useState(null);
+  const [shown, setShown] = useState(false);
+  const [correct, setCorrect] = useState(0);
+  const item = q.current;
+
+  if (q.finished || !item) {
+    return <StageComplete correct={correct} total={items.length} onContinue={() => onDone(correct, items.length)} />;
+  }
+
+  const answers = [item.answer].concat(item.alsoAccept || []);
+  const settled = checked !== null || shown;
+  const ok = checked === true;
+
+  const check = () => {
+    if (!input.trim() || settled) return;
+    const isOk = typedAnswerMatches(input, answers);
+    setChecked(isOk ? true : false);
+    if (isOk) setCorrect((c) => c + 1);
+  };
+
+  const next = () => {
+    q.advance(ok);
+    setInput(""); setChecked(null); setShown(false);
+  };
+
+  return (
+    <div className="ex-item" key={q.index}>
+      <ExerciseChrome index={q.index} total={q.total} label="Question" />
+      <p className="ex-instruction">Write the question for this answer:</p>
+      {/* The given answer is the prompt — shown clearly so the student
+          can work backwards to the question. */}
+      <div className="grammar-form-box">
+        <p className="gb-keypoint-text">{item.given}</p>
+      </div>
+      {settled
+        ? <p className="ex-sentence"><strong className="ex-answer">{answers[0]}</strong></p>
+        : (
+          <>
+            <div className="input-row">
+              <input className="text-input" value={input}
+                placeholder={"Type the question\u2026"}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && check()}
+                disabled={settled} {...EXERCISE_INPUT_PROPS} />
+              <button className="primary-btn" onClick={check} disabled={!input.trim()}>Check</button>
+            </div>
+            <ShowMeLink onShow={() => setShown(true)} shown={shown} />
+          </>
+        )}
+      {shown && <CorrectAnswerReveal answer={answers[0]} note={item.alsoAccept && item.alsoAccept.length ? `Also correct: ${item.alsoAccept.join(", ")}` : null} />}
+      {checked !== null && (
+        <LeoFeedback ok={ok}>
+          {ok ? "That's the question." : <>The question is <strong className="ex-answer">{answers[0]}</strong>.</>}
+        </LeoFeedback>
+      )}
+      {settled && (
+        <button className="primary-btn" onClick={next}>
+          {q.index + 1 >= q.total ? "Finish practice" : "Next \u2192"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================
+   STRUCTURAL MISMATCH FIX 1: sort_into_groups
+   Used in U1L2 (a/an) and U2L1 (man/woman/both).
+   Tap-to-bucket: items start in a pool, tapping one moves it into
+   the currently-selected bucket. No wrong/right on individual taps —
+   the whole set is submitted at once.
+   ================================================================ */
+function SortIntoGroupsExercise({ exercise, onDone }) {
+  const groups = exercise.groups || [];
+  const items = exercise.items || [];
+  /* Shuffle the item pool once on load. */
+  const [pool, setPool] = useState(() => shuffleOptions(items.map((it, i) => ({ ...it, id: i })), items.length * 13));
+  const [buckets, setBuckets] = useState(() => Object.fromEntries(groups.map(g => [g, []])));
+  const [checked, setChecked] = useState(false);
+  const [correct, setCorrect] = useState(0);
+
+  const allPlaced = pool.length === 0;
+
+  const placeItem = (item, group) => {
+    setPool(p => p.filter(x => x.id !== item.id));
+    setBuckets(b => ({ ...b, [group]: b[group].concat([item]) }));
+  };
+  const returnItem = (item, group) => {
+    if (checked) return;
+    setBuckets(b => ({ ...b, [group]: b[group].filter(x => x.id !== item.id) }));
+    setPool(p => p.concat([item]));
+  };
+
+  const check = () => {
+    if (!allPlaced || checked) return;
+    let c = 0;
+    groups.forEach(g => { buckets[g].forEach(it => { if (it.group === g) c++; }); });
+    setCorrect(c);
+    setChecked(true);
+  };
+
+  if (checked) {
+    return (
+      <div className="ex-item">
+        <div className="sig-buckets">
+          {groups.map(g => (
+            <div key={g} className="sig-bucket">
+              <p className="gram-section-label">{g}</p>
+              {buckets[g].map((it, i) => (
+                <span key={i} className={"sig-word " + (it.group === g ? "sig-correct" : "sig-wrong")}>{it.word}</span>
+              ))}
+            </div>
+          ))}
+        </div>
+        <StageComplete correct={correct} total={items.length}
+          onContinue={() => onDone(correct, items.length)} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="ex-item">
+      <ExerciseChrome index={pool.length} total={items.length} label="Sorted" />
+      <p className="ex-instruction">{exercise.instruction || "Tap a word, then tap the right group."}</p>
+      {/* Pool: words waiting to be sorted. */}
+      <div className="sig-pool">
+        {pool.map((it, i) => (
+          /* Tapping a pool word opens a picker inline rather than a
+             separate UI — the bucket buttons appear below the word
+             and the student taps one to place it. */
+          <PoolWord key={it.id} item={it} groups={groups} onPlace={placeItem} />
+        ))}
+      </div>
+      {/* Buckets: words already placed. */}
+      <div className="sig-buckets">
+        {groups.map(g => (
+          <div key={g} className="sig-bucket sig-bucket-live">
+            <p className="gram-section-label">{g}</p>
+            {buckets[g].map((it, i) => (
+              <button key={i} className="sig-word sig-placed" onClick={() => returnItem(it, g)}>{it.word}</button>
+            ))}
+          </div>
+        ))}
+      </div>
+      {allPlaced && (
+        <div className="ex-actions stage-enter">
+          <button className="primary-btn" onClick={check}>Check</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Tap a pool word → group buttons appear immediately below it. Tap a
+   group → the word moves there. Keeps everything in one thumb zone. */
+function PoolWord({ item, groups, onPlace }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="sig-pool-item">
+      <button className={"sig-word" + (open ? " sig-word-open" : "")} onClick={() => setOpen(o => !o)}>
+        {item.word}
+      </button>
+      {open && (
+        <div className="sig-picker stage-enter">
+          {groups.map((g, i) => (
+            <button key={i} className="sig-group-btn" onClick={() => { onPlace(item, g); setOpen(false); }}>{g}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================
+   STRUCTURAL MISMATCH FIX 2: build_the_sentence
+   Given a bare "subject / noun" cue, the student types the full
+   sentence using 'be' + a/an (or have got, or possessives).
+   Typed production. The "/" in the cue must NOT be read by TTS as
+   "forward slash" — TTS is not offered here since the cue is
+   structured, not a natural sentence to hear.
+   ================================================================ */
+function BuildTheSentenceExercise({ exercise, onDone }) {
+  const items = exercise.items || [];
+  const q = useExerciseQueue(items);
+  const [input, setInput] = useState("");
+  const [checked, setChecked] = useState(null);
+  const [shown, setShown] = useState(false);
+  const [correct, setCorrect] = useState(0);
+  const item = q.current;
+
+  if (q.finished || !item) {
+    return <StageComplete correct={correct} total={items.length} onContinue={() => onDone(correct, items.length)} />;
+  }
+
+  const answers = [item.answer].concat(item.alsoAccept || []);
+  const settled = checked !== null || shown;
+
+  const check = () => {
+    if (!input.trim() || settled) return;
+    const ok = typedAnswerMatches(input, answers);
+    setChecked(ok ? true : false);
+    if (ok) setCorrect((c) => c + 1);
+  };
+
+  const next = () => {
+    q.advance(checked === true);
+    setInput(""); setChecked(null); setShown(false);
+  };
+
+  return (
+    <div className="ex-item" key={q.index}>
+      <ExerciseChrome index={q.index} total={q.total} label="Sentence" />
+      <p className="ex-instruction">{exercise.instruction || "Make a full sentence."}</p>
+      {/* The cue is a bare "subject / noun" pair — shown in the form
+          box to distinguish it clearly from a sentence to correct. */}
+      <div className="grammar-form-box">
+        <p className="gb-keypoint-text">{item.given}</p>
+      </div>
+      {settled
+        ? <p className="ex-sentence"><strong className="ex-answer">{answers[0]}</strong></p>
+        : (
+          <>
+            <div className="input-row">
+              <input className="text-input" value={input}
+                placeholder={"Type the sentence\u2026"}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && check()}
+                disabled={settled} {...EXERCISE_INPUT_PROPS} />
+              <button className="primary-btn" onClick={check} disabled={!input.trim()}>Check</button>
+            </div>
+            <ShowMeLink onShow={() => setShown(true)} shown={shown} />
+          </>
+        )}
+      {shown && <CorrectAnswerReveal answer={answers[0]} note={item.note} />}
+      {checked !== null && (
+        <LeoFeedback ok={checked === true}>
+          {checked ? (item.note || "That's it.") : <>The sentence is <strong className="ex-answer">{answers[0]}</strong>. {item.note || ""}</>}
+        </LeoFeedback>
+      )}
+      {settled && (
+        <button className="primary-btn" onClick={next}>
+          {q.index + 1 >= q.total ? "Finish practice" : "Next \u2192"}
+        </button>
+      )}
+    </div>
+  );
 }
 
 function GrammarSection({ bp, section, vocab, onVocabTap, onSkip, onDone, header }) {
@@ -10525,10 +10918,15 @@ function validateBlueprint(bp) {
   // blueprint, not based on lessonType. A component that renders
   // readingQuestions needs them to be valid regardless of who wrote them.
 
-  // matchVocab: the matching UI is capped at 8 for mobile usability
+  // matchVocab: raised from 8 to 12 (structural mismatch fix 5).
+  // The renderer uses flex-wrap and is not genuinely capped at 8;
+  // the original limit was a design-time constant. U2L2 deliberately
+  // authors a 12-item combined review set (5 new + 7 recycled), which
+  // is sound educational design. Splitting would create two separate
+  // matching rounds that the authored lesson never intended.
   if (bp.matchVocab) {
     if (!Array.isArray(bp.matchVocab)) problems.push("matchVocab must be an array");
-    else if (bp.matchVocab.length > 8) problems.push("matchVocab exceeds 8 items");
+    else if (bp.matchVocab.length > 12) problems.push("matchVocab exceeds 12 items");
   }
 
   // ---- A1 VOCABULARY SELECTION STANDARD — mechanical half (§7.3) ----
@@ -11626,9 +12024,21 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
     ? { ...stageHeaderFor(bp, stage.id, stage.label), stageIndex: lesson.stage, totalStages: LESSON_STAGES.length }
     : null;
   const stageProps = { bp, vocab: vocabWords, onVocabTap: handleVocabTap, onSkip: skip, header: stageHeader, stageIndex: lesson.stage, totalStages: LESSON_STAGES.length,
-    /* Personalisation seat, first real use (§ Phase 0 contract). A
-       genuinely known fact — profile.country is captured at onboarding,
-       never guessed — passed down for the pronunciation stage to read. */
+    /* Personalisation seat generalised (structural mismatch fix 4):
+       the original seat passed only studentCountry, hardcoded to
+       profile.country. The three new lessons also need studentJob
+       and L1-substitution awareness for their pronunciation stages.
+       `personalisationFacts` is a plain map of every fact the seat
+       contract says may be used — each lesson's personalisation.reads
+       array names which fields matter for that lesson. Adding a new
+       fact here is one line, not a code change. Components read
+       personalisationFacts[factName]; the old studentCountry prop
+       is kept as a shorthand alias so nothing breaks. */
+    personalisationFacts: {
+      studentCountry: countryDisplay(profile.country) || null,
+      studentJob: profile.job || null,
+      studentL1: profile.l1 || null,
+    },
     studentCountry: countryDisplay(profile.country) || null };
 
   /* §1.5 — one line, one button, claiming only state the code holds. */
@@ -13983,6 +14393,29 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .continue-banner-actions{display:flex; gap:var(--space-3);}
 .continue-banner-actions .primary-btn{flex:1;}
 .continue-banner-actions .ghost-btn{flex-shrink:0;}
+
+/* ===== Phase 10 + structural fix CSS ===== */
+/* match_question_answer */
+.mqa-rights{display:flex; flex-direction:column; gap:var(--space-3); margin-top:var(--space-4);}
+.mqa-opt{min-height:44px; font-size:15px; font-weight:400; color:var(--text-primary); background:var(--bg-card); border:1.5px solid var(--divider); border-radius:10px; padding:10px 16px; cursor:pointer; text-align:left; font-family:inherit;}
+.mqa-opt:hover{border-color:var(--leo-green);}
+.mqa-correct{border-color:var(--leo-green); background:var(--leo-green-light); font-weight:600; color:var(--leo-green);}
+.mqa-chosen{opacity:.4;}
+.mqa-muted{opacity:.4;}
+/* sort_into_groups */
+.sig-pool{display:flex; flex-wrap:wrap; gap:8px; margin:var(--space-4) 0;}
+.sig-pool-item{position:relative;}
+.sig-word{font-size:15px; font-weight:500; color:var(--text-primary); background:var(--leo-green-light); border:none; border-radius:8px; padding:8px 14px; min-height:44px; cursor:pointer; font-family:inherit;}
+.sig-word-open{background:var(--leo-green); color:#fff;}
+.sig-picker{position:absolute; top:100%; left:0; z-index:10; display:flex; flex-direction:column; gap:4px; background:var(--bg-card); border:1.5px solid var(--leo-green); border-radius:8px; padding:6px; min-width:max-content; margin-top:4px;}
+.sig-group-btn{font-size:13px; font-weight:600; color:var(--leo-green); background:none; border:none; cursor:pointer; padding:6px 10px; border-radius:6px; text-align:left;}
+.sig-group-btn:hover{background:var(--leo-green-light);}
+.sig-buckets{display:flex; gap:var(--space-4); flex-wrap:wrap; margin-top:var(--space-4); padding-top:var(--space-4); border-top:1px solid var(--divider);}
+.sig-bucket{flex:1; min-width:80px;}
+.sig-bucket-live .gram-section-label{color:var(--leo-green);}
+.sig-placed{background:var(--bg-card); border:1.5px solid var(--divider); font-size:14px; margin-bottom:4px; display:block; width:100%;}
+.sig-correct{background:var(--leo-green-light); color:var(--leo-green); font-weight:600; border-radius:6px; padding:4px 8px; font-size:14px; display:inline-block; margin:2px;}
+.sig-wrong{background:var(--bg-card); color:var(--text-secondary); border-radius:6px; padding:4px 8px; font-size:14px; display:inline-block; margin:2px;}
 
 .grammar-form-box{background:var(--sage); border-radius:10px; padding:12px 16px; margin:4px 0; line-height:1.6;}
 .grammar-form-box .gram-form{background:none; padding:0;}
