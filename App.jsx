@@ -1576,6 +1576,1075 @@ const AUTHORED_LESSONS = [
       syllabusConsequence: "v3 presents the COMPLETE 'be' paradigm in Lesson 1. Units 2-3 shift from 'introduce he/she/they and questions' to 'consolidate and extend them'.",
     },
   },
+  {
+    metadata: {
+      id: "a1-u1-l2-arriving-jobs",
+      title: "Arriving \u2014 who I am (your job)",
+      lessonType: "authored",
+      schemaVersion: 2,
+      author: "Teacher Leo",
+      version: 1,
+      level: "Complete Beginner",
+      cefr: "A1",
+      topic: "Saying your job with a/an",
+      tags: ["a/an", "jobs", "be recycled", "second lesson"],
+      estimatedDuration: "40\u201345 minutes",
+      unit: 1,
+      lessonInUnit: 2,
+      sequence: 2,
+      pack: "a1-block1-arriving",
+      lastUpdated: "2026-08-10",
+    },
+
+    context: "Meeting a new workmate on your first day, talking about jobs",
+    communicativeObjective: "Say what you do \u2014 your job \u2014 using 'a' and 'an': I'm a student. She's an engineer.",
+    explanation: "Welcome back! Last time you said your name, your country and how you feel.\nToday \u2014 your JOB. What you do.",
+    mainSkill: "reading",
+    mission: "This week, tell one person in English what you do.",
+    learningOutcome: "You can say your job using 'a' and 'an', choosing correctly by the sound of the job word.",
+    skillFocus: ["reading", "speaking", "vocabulary", "grammar", "pronunciation"],
+    assumedKnowledge: "Lesson 1 only: the full 'be' paradigm as statements and contractions; introducing yourself (name, country, feeling); the words student, teacher, country, city, happy, tired; word stress in country/nationality pairs.",
+
+    aims: {
+      spoken: "Today you will say what you do \u2014 your job \u2014 using 'a' and 'an': I'm a student. She's an engineer.",
+      list: [
+        "say your job with 'a' or 'an'",
+        "hear the difference \u2014 the sound, not the letter",
+        "read about four workers at a Melbourne caf\u00e9",
+      ],
+    },
+
+    stageHeaders: {
+      intro:   { eyebrow: "WELCOME",       title: "Welcome back",         purpose: "Last time: your name, country, feeling. Today: your job." },
+      warmup:  { eyebrow: "WARM-UP",       title: "What do you do?",      purpose: "A job, a guess, and your own answer." },
+      vocab:   { eyebrow: "VOCABULARY",    title: "Seven jobs",           purpose: "Words for study, care work, and casual jobs." },
+      pron:    { eyebrow: "PRONUNCIATION", title: "The loud part",        purpose: "Job words have their own rhythm. Find the loud part." },
+      speak:   { eyebrow: "SPEAKING",      title: "Your first day",       purpose: "Three turns: your job, someone else's, an 'an' job." },
+      skill:   { eyebrow: "READING",       title: "The Green Caf\u00e9",  purpose: "Four workers, four jobs \u2014 the text stays on screen." },
+      grammar: { eyebrow: "GRAMMAR",       title: "A or an?",             purpose: "One new rule: it's the sound, not the letter." },
+      summary: { eyebrow: "SUMMARY",       title: "That's today done",    purpose: "What you practised, and one thing to try before tomorrow." },
+    },
+
+    personalisation: {
+      reads: [
+        { fact: "studentJob", from: "profile.job", usedIn: ["warm-up recognition", "pronunciation card order"] },
+      ],
+      mayRewrite: ["explanation", "warmup.leoLines", "speaking.turnPrompts", "summary framing"],
+      mayNotTouch: ["vocabulary", "grammar.blocks", "grammar.exercises", "reading.passage", "reading.exercises", "pronunciation.targets", "aims"],
+      fallback: "Every surface above has an authored default that stands alone. If the call fails or a fact is absent, the authored text renders unchanged.",
+    },
+
+    content: {
+      warmUp: {
+        questions: ["What job is this?", "Are you a student? What else do you do?"],
+        activities: [
+          {
+            type: "image_recognition",
+            instruction: "Look at the picture.",
+            prompt: "What job is this?",
+            image: { key: "chef", alt: "A person cooking in a kitchen" },
+            answer: "chef",
+            leoConfirm: "Yes! He's a chef.",
+            note: "If the student cannot answer, Leo gives the answer warmly and moves on.",
+          },
+          {
+            type: "personal_reveal",
+            instruction: "Now tell me about you.",
+            prompt: "Are you a student? What else do you do?",
+            hint: "your job",
+            revealImageByAnswer: false,
+            leoConfirmTemplate: "Great! A {answer}. Good to know.",
+            note: "Free text; Leo responds warmly \u2014 there is no wrong answer here.",
+          },
+          {
+            type: "frame_drill",
+            instruction: "Now practise saying:",
+            frame: "I'm a ___.",
+            prompt: "Say or type your sentence.",
+            leoConfirmTemplate: "I'm a {answer}. Great!",
+          },
+        ],
+      },
+
+      vocabulary: {
+        items: [
+          { word: "student", pos: "noun", meaning: "A person at a school, college or university.", example: "I'm a student in Melbourne.", ipa: "/\u02c8stju\u02d0d\u0259nt/", stress: "STU-dent", syllables: 2 },
+          { word: "chef",    pos: "noun", meaning: "A person who cooks in a caf\u00e9 or restaurant.",  example: "Sam is a chef. He's from Vietnam.", ipa: "/\u0283ef/", stress: "CHEF", syllables: 1 },
+          { word: "nurse",   pos: "noun", meaning: "A person who helps sick people, often at a hospital.", example: "Linh is a nurse. She's tired but happy.", ipa: "/n\u025c\u02d0s/", stress: "NURSE", syllables: 1 },
+          { word: "engineer", pos: "noun", meaning: "A person who builds or fixes machines, roads or bridges.", example: "Tomas is an engineer and a student.", ipa: "/\u02ccend\u0292\u026a\u02c8n\u026a\u0259/", stress: "en-gi-NEER", syllables: 3 },
+          { word: "cleaner", pos: "noun", meaning: "A person whose job is to clean a place.", example: "Maria is a cleaner in the morning.", ipa: "/\u02c8kli\u02d0n\u0259/", stress: "CLEAN-er", syllables: 2 },
+          { word: "artist",  pos: "noun", meaning: "A person who makes art \u2014 pictures, music or films.", example: "Maria is an artist too. She's very good!", ipa: "/\u02c8\u0251\u02d0t\u026ast/", stress: "AR-tist", syllables: 2 },
+          { word: "driver",  pos: "noun", meaning: "A person who drives a car, bus, taxi or truck.", example: "He's a driver. He's friendly.", ipa: "/\u02c8dra\u026av\u0259/", stress: "DRIV-er", syllables: 2 },
+        ],
+        matchSet: ["student", "chef", "nurse", "engineer", "cleaner", "artist", "driver"],
+        note: "Chosen for the cohort (study + hospitality/care/casual work) and to demonstrate both 'a' and 'an'. Where the rest of the jobs return: Unit 9 (Work) is their home, with present simple.",
+      },
+
+      pronunciation: {
+        focus: "Word stress on job nouns, and the weak article",
+        targets: [
+          { type: "single", word: "engineer", ipa: "/\u02ccend\u0292\u026a\u02c8n\u026a\u0259/", stress: "en-gi-NEER", stressIndex: 2, syllables: ["en", "gi", "NEER"] },
+          { type: "single", word: "artist",   ipa: "/\u02c8\u0251\u02d0t\u026ast/",   stress: "AR-tist", stressIndex: 0, syllables: ["AR", "tist"] },
+          { type: "single", word: "cleaner",  ipa: "/\u02c8kli\u02d0n\u0259/",  stress: "CLEAN-er", stressIndex: 0, syllables: ["CLEAN", "er"] },
+          { type: "single", word: "driver",   ipa: "/\u02c8dra\u026av\u0259/",   stress: "DRIV-er", stressIndex: 0, syllables: ["DRIV", "er"] },
+          { type: "single", word: "student",  ipa: "/\u02c8stju\u02d0d\u0259nt/", stress: "STU-dent", stressIndex: 0, syllables: ["STU", "dent"] },
+        ],
+        note: "The weak article: a /\u0259/, an /\u0259n/. Linking: an engineer /\u0259n\u203fend\u0292\u026a\u02c8n\u026a\u0259/.",
+        anticipatedProblem: "Wrong article by letter, not sound: 'a engineer'. Model: 'e-engineer starts with a vowel SOUND. So: AN engineer.' Teach by ear.",
+      },
+
+      speaking: {
+        scenario: "You meet a new workmate on your first day.",
+        minExchanges: 3,
+        oneFramePerTurn: true,
+        turns: [
+          { id: "yourJob",  leoPrompt: "What do you do?", repeatAfterMe: "I'm a ___.", frame: "I'm a ___", expects: "the student's job",
+            accepts: ["full sentence", "job only"], modelOnShort: "Student! I'm a student. Great!" },
+          { id: "someoneElse", leoPrompt: "This is my friend Alex. He's a driver.", repeatAfterMe: "He's a driver.", frame: "He's a ___", expects: "a repeated statement about a third person",
+            accepts: ["full sentence"], modelOnShort: "He's a driver. Nice!" },
+          { id: "anJob", leoPrompt: "And my friend Priya \u2014 she's an artist.", repeatAfterMe: "She's an artist.", frame: "She's an ___", expects: "a repeated 'an' statement",
+            accepts: ["full sentence"], modelOnShort: "She's an artist. Great!" },
+        ],
+        sentenceFrames: [
+          { frame: "I'm a ___", example: "I'm a student." },
+          { frame: "He's a ___", example: "He's a driver." },
+          { frame: "She's an ___", example: "She's an artist." },
+        ],
+        correctionBank: [
+          { turn: "yourJob", studentSays: "I'm student.",     leoResponds: "Almost! I'm A student. Try: I'm a student." },
+          { turn: "yourJob", studentSays: "I'm a engineer.",  leoResponds: "Listen \u2014 AN engineer. It starts with a vowel sound. Try: I'm an engineer." },
+          { turn: "yourJob", studentSays: "I'm are a chef.",  leoResponds: "I \u2192 am \u2192 I'm. Try: I'm a chef." },
+          { turn: "yourJob", studentSays: "(nationality/job mix, e.g. 'I'm a Brazil')", leoResponds: "Brazil is your country. Your job is different \u2014 you're a student. Try: I'm a student." },
+          { turn: "yourJob", studentSays: "(L1 job word)", leoResponds: "In English, that's a chef. Try: I'm a chef." },
+          { turn: "someoneElse", studentSays: "He's driver.",  leoResponds: "He's A driver. Try again: He's a driver." },
+          { turn: "anJob",   studentSays: "She's a artist.",  leoResponds: "AN artist. Try: She's an artist." },
+          { turn: "any",     studentSays: "(plural with article, e.g. 'They're a nurses')", leoResponds: "One nurse \u2014 a nurse. Two nurses \u2014 nurses, no 'a'. Try: They're nurses." },
+          { turn: "any",     studentSays: "(freezes \u2014 produces nothing)", leoResponds: "No problem. Say this: I'm a student. Never a correction on a first attempt." },
+        ],
+      },
+
+      reading: {
+        passage: "This is the Green Caf\u00e9 in Melbourne.\n\nSam is from Vietnam. He's a chef. He's happy here.\n\nLinh is from the Philippines. She's a nurse. Tonight she's here at the caf\u00e9. She's tired but happy.\n\nTomas is from Brazil. He's an engineer and a student. He's busy, and he's friendly.\n\nMaria is from Colombia. She's a cleaner in the morning. She's an artist too \u2014 she's very good!\n\nThe caf\u00e9 is small but friendly. The city is big. It's a good place for new friends in Australia.",
+        passageWordCount: 95,
+        exercises: [
+          {
+            n: 1, exerciseType: "multiple_choice", title: "Multiple choice",
+            items: [
+              { stem: "Sam is ___.",   options: ["a nurse", "a chef", "an engineer"], answer: "a chef" },
+              { stem: "Tomas is ___.", options: ["a cleaner", "a chef", "an engineer"], answer: "an engineer" },
+              { stem: "Maria is a cleaner and ___.", options: ["a nurse", "an artist", "a student"], answer: "an artist" },
+            ],
+          },
+          {
+            n: 2, exerciseType: "true_false", title: "True or false?",
+            items: [
+              { stem: "Linh is a nurse.",         answer: true },
+              { stem: "Sam is from Brazil.",      answer: false, note: "He's from Vietnam." },
+              { stem: "Tomas is a student too.",  answer: true },
+              { stem: "Maria is a driver.",       answer: false, note: "She's a cleaner and an artist." },
+              { stem: "The caf\u00e9 is in Melbourne.", answer: true },
+            ],
+          },
+          {
+            n: 3, exerciseType: "who_is_it", title: "Who is it? Write Sam, Linh, Tomas or Maria",
+            options: ["Sam", "Linh", "Tomas", "Maria"],
+            items: [
+              { stem: "\"I'm a chef.\"",                       answer: "Sam" },
+              { stem: "\"I'm an engineer and a student.\"",    answer: "Tomas" },
+              { stem: "\"I'm a nurse.\"",                      answer: "Linh" },
+              { stem: "\"I'm a cleaner and an artist.\"",      answer: "Maria" },
+            ],
+          },
+          {
+            n: 4, exerciseType: "match_halves", title: "Match the two halves",
+            items: [
+              { left: "Sam is",   right: "a chef." },
+              { left: "Linh is",  right: "a nurse." },
+              { left: "Tomas is", right: "an engineer." },
+              { left: "Maria is", right: "a cleaner." },
+            ],
+          },
+          {
+            n: 5, exerciseType: "correct_the_mistake", title: "Correct the mistake (the article is wrong)",
+            items: [
+              { stem: "Tomas is a engineer.", wrongWord: "a",  answer: "an" },
+              { stem: "Sam is an chef.",      wrongWord: "an", answer: "a" },
+              { stem: "Maria is a artist.",   wrongWord: "a",  answer: "an" },
+              { stem: "Linh is an nurse.",    wrongWord: "an", answer: "a" },
+            ],
+          },
+          {
+            n: 6, exerciseType: "complete_from_text", title: "Complete the sentence with a or an",
+            items: [
+              { stem: "Sam is ___ chef.",     answer: "a" },
+              { stem: "Tomas is ___ engineer.", answer: "an" },
+              { stem: "Linh is ___ nurse.",    answer: "a" },
+              { stem: "Maria is ___ artist.",  answer: "an" },
+              { stem: "Tomas is ___ student.", answer: "a" },
+            ],
+          },
+          {
+            n: 7, exerciseType: "sort_into_groups", title: "Sort: a or an",
+            instruction: "Put each job in the right box.",
+            groups: ["a", "an"],
+            items: [
+              { word: "chef", group: "a" }, { word: "engineer", group: "an" }, { word: "nurse", group: "a" },
+              { word: "artist", group: "an" }, { word: "cleaner", group: "a" }, { word: "student", group: "a" },
+              { word: "driver", group: "a" },
+            ],
+          },
+          {
+            n: 8, exerciseType: "about_you", title: "About you",
+            instruction: "What's your job? Write one sentence.",
+            openEnded: true,
+            items: [
+              { stem: "I'm a ___ . / I'm an ___ .", model: "I'm a student. / I'm an engineer." },
+            ],
+          },
+        ],
+      },
+
+      grammar: {
+        point: "a / an with jobs",
+        meaning: "Saying a person's job or occupation.",
+        form: "subject + be + a/an + job (singular). 'a' before a consonant SOUND, 'an' before a vowel SOUND.",
+        usage: "It is the sound, not the letter, that decides a or an.",
+        examples: ["I'm a student.", "He's a chef.", "She's an engineer.", "They're nurses."],
+
+        blocks: {
+          subjects: {
+            label: "RECYCLED FROM LESSON 1",
+            rows: [
+              { subject: "I'm",     gloss: "I am", icon: "User" },
+              { subject: "You're",  gloss: "you are", icon: "UserCheck" },
+              { subject: "He's",    gloss: "he is", icon: "User" },
+              { subject: "She's",   gloss: "she is", icon: "User" },
+              { subject: "We're",   gloss: "we are", icon: "Users" },
+              { subject: "They're", gloss: "they are", icon: "Users" },
+            ],
+          },
+          paradigm: {
+            label: "A OR AN?",
+            columnHeads: { full: "a \u2014 before a consonant sound", short: "an \u2014 before a vowel sound", follows: "" },
+            rows: [
+              { full: "a chef",    short: "an engineer", follows: "", example: "He's a chef." },
+              { full: "a nurse",   short: "an artist",   follows: "", example: "She's an artist." },
+              { full: "a cleaner", short: "",             follows: "", example: "She's a cleaner." },
+              { full: "a driver",  short: "",             follows: "", example: "He's a driver." },
+              { full: "a student", short: "",             follows: "", example: "I'm a student." },
+              { full: "a teacher", short: "",             follows: "", example: "She's a teacher.", explain: "from Lesson 1" },
+            ],
+          },
+          patterns: {
+            label: "PLURAL = NO ARTICLE",
+            rows: [
+              { sentence: "One nurse \u2192 a nurse.",  target: "a nurse", category: "singular" },
+              { sentence: "Two nurses \u2192 nurses.",  target: "nurses",  category: "plural, no article" },
+            ],
+          },
+          keyPoint: {
+            label: "THE KEY POINT",
+            text: "It is the SOUND at the start of the job word that chooses a or an, not the letter.",
+            pairs: [{ full: "engineer (vowel sound)", short: "an engineer" }, { full: "chef (consonant sound)", short: "a chef" }],
+          },
+        },
+
+        warmIn: {
+          exerciseType: "choose_the_form", title: "Warm-in",
+          options: ["a", "an"],
+          items: [
+            { stem: "She's ___ nurse.", answer: "a" },
+            { stem: "He's ___ engineer.", answer: "an" },
+            { stem: "I'm ___ student.", answer: "a" },
+            { stem: "She's ___ artist.", answer: "an" },
+          ],
+        },
+
+        exercises: [
+          {
+            n: 1, exerciseType: "choose_the_form", title: "Choose a or an",
+            options: ["a", "an"],
+            items: [
+              { stem: "She's ___ nurse.",    answer: "a" },
+              { stem: "He's ___ engineer.",  answer: "an" },
+              { stem: "I'm ___ student.",    answer: "a" },
+              { stem: "She's ___ artist.",   answer: "an" },
+              { stem: "He's ___ driver.",    answer: "a" },
+              { stem: "She's ___ cleaner.",  answer: "a" },
+            ],
+          },
+          {
+            n: 3, exerciseType: "word_order", title: "Word order",
+            items: [
+              { tokens: ["a", "chef", "He's"],         answer: "He's a chef." },
+              { tokens: ["an", "She's", "engineer"],   answer: "She's an engineer." },
+              { tokens: ["student", "I'm", "a"],       answer: "I'm a student." },
+              { tokens: ["a", "nurse", "She's"],       answer: "She's a nurse." },
+              { tokens: ["artist", "an", "He's"],      answer: "He's an artist." },
+            ],
+          },
+          {
+            n: 4, exerciseType: "correct_the_mistake", title: "Correct the mistake",
+            items: [
+              { stem: "He's a engineer.", wrongWord: "a",  answer: "an" },
+              { stem: "She's an cleaner.", wrongWord: "an", answer: "a" },
+              { stem: "I'm student.",     wrongWord: "I'm", answer: "I'm a", note: "Missing 'a'." },
+              { stem: "She's a artist.",  wrongWord: "a",  answer: "an" },
+              { stem: "He's an driver.",  wrongWord: "an", answer: "a" },
+            ],
+          },
+        ],
+        deferredExercises: [
+          {
+            n: 2, exerciseType: "build_the_sentence", title: "Make the sentence (be + a/an)",
+            instruction: "Use the words to write a full sentence. Example: (he / chef) \u2192 He's a chef.",
+            items: [
+              { given: "she / nurse",    answer: "She's a nurse." },
+              { given: "I / student",    answer: "I'm a student." },
+              { given: "he / engineer",  answer: "He's an engineer." },
+              { given: "she / artist",   answer: "She's an artist." },
+              { given: "he / driver",    answer: "He's a driver." },
+            ],
+            note: "No renderer exists for a bare (subject/noun) build with no source sentence. Content preserved verbatim.",
+          },
+          {
+            n: 5, exerciseType: "own_word", title: "Complete with your own word",
+            note: "Every item has TWO blanks (article + job). The single-gap own_word renderer would silently drop the second blank rather than error, so this is held out rather than shipped broken.",
+            items: [
+              { stem: "I'm ___ ___.",   model: "I'm a student." },
+              { stem: "Ana is ___ ___.", model: "Ana is a nurse." },
+              { stem: "Tom is ___ ___.", model: "Tom is an engineer." },
+            ],
+          },
+        ],
+        markingNote: "Open-ended answers are marked on communicative success \u2014 never exact string matching.",
+      },
+    },
+
+    teacherNotes: {
+      personalAim: "Recycle 'be' from Lesson 1 without re-teaching it. Keep Leo's language sparse \u2014 max 20 words per turn, 3 sentences.",
+      anticipatedProblems: [
+        { problem: "Omits the article: 'I'm student'", solution: "Very common. Leo: 'Almost! I'm A student. In English we say A before the job. Try: I'm a student.'" },
+        { problem: "Wrong article by letter, not sound: 'a engineer'", solution: "Leo: 'Listen \u2014 e-engineer starts with a vowel SOUND. So: AN engineer.' Teach by ear; model both." },
+        { problem: "Article with a plural: 'They're a nurses'", solution: "Leo: 'One nurse \u2014 a nurse. Two nurses \u2014 nurses, no a. Try: They're nurses.'" },
+        { problem: "Job confused with nationality: 'I'm a Brazil'", solution: "Leo: 'Brazil is your country. Your job is different \u2014 you're a student. Try: I'm a student.'" },
+        { problem: "Doesn't know the English job word", solution: "Leo accepts the L1 word, provides it warmly: 'In English, that's a chef.' No penalty." },
+        { problem: "Over-recycles 'be': 'I'm are a chef'", solution: "Recycle the Lesson 1 pattern: 'I \u2192 am \u2192 I'm. Try: I'm a chef.'" },
+        { problem: "Freezes \u2014 produces nothing", solution: "Leo gives the answer warmly: 'No problem. Say this: I'm a student.' No correction on a first attempt." },
+      ],
+      notThisLesson: "Question formation of any kind (Unit 3). Present simple for work routines (Unit 9). Possessives (Unit 2). Plurals as a focus (Unit 4 \u2014 light receptive contrast only here).",
+      forwardPointer: "Unit 2 \u2014 your people (family; he/she/they + possessives).",
+      syllabusConsequence: "Knock-on flag for Genesis / the syllabus map (author's recommendation, not a decision): 'first language' does not fit cleanly in Unit 1's grammar scope (be + a/an) and should be re-homed to Unit 2, where the possessive makes 'My first language is Spanish' grammatical.",
+    },
+  },
+  {
+    metadata: {
+      id: "a1-u2-l1-my-people",
+      title: "My people (possessives)",
+      lessonType: "authored",
+      schemaVersion: 2,
+      author: "Teacher Leo",
+      version: 1,
+      level: "Complete Beginner",
+      cefr: "A1",
+      topic: "Introducing family with my/your/his/her",
+      tags: ["possessives", "family", "be recycled", "third lesson"],
+      estimatedDuration: "40\u201345 minutes",
+      unit: 2,
+      lessonInUnit: 1,
+      sequence: 3,
+      pack: "a1-block1-arriving",
+      lastUpdated: "2026-08-10",
+    },
+
+    context: "Showing Leo a photo of your family",
+    communicativeObjective: "Introduce the people in your life \u2014 say who someone is to you (my mum, my brother) and tell someone their name and job (Her name is Rosa. She's a nurse).",
+    explanation: "Welcome back! You can introduce yourself now \u2014 your name, country, job.\nToday \u2014 your PEOPLE. Your family.",
+    mainSkill: "reading",
+    mission: "This week, tell one person in English about someone in your family.",
+    learningOutcome: "You can introduce a family member using my/your/his/her, matching his/her to the owner's gender.",
+    skillFocus: ["reading", "speaking", "vocabulary", "grammar", "pronunciation"],
+    assumedKnowledge: "Unit 1: the full 'be' paradigm as statements and contractions; introducing yourself; a/an with jobs (student, chef, nurse, engineer, cleaner, artist, driver); word stress. The /\u00f0/ sound is new here.",
+
+    aims: {
+      spoken: "Today you will talk about your family \u2014 say who someone is to you, using my, your, his and her: This is my mum. Her name is Rosa.",
+      list: [
+        "say who someone is to you with my/your/his/her",
+        "match his/her to the owner, not the noun",
+        "practise the /\u00f0/ sound in this, they, brother",
+      ],
+    },
+
+    stageHeaders: {
+      intro:   { eyebrow: "WELCOME",       title: "Welcome back",           purpose: "Last time: name, country, job. Today: your family." },
+      warmup:  { eyebrow: "WARM-UP",       title: "Who is this?",           purpose: "A family, a guess, and your own family." },
+      vocab:   { eyebrow: "VOCABULARY",    title: "Seven family words",     purpose: "Mum, dad, and the people closest to you." },
+      pron:    { eyebrow: "PRONUNCIATION", title: "This, they, brother",    purpose: "One tricky sound, three family words." },
+      speak:   { eyebrow: "SPEAKING",      title: "Show me your family",    purpose: "Three turns: who they are, their name, their job." },
+      skill:   { eyebrow: "READING",       title: "My family",              purpose: "Two countries, one family \u2014 the text stays on screen." },
+      grammar: { eyebrow: "GRAMMAR",       title: "My, your, his, her",     purpose: "One rule: it follows the owner, not the noun." },
+      summary: { eyebrow: "SUMMARY",       title: "That's today done",      purpose: "What you practised, and one thing to try before tomorrow." },
+    },
+
+    personalisation: {
+      reads: [
+        { fact: "studentL1", from: "profile.l1", usedIn: ["pronunciation /\u00f0/ contrast lead"] },
+      ],
+      mayRewrite: ["explanation", "warmup.leoLines", "speaking.turnPrompts", "summary framing"],
+      mayNotTouch: ["vocabulary", "grammar.blocks", "grammar.exercises", "reading.passage", "reading.exercises", "pronunciation.targets", "aims"],
+      fallback: "Every surface above has an authored default that stands alone. If the call fails or a fact is absent, the authored text renders unchanged.",
+    },
+
+    content: {
+      warmUp: {
+        questions: ["This is a family. He's the dad. Who is she?", "Who is in YOUR family?"],
+        activities: [
+          {
+            type: "image_recognition",
+            instruction: "Look at the picture.",
+            prompt: "This is a family. He's the dad. Who is she?",
+            image: { key: "family", alt: "A family of four" },
+            answer: "mum",
+            leoConfirm: "Yes! She's the mum.",
+            note: "If the student cannot answer, Leo gives the answer warmly and moves on.",
+          },
+          {
+            type: "personal_reveal",
+            instruction: "Now tell me about you.",
+            prompt: "Who is in YOUR family?",
+            hint: "a family member",
+            revealImageByAnswer: false,
+            leoConfirmTemplate: "Nice! Your {answer}. Good to know.",
+            note: "Free text; Leo responds warmly \u2014 there is no wrong answer here.",
+          },
+          {
+            type: "frame_drill",
+            instruction: "Now practise saying:",
+            frame: "This is my ___.",
+            prompt: "Say or type your sentence.",
+            leoConfirmTemplate: "This is my {answer}. Great!",
+          },
+        ],
+      },
+
+      vocabulary: {
+        items: [
+          { word: "mum",      pos: "noun", meaning: "Your female parent \u2014 your mother.", example: "This is my mum. Her name is Rosa.", ipa: "/m\u028cm/", stress: "MUM", syllables: 1 },
+          { word: "dad",      pos: "noun", meaning: "Your male parent \u2014 your father.",   example: "This is my dad. He's a driver.",   ipa: "/d\u00e6d/", stress: "DAD", syllables: 1 },
+          { word: "parents",  pos: "noun", meaning: "Your mum and dad together.",             example: "My parents are happy in Australia.", ipa: "/\u02c8pe\u0259r\u0259nts/", stress: "PAR-ents", syllables: 2 },
+          { word: "brother",  pos: "noun", meaning: "A boy or man with the same parents as you.", example: "This is my brother. He's a student.", ipa: "/\u02c8br\u028c\u00f0\u0259/", stress: "BROTH-er", syllables: 2 },
+          { word: "sister",   pos: "noun", meaning: "A girl or woman with the same parents as you.", example: "Her sister is a chef.", ipa: "/\u02c8s\u026ast\u0259/", stress: "SIS-ter", syllables: 2 },
+          { word: "son",      pos: "noun", meaning: "Someone's male child.",                  example: "His son is a student.",  ipa: "/s\u028cn/", stress: "SON", syllables: 1 },
+          { word: "daughter", pos: "noun", meaning: "Someone's female child.",                example: "Her daughter is here too.", ipa: "/\u02c8d\u0254\u02d0t\u0259/", stress: "DAUGH-ter", syllables: 2 },
+        ],
+        matchSet: ["mum", "dad", "parents", "brother", "sister", "son", "daughter"],
+        note: "The immediate-family half of Unit 2's closed set. Uncle, aunt, cousin, nephew, niece are extension terms, returning in Unit 19.",
+      },
+
+      pronunciation: {
+        focus: "The /\u00f0/ sound, contrasted with /d/ and /z/",
+        targets: [
+          { type: "single", word: "this",    ipa: "/\u00f0\u026as/",   stress: "this", stressIndex: 0, syllables: ["this"] },
+          { type: "single", word: "they",    ipa: "/\u00f0e\u026a/",   stress: "they", stressIndex: 0, syllables: ["they"] },
+          { type: "single", word: "brother", ipa: "/\u02c8br\u028c\u00f0\u0259/", stress: "BROTH-er", stressIndex: 0, syllables: ["BROTH", "er"] },
+        ],
+        note: "Tongue between the teeth for /\u00f0/. Many L1s substitute /d/ ('dis', 'broder') or /z/ ('zis', 'brozer').",
+        l1Adaptation: {
+          note: "Personalisation seat (live, per Genesis ratification): where the app holds that the student's L1 substitutes /\u00f0/, lead with the /\u00f0/ contrast. Reorders authored targets only \u2014 never invents new IPA.",
+        },
+        anticipatedProblem: "/\u00f0/ replaced: 'dis is my brother' / 'zis'. Leo: 'THIS \u2014 put your tongue between your teeth: /\u00f0/. Try: This is my brother.'",
+      },
+
+      speaking: {
+        scenario: "Show Leo a photo of your family.",
+        minExchanges: 3,
+        oneFramePerTurn: true,
+        turns: [
+          { id: "who",  leoPrompt: "Show me a photo of your family. Who is this?", repeatAfterMe: "This is my ___.", frame: "This is my ___", expects: "a family member",
+            accepts: ["full sentence", "family word only"], modelOnShort: "Mum! This is my mum. Great!" },
+          { id: "name", leoPromptTemplate: "Nice! What's {name}'s name?", repeatAfterMe: "Her name is ___ / His name is ___.", frame: "Her name is ___", expects: "the family member's name",
+            accepts: ["full sentence", "name only"], modelOnShort: "Rosa! Her name is Rosa. Lovely." },
+          { id: "job",  leoPrompt: "And what does she do?", repeatAfterMe: "She's a ___ / He's a ___.", frame: "She's a ___", expects: "the family member's job (recycled Unit 1)",
+            accepts: ["full sentence", "job only"], modelOnShort: "A nurse! She's a nurse. Great." },
+        ],
+        sentenceFrames: [
+          { frame: "This is my ___", example: "This is my mum." },
+          { frame: "Her name is ___", example: "Her name is Rosa." },
+          { frame: "She's a ___", example: "She's a nurse." },
+        ],
+        correctionBank: [
+          { turn: "who",  studentSays: "This is mum.", leoResponds: "This is MY mum. We say my before the person. Try: This is my mum." },
+          { turn: "name", studentSays: "(wrong possessive by noun, e.g. 'Sam is here. Her sister is a nurse.')", leoResponds: "Sam is a man \u2192 HIS sister. It follows Sam. Try: His sister is a nurse." },
+          { turn: "name", studentSays: "(wrong possessive by noun, e.g. 'Rosa is a nurse. His son...')", leoResponds: "Rosa is a woman \u2192 HER son. Try: Her son is a student." },
+          { turn: "any",  studentSays: "(/\u00f0/ replaced: 'dis is my brother' / 'zis')", leoResponds: "THIS \u2014 tongue between your teeth: /\u00f0/. Try: This is my brother." },
+          { turn: "any",  studentSays: "This is your mum. (means own)", leoResponds: "YOUR = me? No \u2014 MY. Your is the other person. Try: This is my mum." },
+          { turn: "any",  studentSays: "her brothers (changed the noun)", leoResponds: "The word stays the same \u2014 brother. Her brother. Try again." },
+          { turn: "job",  studentSays: "She's a artist. (recycled a/an slip)", leoResponds: "AN artist \u2014 a vowel sound. Try: She's an artist." },
+          { turn: "any",  studentSays: "(L1 family word)", leoResponds: "In English, that's your sister. Try: This is my sister." },
+          { turn: "any",  studentSays: "(freezes \u2014 produces nothing)", leoResponds: "No problem. Say this: This is my mum. Never a correction on a first attempt." },
+        ],
+      },
+
+      reading: {
+        passage: "This is a photo of my family. We're from Peru, but now we're in Sydney.\n\nThis is my mum. Her name is Rosa. She's a nurse.\n\nThis is my dad. His name is Carlos. He's a driver.\n\nThis is my brother. He's a student. I'm the daughter and he's the son.\n\nThis is my sister, Elena. She's a chef. She's in Peru now.\n\nMy parents are happy in Australia. My family is small, but we're happy.\n\nTwo countries, one family. I love them.",
+        passageWordCount: 80,
+        exercises: [
+          {
+            n: 1, exerciseType: "multiple_choice", title: "Multiple choice",
+            items: [
+              { stem: "Rosa is ___.",   options: ["a chef", "a nurse", "a driver"], answer: "a nurse" },
+              { stem: "Carlos is ___.", options: ["a driver", "a student", "a chef"], answer: "a driver" },
+              { stem: "Elena is ___.",  options: ["a nurse", "a chef", "a student"], answer: "a chef" },
+            ],
+          },
+          {
+            n: 2, exerciseType: "true_false", title: "True or false?",
+            items: [
+              { stem: "The family is from Peru.",     answer: true },
+              { stem: "Rosa is the dad.",              answer: false, note: "Rosa is the mum." },
+              { stem: "The brother is a student.",     answer: true },
+              { stem: "Elena is in Australia.",        answer: false, note: "She's in Peru." },
+              { stem: "The family is in two countries.", answer: true },
+            ],
+          },
+          {
+            n: 3, exerciseType: "who_is_it", title: "Who is it? Write Rosa, Carlos or Elena",
+            options: ["Rosa", "Carlos", "Elena"],
+            items: [
+              { stem: "\"She's my mum. She's a nurse.\"",   answer: "Rosa" },
+              { stem: "\"He's my dad. He's a driver.\"",    answer: "Carlos" },
+              { stem: "\"She's my sister. She's a chef.\"", answer: "Elena" },
+            ],
+          },
+          {
+            n: 4, exerciseType: "match_halves", title: "Match the two halves",
+            items: [
+              { left: "Rosa is",         right: "a nurse." },
+              { left: "Carlos is",       right: "a driver." },
+              { left: "Elena is",        right: "a chef." },
+              { left: "The brother is",  right: "a student." },
+            ],
+          },
+          {
+            n: 5, exerciseType: "correct_the_mistake", title: "Correct the mistake (his or her)",
+            items: [
+              { stem: "This is my mum. His name is Rosa.",     wrongWord: "His", answer: "Her", note: "Rosa is a woman." },
+              { stem: "This is my dad. Her name is Carlos.",   wrongWord: "Her", answer: "His", note: "Carlos is a man." },
+              { stem: "This is my sister. His name is Elena.", wrongWord: "His", answer: "Her" },
+            ],
+          },
+          {
+            n: 6, exerciseType: "complete_from_text", title: "Complete the sentence (my, his or her)",
+            items: [
+              { stem: "I'm from Peru. This is ___ family.", answer: "my" },
+              { stem: "This is my mum. ___ name is Rosa.",  answer: "Her" },
+              { stem: "This is my dad. ___ name is Carlos.", answer: "His" },
+              { stem: "This is my sister. ___ name is Elena.", answer: "Her" },
+            ],
+          },
+          {
+            n: 7, exerciseType: "sort_into_groups", title: "Sort: a man, a woman, or both?",
+            instruction: "Put each family word in the right box.",
+            groups: ["a man", "a woman", "both"],
+            items: [
+              { word: "brother", group: "a man" }, { word: "sister", group: "a woman" }, { word: "mum", group: "a woman" },
+              { word: "dad", group: "a man" }, { word: "son", group: "a man" }, { word: "daughter", group: "a woman" },
+              { word: "parents", group: "both" },
+            ],
+          },
+          {
+            n: 8, exerciseType: "about_you", title: "About you",
+            instruction: "Tell me about one person in your family. Write two sentences.",
+            openEnded: true,
+            items: [
+              { stem: "This is my ___ . His / Her name is ___ .", model: "This is my sister. Her name is Ana." },
+            ],
+          },
+        ],
+      },
+
+      grammar: {
+        point: "possessive adjectives (my / your / his / her)",
+        meaning: "Saying who people are to you \u2014 family and the people in your life.",
+        form: "possessive adjective + noun: my mum, your dad, his sister, her son. his/her agree with the OWNER: a man \u2192 his; a woman \u2192 her. The noun after does not change.",
+        usage: "The possessive comes BEFORE the person, and follows the owner's gender, not the noun's.",
+        examples: ["This is my brother.", "Is this your sister?", "Sam is here. His mum is a nurse.", "Rosa is here. Her son is a student."],
+
+        blocks: {
+          subjects: {
+            label: "RECYCLED FROM UNIT 1",
+            rows: [
+              { subject: "I",   gloss: "me", icon: "User" },
+              { subject: "you", gloss: "the person I talk to", icon: "UserCheck" },
+              { subject: "he",  gloss: "a man, e.g. Sam", icon: "User" },
+              { subject: "she", gloss: "a woman, e.g. Rosa", icon: "User" },
+            ],
+          },
+          paradigm: {
+            label: "MY, YOUR, HIS, HER",
+            columnHeads: { full: "Person", short: "Possessive", follows: "Example" },
+            rows: [
+              { full: "I",                    short: "my",   follows: "", example: "This is my brother." },
+              { full: "you",                  short: "your", follows: "", example: "Is this your sister?" },
+              { full: "he (a man \u2014 Sam)", short: "his",  follows: "", example: "Sam is here. His mum is a nurse." },
+              { full: "she (a woman \u2014 Rosa)", short: "her", follows: "", example: "Rosa is here. Her son is a student." },
+            ],
+          },
+          patterns: {
+            label: "HIS AND HER FOLLOW THE OWNER",
+            rows: [
+              { sentence: "Sam \u2192 his sister AND his brother.",  target: "his", category: "follows the owner" },
+              { sentence: "Rosa \u2192 her sister AND her brother.", target: "her", category: "follows the owner" },
+            ],
+          },
+          keyPoint: {
+            label: "THE KEY POINT",
+            text: "his and her follow the person who owns, not the word after. The noun stays the same \u2014 only the possessive changes.",
+            pairs: [{ full: "a man (Sam)", short: "his" }, { full: "a woman (Rosa)", short: "her" }],
+          },
+        },
+
+        warmIn: {
+          exerciseType: "choose_the_form", title: "Warm-in",
+          options: ["my", "your", "his", "her"],
+          items: [
+            { stem: "I'm Ana. This is ___ brother.", answer: "my" },
+            { stem: "Sam is happy. This is ___ mum.", answer: "his" },
+            { stem: "Rosa is a nurse. This is ___ son.", answer: "her" },
+            { stem: "\"Hello! Is this ___ dad?\" (Leo asks you)", answer: "your" },
+          ],
+        },
+
+        exercises: [
+          {
+            n: 1, exerciseType: "choose_the_form", title: "Choose my, your, his or her",
+            options: ["my", "your", "his", "her"],
+            items: [
+              { stem: "I'm Ana. This is ___ brother.",       answer: "my" },
+              { stem: "Sam is happy. This is ___ mum.",      answer: "his" },
+              { stem: "Rosa is a nurse. This is ___ son.",   answer: "her" },
+              { stem: "\"Hello! Is this ___ dad?\" (Leo asks you)", answer: "your" },
+              { stem: "He's Carlos. This is ___ daughter.",  answer: "his" },
+              { stem: "She's Elena. This is ___ family.",    answer: "her" },
+            ],
+          },
+          {
+            n: 2, exerciseType: "choose_the_form", title: "His or her?",
+            options: ["His", "Her"],
+            items: [
+              { stem: "Maria is a chef. ___ brother is a student.", answer: "Her" },
+              { stem: "Sam is a driver. ___ sister is a nurse.",    answer: "His" },
+              { stem: "Rosa is a nurse. ___ son is a student.",     answer: "Her" },
+              { stem: "Carlos is a driver. ___ daughter is happy.", answer: "His" },
+              { stem: "Elena is a chef. ___ mum is a nurse.",       answer: "Her" },
+            ],
+          },
+          {
+            n: 3, exerciseType: "word_order", title: "Word order",
+            items: [
+              { tokens: ["my", "This is", "brother"],      answer: "This is my brother." },
+              { tokens: ["sister", "Her", "is a nurse"],    answer: "Her sister is a nurse." },
+              { tokens: ["dad", "His", "is a driver"],      answer: "His dad is a driver." },
+              { tokens: ["is", "my", "This", "mum"],        answer: "This is my mum." },
+              { tokens: ["son", "Her", "is a student"],     answer: "Her son is a student." },
+            ],
+          },
+          {
+            n: 4, exerciseType: "correct_the_mistake", title: "Correct the mistake",
+            items: [
+              { stem: "Sam is happy. Her mum is a nurse.",       wrongWord: "Her", answer: "His" },
+              { stem: "Maria is a chef. His brother is a student.", wrongWord: "His", answer: "Her" },
+              { stem: "This is my sister. She's a artist.",      wrongWord: "a", answer: "an", note: "Recycled from Unit 1." },
+              { stem: "Rosa is a nurse. His son is happy.",      wrongWord: "His", answer: "Her" },
+            ],
+          },
+        ],
+        deferredExercises: [
+          {
+            n: 5, exerciseType: "own_word", title: "Complete with your own word",
+            note: "Item 1 has two blanks across two sentences; item 2 has two blanks in one sentence. Held out \u2014 the single-gap renderer cannot represent either honestly.",
+            items: [
+              { stem: "This is my ___ . His / Her name is ___ .", model: "This is my mum. Her name is Rosa." },
+              { stem: "My ___ is a ___ .", model: "My brother is a student." },
+            ],
+          },
+        ],
+        markingNote: "Open-ended answers are marked on communicative success \u2014 never exact string matching.",
+      },
+    },
+
+    teacherNotes: {
+      personalAim: "Recycle 'be' and jobs from Unit 1 without re-teaching them. Keep Leo's language sparse \u2014 max 20 words per turn, 3 sentences.",
+      anticipatedProblems: [
+        { problem: "Wrong possessive by the noun, not owner: 'Sam is here. Her sister is a nurse.'", solution: "The core error. Leo: 'Sam is a man \u2192 HIS sister. It follows Sam, not the sister. Try: His sister is a nurse.'" },
+        { problem: "Omits the possessive: 'This is mum.'", solution: "Leo: 'This is MY mum. We say my before the person. Try: This is my mum.'" },
+        { problem: "/\u00f0/ replaced: 'dis is my brother' / 'zis'", solution: "Leo: 'THIS \u2014 put your tongue between your teeth: /\u00f0/. Try: This is my brother.'" },
+        { problem: "Uses 'your' for 'my' (L1 transfer): 'This is your mum' (means own)", solution: "Leo: 'YOUR = the other person. MY = me. Try: This is my mum.'" },
+        { problem: "Changes the noun for his/her: 'his brother / her brothers'", solution: "Leo: 'The word stays the same \u2014 brother. Only his/her changes. His brother. Her brother.'" },
+        { problem: "Doesn't know the English family word", solution: "Leo accepts, provides it warmly: 'In English, that's your sister.' No penalty." },
+        { problem: "Freezes \u2014 produces nothing", solution: "Leo gives it: 'No problem. Say this: This is my mum.' No correction on a first attempt." },
+      ],
+      notThisLesson: "have got (Unit 2, Lesson 2). Question formation (Unit 3). Possessive 's \u2014 Sam's brother (Unit 4). his/her with there is (Unit 5).",
+      forwardPointer: "Unit 2 Lesson 2 \u2014 how many people you've got (have got).",
+    },
+  },
+  {
+    metadata: {
+      id: "a1-u2-l2-have-got",
+      title: "My people (have got)",
+      lessonType: "authored",
+      schemaVersion: 2,
+      author: "Teacher Leo",
+      version: 1,
+      level: "Complete Beginner",
+      cefr: "A1",
+      topic: "Saying how many with have got",
+      tags: ["have got", "family", "possessives recycled", "fourth lesson", "home unit"],
+      estimatedDuration: "40\u201345 minutes",
+      unit: 2,
+      lessonInUnit: 2,
+      sequence: 4,
+      pack: "a1-block1-arriving",
+      lastUpdated: "2026-08-10",
+    },
+
+    context: "A new friend asks about your family",
+    communicativeObjective: "Say who is in your family and how many \u2014 tell someone what you've got (I've got a brother and two sisters) and understand them when they tell you theirs.",
+    explanation: "Welcome back! Last time \u2014 your family, with my, his and her.\nToday \u2014 how MANY. I've got a brother. You?",
+    mainSkill: "reading",
+    mission: "This week, tell one person in English how many brothers or sisters you've got.",
+    learningOutcome: "You can say how many family members you have using have got / has got, with correct plurals.",
+    skillFocus: ["reading", "speaking", "vocabulary", "grammar", "pronunciation"],
+    assumedKnowledge: "Units 1\u20132 Lesson 1: 'be' paradigm; a/an with jobs; possessive adjectives my/your/his/her; family words mum, dad, parents, brother, sister, son, daughter; numbers 0\u201310; the /\u00f0/ sound.",
+
+    aims: {
+      spoken: "Today you will say how many people are in your family, using have got: I've got two sisters. She's got a brother.",
+      list: [
+        "say how many with have got / has got",
+        "use the short forms \u2014 I've got, she's got, they've got",
+        "read about two families and answer questions",
+      ],
+    },
+
+    stageHeaders: {
+      intro:   { eyebrow: "WELCOME",       title: "Welcome back",          purpose: "Last time: your family, with my/his/her. Today: how many." },
+      warmup:  { eyebrow: "WARM-UP",       title: "How many?",             purpose: "Count a family, then count your own." },
+      vocab:   { eyebrow: "VOCABULARY",    title: "Five more family words", purpose: "Husband, wife, partner, and grandparents." },
+      pron:    { eyebrow: "PRONUNCIATION", title: "I've got, she's got",   purpose: "Two short forms, said fast and light." },
+      speak:   { eyebrow: "SPEAKING",      title: "Tell a new friend",     purpose: "Three turns: how many, someone else's, your own people." },
+      skill:   { eyebrow: "READING",       title: "Two families",          purpose: "The Nguyens and Omar \u2014 the text stays on screen." },
+      grammar: { eyebrow: "GRAMMAR",       title: "Have got",              purpose: "One new pattern: what you have, in family terms." },
+      summary: { eyebrow: "SUMMARY",       title: "That's today done",     purpose: "What you practised, and one thing to try before tomorrow." },
+    },
+
+    personalisation: {
+      reads: [
+        { fact: "studentL1", from: "profile.l1", usedIn: ["pronunciation short-form lead"] },
+      ],
+      mayRewrite: ["explanation", "warmup.leoLines", "speaking.turnPrompts", "summary framing"],
+      mayNotTouch: ["vocabulary", "grammar.blocks", "grammar.exercises", "reading.passage", "reading.exercises", "pronunciation.targets", "aims"],
+      fallback: "Every surface above has an authored default that stands alone. If the call fails or a fact is absent, the authored text renders unchanged.",
+    },
+
+    content: {
+      warmUp: {
+        questions: ["How many people? Count with me.", "How many brothers and sisters?"],
+        activities: [
+          {
+            type: "image_recognition",
+            instruction: "Look at the picture.",
+            prompt: "How many people? Count with me: one, two, three\u2026",
+            image: { key: "family-group", alt: "A family group" },
+            answer: "four",
+            leoConfirm: "Yes! Four people.",
+            note: "If the student cannot answer, Leo counts warmly and moves on.",
+          },
+          {
+            type: "personal_reveal",
+            instruction: "Now tell me about you.",
+            prompt: "How many brothers and sisters?",
+            hint: "a number",
+            revealImageByAnswer: false,
+            leoConfirmTemplate: "Nice! {answer}. Good to know.",
+            note: "Free text; Leo responds warmly \u2014 there is no wrong answer here.",
+          },
+          {
+            type: "frame_drill",
+            instruction: "Now practise saying:",
+            frame: "I've got ___.",
+            prompt: "Say or type your sentence.",
+            leoConfirmTemplate: "I've got {answer}. Great!",
+          },
+        ],
+      },
+
+      vocabulary: {
+        items: [
+          { word: "husband",     pos: "noun", meaning: "The man a woman is married to.",       example: "She's got a husband. He's a driver.", ipa: "/\u02c8h\u028czb\u0259nd/", stress: "HUS-band", syllables: 2 },
+          { word: "wife",        pos: "noun", meaning: "The woman a man is married to.",        example: "He's got a wife and two sons.", ipa: "/wa\u026af/", stress: "WIFE", syllables: 1 },
+          { word: "partner",     pos: "noun", meaning: "The person you live with or love.",     example: "I've got a partner. Her name is Mai.", ipa: "/\u02c8p\u0251\u02d0tn\u0259/", stress: "PART-ner", syllables: 2 },
+          { word: "grandmother", pos: "noun", meaning: "The mother of your mum or dad.",        example: "She's got a grandmother in Vietnam.", ipa: "/\u02c8gr\u00e6nm\u028c\u00f0\u0259/", stress: "GRAND-moth-er", syllables: 3 },
+          { word: "grandfather", pos: "noun", meaning: "The father of your mum or dad.",        example: "His grandfather is in Peru.", ipa: "/\u02c8gr\u00e6nf\u0251\u02d0\u00f0\u0259/", stress: "GRAND-fa-ther", syllables: 3 },
+        ],
+        matchSet: ["husband", "wife", "partner", "grandmother", "grandfather", "mum", "dad", "parents", "brother", "sister", "son", "daughter"],
+        note: "These five complete Unit 2's closed set of 12. Lesson 1's seven (mum, dad, parents, brother, sister, son, daughter) return here as recycled review. Uncle, aunt, cousin, nephew, niece are extension terms, returning in Unit 19.",
+      },
+
+      pronunciation: {
+        focus: "The short forms 've got / 's got, and /\u00f0/ in grandmother",
+        targets: [
+          { type: "single", word: "I've got",   ipa: "/a\u026av g\u0252t/",  stress: "I've got", stressIndex: 1, syllables: ["I've", "got"] },
+          { type: "single", word: "she's got",  ipa: "/\u0283i\u02d0z g\u0252t/", stress: "she's got", stressIndex: 1, syllables: ["she's", "got"] },
+          { type: "single", word: "grandmother", ipa: "/\u02c8gr\u00e6nm\u028c\u00f0\u0259/", stress: "GRAND-moth-er", stressIndex: 0, syllables: ["GRAND", "moth", "er"] },
+        ],
+        note: "The weak 've /v/ and 's /z/. The /\u00f0/ sound continues from Lesson 1, now in grandmother and grandfather.",
+        l1Adaptation: {
+          note: "Personalisation seat (live, per Genesis ratification): lead with the short form the student's L1 tends to drop. Reorders authored targets only \u2014 never invents new IPA.",
+        },
+        anticipatedProblem: "Drops 'got': 'I've a brother' / 'I have a brother'. Leo: 'Nice \u2014 I've GOT a brother. Say it with me: I've got a brother.'",
+      },
+
+      speaking: {
+        scenario: "A new friend asks about your family.",
+        minExchanges: 3,
+        oneFramePerTurn: true,
+        turns: [
+          { id: "howMany", leoPrompt: "How many brothers and sisters have you got?", repeatAfterMe: "I've got ___ brother(s) / sister(s).", frame: "I've got ___", expects: "a number and family word",
+            accepts: ["full sentence"], modelOnShort: "One brother! I've got a brother. Great." },
+          { id: "someoneElse", leoPrompt: "My friend Mai \u2014 she's got two sons.", repeatAfterMe: "She's got two sons.", frame: "She's got ___", expects: "a repeated statement about a third person",
+            accepts: ["full sentence"], modelOnShort: "She's got two sons. Nice!" },
+          { id: "yourPeople", leoPrompt: "Tell me about your people.", repeatAfterMe: "I've got ___.", frame: "I've got ___", expects: "the student's own family, freely",
+            accepts: ["full sentence"], modelOnShort: "I've got that too. Great." },
+        ],
+        sentenceFrames: [
+          { frame: "I've got ___", example: "I've got a brother." },
+          { frame: "She's got ___", example: "She's got two sons." },
+        ],
+        correctionBank: [
+          { turn: "any", studentSays: "She have got a brother.", leoResponds: "he/she \u2192 HAS got. She's got a brother. Try again." },
+          { turn: "any", studentSays: "I've a sister. / I have a sister.", leoResponds: "Nice \u2014 I've GOT a sister. Say it with me: I've got a sister." },
+          { turn: "any", studentSays: "I've got two sister.", leoResponds: "Two \u2014 so sisterS. I've got two sisters. Try again." },
+          { turn: "any", studentSays: "I've got a two brothers.", leoResponds: "Two brothers \u2014 no 'a'. I've got two brothers." },
+          { turn: "any", studentSays: "Have you got a sister? (produces a question)", leoResponds: "Good try! Tell me about YOU: I've got a sister. Your turn: I've got\u2026" },
+          { turn: "any", studentSays: "\"He's got\" \u2014 meaning 'he is'", leoResponds: "Here 's = HAS. He's got = he has got. He's got a wife." },
+          { turn: "any", studentSays: "grandmuzzer / grandmuvver (/\u00f0/)", leoResponds: "GRANDmother \u2014 tongue between your teeth: /\u00f0/. Try again." },
+          { turn: "any", studentSays: "(L1 family word)", leoResponds: "In English, that's your grandmother. Try: I've got a grandmother." },
+          { turn: "any", studentSays: "(freezes \u2014 produces nothing)", leoResponds: "No problem. Say this: I've got a brother. Never a correction on a first attempt." },
+        ],
+      },
+
+      reading: {
+        passage: "Meet the Nguyen family. They're from Vietnam, and now they're in Brisbane.\n\nBao is the dad. He's got a wife, Mai, and three children: two sons and one daughter.\n\nMai is a nurse. She's got a big family in Vietnam \u2014 a mum, a dad, and four sisters!\n\nTheir grandmother is in Vietnam too. The children love her.\n\nNow meet Omar. He's a student from Egypt. He's got a small family here \u2014 just a brother.\n\nBut he's got a lot of friends at his English school.\n\nTwo families, one city. Everyone is happy in Brisbane.",
+        passageWordCount: 90,
+        exercises: [
+          {
+            n: 1, exerciseType: "multiple_choice", title: "Multiple choice",
+            items: [
+              { stem: "Bao has got ___.", options: ["two sons and one daughter", "three daughters", "one son"], answer: "two sons and one daughter" },
+              { stem: "Mai is ___.",      options: ["a chef", "a nurse", "a student"], answer: "a nurse" },
+              { stem: "Omar has got ___.", options: ["a big family here", "a brother here", "three sisters here"], answer: "a brother here" },
+            ],
+          },
+          {
+            n: 2, exerciseType: "true_false", title: "True or false?",
+            items: [
+              { stem: "The Nguyen family is from Vietnam.",  answer: true },
+              { stem: "Bao has got a wife.",                  answer: true },
+              { stem: "Mai has got four brothers.",           answer: false, note: "Four sisters." },
+              { stem: "Omar is a student.",                   answer: true },
+              { stem: "Omar has got a big family in Brisbane.", answer: false, note: "A small family \u2014 just a brother." },
+            ],
+          },
+          {
+            n: 3, exerciseType: "who_is_it", title: "Who's got it? Write Bao, Mai or Omar",
+            options: ["Bao", "Mai", "Omar"],
+            items: [
+              { stem: "\"I've got a wife and three children.\"",  answer: "Bao" },
+              { stem: "\"I've got four sisters in Vietnam.\"",    answer: "Mai" },
+              { stem: "\"I've got a brother and a lot of friends.\"", answer: "Omar" },
+            ],
+          },
+          {
+            n: 4, exerciseType: "match_halves", title: "Match the two halves",
+            items: [
+              { left: "Bao has got",  right: "a wife and three children." },
+              { left: "Mai has got",  right: "four sisters in Vietnam." },
+              { left: "Omar has got", right: "a brother and lots of friends." },
+            ],
+          },
+          {
+            n: 5, exerciseType: "correct_the_mistake", title: "Correct the mistake (have got / has got)",
+            items: [
+              { stem: "Bao have got a wife.",       wrongWord: "have", answer: "has" },
+              { stem: "Mai has got four sister.",   wrongWord: "sister", answer: "sisters", note: "Number \u2192 plural." },
+              { stem: "Omar have got a brother.",   wrongWord: "have", answer: "has" },
+              { stem: "The children has got a grandmother in Vietnam.", wrongWord: "has", answer: "have" },
+            ],
+          },
+          {
+            n: 6, exerciseType: "complete_from_text", title: "Complete the sentence (have got or has got)",
+            items: [
+              { stem: "I ___ a brother.",                        answer: "have got" },
+              { stem: "Bao ___ a wife and three children.",      answer: "has got" },
+              { stem: "Mai ___ a big family in Vietnam.",        answer: "has got" },
+              { stem: "Omar and his brother ___ a lot of friends.", answer: "have got" },
+            ],
+          },
+          {
+            n: 7, exerciseType: "complete_from_text", title: "Count and write",
+            instruction: "Look at the text. Write the number and the family word \u2014 remember the plural for two or more.",
+            items: [
+              { stem: "Bao's children: ___ (sons and daughter together)", answer: "three children" },
+              { stem: "Mai's sisters: ___",  answer: "four sisters" },
+              { stem: "Omar's brothers: ___", answer: "one brother" },
+            ],
+          },
+          {
+            n: 8, exerciseType: "about_you", title: "About you",
+            instruction: "How big is your family? Write one sentence.",
+            openEnded: true,
+            items: [
+              { stem: "I've got ___ .", model: "I've got a sister. / I've got two brothers and a sister." },
+            ],
+          },
+        ],
+      },
+
+      grammar: {
+        point: "have got (statements)",
+        meaning: "Talking about the family and people you have.",
+        form: "subject + have/has got + noun. I/you/we/they \u2192 have got \u2192 've got. he/she/it \u2192 has got \u2192 's got. Number + plural noun: two sisters, three brothers.",
+        usage: "The short form is what we say: I've got, she's got.",
+        examples: ["I've got a brother.", "She's got two sons.", "They've got a big family."],
+
+        blocks: {
+          subjects: {
+            label: "RECYCLED FROM UNITS 1\u20132",
+            rows: [
+              { subject: "I / you / we / they", gloss: "have got \u2192 've got", icon: "Users" },
+              { subject: "he / she / it",        gloss: "has got \u2192 's got", icon: "User" },
+            ],
+          },
+          paradigm: {
+            label: "HAVE GOT",
+            columnHeads: { full: "Full form", short: "Short \u2014 say this one", follows: "Example" },
+            rows: [
+              { full: "I/you/we/they have got", short: "'ve got", follows: "", example: "I've got a brother." },
+              { full: "he/she/it has got",       short: "'s got",  follows: "", example: "She's got two sons." },
+            ],
+          },
+          patterns: {
+            label: "NUMBERS + PLURALS",
+            rows: [
+              { sentence: "one brother \u2192 two brothers.",  target: "brothers", category: "plural after 2+" },
+              { sentence: "one sister \u2192 three sisters.",  target: "sisters",  category: "plural after 2+" },
+            ],
+          },
+          keyPoint: {
+            label: "THE KEY POINT",
+            text: "The short form is what we say. She's got \u2014 the 's here is HAS (she has got), not IS.",
+            pairs: [{ full: "I have got", short: "I've got" }, { full: "she has got", short: "she's got" }],
+          },
+        },
+
+        warmIn: {
+          exerciseType: "choose_the_form", title: "Warm-in",
+          options: ["have got", "has got"],
+          items: [
+            { stem: "I ___ a sister.",        answer: "have got" },
+            { stem: "She ___ two brothers.",  answer: "has got" },
+            { stem: "Bao ___ a wife.",        answer: "has got" },
+            { stem: "We ___ a big family.",   answer: "have got" },
+          ],
+        },
+
+        exercises: [
+          {
+            n: 1, exerciseType: "choose_the_form", title: "Choose have got or has got",
+            options: ["have got", "has got"],
+            items: [
+              { stem: "I ___ a sister.",              answer: "have got" },
+              { stem: "She ___ two brothers.",         answer: "has got" },
+              { stem: "Bao ___ a wife.",                answer: "has got" },
+              { stem: "We ___ a big family.",           answer: "have got" },
+              { stem: "He ___ a grandmother in Peru.",  answer: "has got" },
+              { stem: "They ___ three children.",       answer: "have got" },
+            ],
+          },
+          {
+            n: 3, exerciseType: "word_order", title: "Word order",
+            items: [
+              { tokens: ["got", "I've", "a brother"],       answer: "I've got a brother." },
+              { tokens: ["two sons", "She's", "got"],       answer: "She's got two sons." },
+              { tokens: ["a big family", "They've", "got"], answer: "They've got a big family." },
+              { tokens: ["got", "He's", "a wife"],          answer: "He's got a wife." },
+              { tokens: ["three sisters", "I've", "got"],   answer: "I've got three sisters." },
+            ],
+          },
+          {
+            n: 4, exerciseType: "correct_the_mistake", title: "Correct the mistake",
+            items: [
+              { stem: "She have got a brother.",  wrongWord: "have", answer: "has" },
+              { stem: "I've got two sister.",     wrongWord: "sister", answer: "sisters" },
+              { stem: "My mum is a artist.",      wrongWord: "a", answer: "an", note: "Recycled from Unit 1." },
+              { stem: "They has got a big family.", wrongWord: "has", answer: "have" },
+            ],
+          },
+        ],
+        deferredExercises: [
+          {
+            /* Flagged, not built: correct_the_mistake's Check button
+               requires typed text to submit (disabled when empty), so
+               a DELETION correction (the fix is removing a word, not
+               substituting one) can never be successfully entered. One
+               item, held out rather than shipped unanswerable. */
+            n: "4b", exerciseType: "correct_the_mistake_deletion", title: "Correct the mistake (deletion case)",
+            items: [
+              { stem: "He's got a two sons.", wrongWord: "a", answer: "", note: "No 'a' before a number \u2014 the fix is removing the word, not replacing it." },
+            ],
+          },
+          {
+            n: 2, exerciseType: "build_the_sentence", title: "Make the sentence",
+            instruction: "Use the words to write a full sentence with the short form. Example: (she / two sons) \u2192 She's got two sons.",
+            items: [
+              { given: "I / a brother",              answer: "I've got a brother." },
+              { given: "he / a wife",                answer: "He's got a wife." },
+              { given: "they / a big family",        answer: "They've got a big family." },
+              { given: "she / three sisters",        answer: "She's got three sisters." },
+              { given: "we / a grandmother in Vietnam", answer: "We've got a grandmother in Vietnam." },
+            ],
+            note: "No renderer exists for a bare (subject/noun) build with no source sentence. Content preserved verbatim.",
+          },
+          {
+            n: 5, exerciseType: "own_word", title: "Complete with your own word",
+            note: "Item 2 has two blanks ('My ___ has got ___.'). Held out \u2014 the single-gap renderer cannot represent it honestly. Items 1 and 3 have a single blank each and DO fit the existing renderer \u2014 flagged for CODE to wire as single-item own_word if desired, not done here to keep this exercise's items together as authored.",
+            items: [
+              { stem: "I've got ___ .", model: "I've got a sister.", singleGap: true },
+              { stem: "My ___ has got ___ .", model: "My brother has got a wife.", singleGap: false },
+              { stem: "In my family, we've got ___ .", model: "In my family, we've got two grandmothers.", singleGap: true },
+            ],
+          },
+        ],
+        markingNote: "Open-ended answers are marked on communicative success \u2014 never exact string matching.",
+      },
+    },
+
+    teacherNotes: {
+      personalAim: "Recycle possessives, family words and numbers without re-teaching. Keep have got in STATEMENTS \u2014 do not slip into 'Have you got\u2026?' as a taught form. Max 20 words per turn.",
+      anticipatedProblems: [
+        { problem: "Wrong auxiliary for he/she: 'She have got a brother'", solution: "Leo: 'he/she/it \u2192 HAS got. She's got a brother. Try again.'" },
+        { problem: "Drops 'got': 'I've a brother' / 'I have a brother'", solution: "Accept the meaning, model the target: 'Nice \u2014 I've GOT a brother. Say it with me: I've got a brother.'" },
+        { problem: "No plural after a number: 'two sister'", solution: "Leo: 'Two \u2014 so sisterS. Two sisters. Try again.'" },
+        { problem: "Article with a plural: 'I've got a two brothers'", solution: "Leo: 'Two brothers \u2014 no a. I've got two brothers.'" },
+        { problem: "Produces a question by L1 habit: 'Have you got\u2026' when answering", solution: "Gently redirect to the statement: 'Tell me about YOU \u2014 I've got a sister. Your turn: I've got\u2026'" },
+        { problem: "Doesn't know a family word (grandmother etc.)", solution: "Leo accepts, provides it warmly: 'In English, that's your grandmother.' No penalty." },
+        { problem: "Freezes \u2014 produces nothing", solution: "Leo gives it: 'No problem. Say this: I've got a brother.' No correction on a first attempt." },
+      ],
+      notThisLesson: "\"Have you got\u2026?\" as a produced question (Unit 3). has as a main verb \u2014 I have breakfast (Unit 9). Possessive 's \u2014 my brother's phone (Unit 4).",
+      forwardPointer: "Unit 3 \u2014 at reception: spelling, forms, and \u2014 at last \u2014 asking questions (Are you\u2026? Have you got\u2026?).",
+      syllabusConsequence: "Home-unit discipline: have got is introduced here as new. Units 6 and 12 recycle it (rooms/rent; symptoms \u2014 'I've got a headache'), never re-teach it, because Unit 2 is its home unit.",
+    },
+  },
 ];
 
 /* ---------- prepareAuthoredBlueprint(lesson) ----------
@@ -1728,9 +2797,18 @@ function prepareAuthoredBlueprint(lesson) {
     const questions = (c.reading.questions && c.reading.questions.length)
       ? c.reading.questions
       : _mcqFromExercises(c.reading.exercises);
-    if (questions.length) {
-      sections.skill = { passage: c.reading.passage, questions };
-    }
+    /* Bug fix, found building Units 1-2 Lessons 2: the AI-bypass gate
+       checks whether sections.skill/grammar is TRUTHY, not whether its
+       questions array is non-empty. A lesson whose exercises are all
+       covered by real renderers (so the MCQ-derivation heuristic
+       correctly finds nothing to lift) was leaving the section entirely
+       UNSET — which the gate reads as "not authored, call the AI",
+       defeating the whole zero-AI-call point for exactly the richest
+       authored content. The section must exist whenever the lesson
+       authored reading content at all, even with an empty questions
+       array; AuthoredExerciseRunner's own renderer-coverage logic
+       already handles an empty fallback safely. */
+    sections.skill = { passage: c.reading.passage, questions };
   }
 
   // Grammar section: practice questions (the explanation lives on the blueprint)
@@ -1742,9 +2820,10 @@ function prepareAuthoredBlueprint(lesson) {
         [c.grammar.warmIn].filter(Boolean).concat(c.grammar.exercises || [])
       );
     }
-    if (questions.length) {
-      sections.grammar = { grammarPoint: c.grammar.point, questions };
-    }
+    /* Same fix as sections.skill above: set whenever grammar content
+       exists, even with zero MCQ-derivable questions, so the AI-bypass
+       gate correctly treats this as an authored section. */
+    sections.grammar = { grammarPoint: c.grammar.point, questions };
   }
 
   // Summary is NOT pre-filled — it is always personalised by AI to
