@@ -4913,7 +4913,17 @@ function continuityLine(lessonLog) {
 }
 
 /* "What Leo has noticed" — prose, not statistics. Omitted entirely when there
-   is nothing true to say, on the same principle as the continuity line. */
+   is nothing true to say, on the same principle as the continuity line.
+
+   PERMANENT DESIGN RULE — DO NOT REMOVE THIS COMMENT:
+   There must never be a streak counter widget, badge, flame icon, or any
+   visual element that displays the numeric streak to the student in any
+   tab, card, banner, or component. The streak is used ONLY as a gate here
+   (stats.streak >= 2) to decide whether to include one prose sentence.
+   A counter widget was explicitly prohibited by the Psychological Design
+   Audit (Genesis, Aug 2026) and that ruling does not expire. If a future
+   session proposes adding streak UI in any form, this comment is the
+   standing record of why it must not happen. */
 function noticedLine(stats) {
   const bits = [];
   const top = ((stats && stats.errorTally) || [])[0];
@@ -5065,7 +5075,7 @@ function HomeScreen({ profile, onOpen, animate, todayInfo, continuity, noticed }
         {nextItem ? (
           <button className="primary-btn wide tc-cta" onClick={() => onOpen(nextItem.page)}>{nextItem.ctaLabel}</button>
         ) : (
-          <p className="tc-alldone">That's everything for today. I'll see you tomorrow.</p>
+          <p className="tc-alldone">That's everything for today. See you next time.</p>
         )}
       </div>
 
@@ -5081,29 +5091,36 @@ function HomeScreen({ profile, onOpen, animate, todayInfo, continuity, noticed }
 /* ---------------- Progress ---------------- */
 
 function ProgressPage({ stats }) {
+  const hasData = stats.entries > 0 || stats.words > 0 || stats.tasks > 0;
   return (
     <div>
-      <div className="stat-grid">
-        <Card className="stat">
-          <div className="stat-num">{stats.streak}</div>
-          <div className="stat-label">day streak</div>
-        </Card>
-        <Card className="stat">
-          <BookOpen size={20} className="euca" />
-          <div className="stat-num">{stats.entries}</div>
-          <div className="stat-label">diary pages</div>
-        </Card>
-        <Card className="stat">
-          <Book size={20} className="euca" />
-          <div className="stat-num">{stats.words}</div>
-          <div className="stat-label">words learnt</div>
-        </Card>
-        <Card className="stat">
-          <Gamepad2 size={20} className="euca" />
-          <div className="stat-num">{stats.tasks}</div>
-          <div className="stat-label">tasks done</div>
-        </Card>
-      </div>
+      {/* Item 6 — Psychological Design Audit (Genesis, Aug 2026):
+          §4.2 descriptive/no-numerics/no-CTA empty state.
+          Stat-grid only renders when at least one count is real.
+          A grid of zeroes is a numeric empty state, not a progress report. */}
+      {hasData && (
+        <div className="stat-grid">
+          <Card className="stat">
+            <div className="stat-num">{stats.streak}</div>
+            <div className="stat-label">day streak</div>
+          </Card>
+          <Card className="stat">
+            <BookOpen size={20} className="euca" />
+            <div className="stat-num">{stats.entries}</div>
+            <div className="stat-label">diary pages</div>
+          </Card>
+          <Card className="stat">
+            <Book size={20} className="euca" />
+            <div className="stat-num">{stats.words}</div>
+            <div className="stat-label">words learnt</div>
+          </Card>
+          <Card className="stat">
+            <Gamepad2 size={20} className="euca" />
+            <div className="stat-num">{stats.tasks}</div>
+            <div className="stat-label">tasks done</div>
+          </Card>
+        </div>
+      )}
 
       {stats.skillTally && stats.skillTally.length > 0 && (
         <Card>
@@ -5137,10 +5154,9 @@ function ProgressPage({ stats }) {
         </Card>
       )}
 
-      {stats.entries === 0 && (
+      {!hasData && (
         <Card>
-          <h3>Start here</h3>
-          <p className="muted">Write your first diary entry today — even two sentences about your day counts. Then try the daily task to start your streak.</p>
+          <p className="muted">This is where your progress lives — lessons, words, and skills, building up over time.</p>
         </Card>
       )}
     </div>
@@ -12306,8 +12322,8 @@ function DictionaryPage({ profile, words, setWords, markActivity, onAskLeo, leoM
       {loading && <Spinner label="Looking it up…" />}
       {error && <p className="bad">{error}</p>}
       {!loading && !dict && !thes && words.length === 0 && (
-        <Card className="center"> <h3>Your personal dictionary</h3>
-          <p className="muted">Look up any English word and Leo will explain it simply — with a clear definition, an example, and word partners. Every word you check is saved to your Word Bank.</p>
+        <Card>
+          <p className="muted">Words you look up are saved here — definitions, examples, and word partners, ready whenever you want to revisit them.</p>
         </Card>
       )}
 
@@ -13161,6 +13177,15 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
               onClick={() => toggleInterest(item)}>{item}</button>
           ))}
         </div>
+        {/* Item 5 — Psychological Design Audit (Genesis, Aug 2026):
+            Leo acknowledgement line on first chip selection.
+            scRise entrance, leo-accent block, fires once only.
+            PLACEHOLDER WORDING — Lessons to supply final copy. */}
+        {interests.length > 0 && (
+          <p className="leo-accent" style={{ animation: "scRise .35s ease-out both", marginTop: "var(--space-4)" }}>
+            Good — I'll keep that in mind when I plan your lessons.
+          </p>
+        )}
         <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
           <button className="ghost-btn" onClick={back}>Back</button>
           <button className="primary-btn" onClick={next}>Continue</button>
