@@ -1415,75 +1415,74 @@ const AUTHORED_LESSONS = [
            authored content is preserved, not discarded, pending Genesis's
            replacement items (for choose_the_form) or permanent deferral
            to Unit 3 (match_question_answer, write_the_question, ask_leo).
-           AUDIT FINDING, flagged not acted on: this lesson's remaining
-           five numbered exercises (gap_fill_typed, word_order,
-           correct_the_mistake, country_or_nationality, own_word) are ALSO
-           100% question-form items and were not named in the ruling. Left
-           untouched pending explicit direction — see the CODE report. */
+           CONTENT DELIVERED (Genesis, A1-U1-L1-Grammar-Exercises-v4-
+           statements.docx): Ex2, Ex3, Ex5, Ex6, Ex8 below are the
+           delivered statement-only replacement items, transcribed
+           verbatim. Same exerciseType and mechanics throughout. */
         exercises: [
           {
             n: 2, exerciseType: "gap_fill_typed", title: "Gap-fill: write am, is or are",
             items: [
-              { stem: "______ you from China?", answer: "Are" },
-              { stem: "______ she a doctor?",   answer: "Is" },
-              { stem: "______ they tired?",     answer: "Are" },
-              { stem: "______ it hot?",         answer: "Is" },
-              { stem: "______ he Colombian?",   answer: "Is" },
-              { stem: "______ we in Room 2?",   answer: "Are" },
-              { stem: "______ you hungry?",     answer: "Are" },
-              { stem: "______ I in your class?", answer: "Am" },
+              { stem: "I ______ from Australia.", answer: "am" },
+              { stem: "She ______ a teacher.",     answer: "is" },
+              { stem: "They ______ from Japan.",   answer: "are" },
+              { stem: "He ______ tired today.",    answer: "is" },
+              { stem: "We ______ happy.",          answer: "are" },
+              { stem: "You ______ a student.",     answer: "are" },
+              { stem: "It ______ hot today.",      answer: "is" },
+              { stem: "I ______ late.",            answer: "am" },
             ],
           },
           {
             n: 3, exerciseType: "word_order", title: "Put the words in order",
             items: [
-              { tokens: ["you", "are", "happy", "?"],           answer: "Are you happy?" },
-              { tokens: ["she", "is", "from Korea", "?"],       answer: "Is she from Korea?" },
-              { tokens: ["Japanese", "they", "are", "?"],       answer: "Are they Japanese?" },
-              { tokens: ["it", "is", "cold", "?"],              answer: "Is it cold?" },
-              { tokens: ["a student", "he", "is", "?"],         answer: "Is he a student?" },
-              { tokens: ["are", "tired", "we", "?"],            answer: "Are we tired?" },
-              { tokens: ["is", "your teacher", "she", "?"],     answer: "Is she your teacher?" },
-              { tokens: ["from Spain", "you", "are", "?"],      answer: "Are you from Spain?" },
+              { tokens: ["happy", "I", "am"],          answer: "I am happy." },
+              { tokens: ["Korea", "from", "she", "is"], answer: "She is from Korea." },
+              { tokens: ["Japanese", "they", "are"],   answer: "They are Japanese." },
+              { tokens: ["cold", "is", "it"],          answer: "It is cold." },
+              { tokens: ["a student", "he", "is"],     answer: "He is a student." },
+              { tokens: ["tired", "we", "are"],        answer: "We are tired." },
+              { tokens: ["your teacher", "she", "is"], answer: "She is your teacher." },
+              { tokens: ["from Spain", "you", "are"],  answer: "You are from Spain." },
             ],
           },
           {
             n: 5, exerciseType: "correct_the_mistake", title: "Correct the mistake",
             items: [
-              { stem: "Is you happy?",         wrongWord: "Is",  answer: "Are" },
-              { stem: "Are she a nurse?",      wrongWord: "Are", answer: "Is" },
-              { stem: "Am they from Italy?",   wrongWord: "Am",  answer: "Are" },
-              { stem: "Are it cold?",          wrongWord: "Are", answer: "Is" },
-              { stem: "Is we students?",       wrongWord: "Is",  answer: "Are" },
-              { stem: "You are Chinese?",      wrongWord: "You are", answer: "Are you", note: "Word order \u2014 the verb moves to the front." },
-              { stem: "Is they tired?",        wrongWord: "Is",  answer: "Are" },
-              { stem: "Are he Mexican?",       wrongWord: "Are", answer: "Is" },
+              { stem: "She am happy.",        wrongWord: "am",  answer: "is" },
+              { stem: "I is a student.",      wrongWord: "is",  answer: "am" },
+              { stem: "You is from Italy.",   wrongWord: "is",  answer: "are" },
+              { stem: "We is students.",      wrongWord: "is",  answer: "are" },
+              { stem: "He are late.",         wrongWord: "are", answer: "is" },
+              { stem: "You am tired.",        wrongWord: "am",  answer: "are" },
+              { stem: "They is Japanese.",    wrongWord: "is",  answer: "are" },
+              { stem: "I are from Colombia.", wrongWord: "are", answer: "am" },
             ],
           },
           {
             n: 6, exerciseType: "country_or_nationality", title: "Country or nationality?",
             evidenceColumns: { left: "FROM + COUNTRY", right: "BE + NATIONALITY" },
             items: [
-              { stem: "Are you from (Japan / Japanese)?",   options: ["Japan", "Japanese"], answer: "Japan",     column: "left" },
-              { stem: "Are you (Japan / Japanese)?",        options: ["Japan", "Japanese"], answer: "Japanese",  column: "right" },
-              { stem: "Is she from (Brazil / Brazilian)?",  options: ["Brazil", "Brazilian"], answer: "Brazil",  column: "left" },
-              { stem: "Is she (Brazil / Brazilian)?",       options: ["Brazil", "Brazilian"], answer: "Brazilian", column: "right" },
-              { stem: "Are they (China / Chinese)?",        options: ["China", "Chinese"],  answer: "Chinese",   column: "right" },
-              { stem: "Are they from (China / Chinese)?",   options: ["China", "Chinese"],  answer: "China",     column: "left" },
+              { stem: "I'm from (Brazil / Brazilian).", options: ["Brazil", "Brazilian"], answer: "Brazil",    column: "left" },
+              { stem: "I'm (Brazil / Brazilian).",      options: ["Brazil", "Brazilian"], answer: "Brazilian", column: "right" },
+              { stem: "She's from (Japan / Japanese).", options: ["Japan", "Japanese"],   answer: "Japan",     column: "left" },
+              { stem: "She's (Japan / Japanese).",      options: ["Japan", "Japanese"],   answer: "Japanese",  column: "right" },
+              { stem: "We're from (China / Chinese).",  options: ["China", "Chinese"],    answer: "China",     column: "left" },
+              { stem: "We're (China / Chinese).",       options: ["China", "Chinese"],    answer: "Chinese",   column: "right" },
             ],
             /* \u00a72b.6 payoff: the authored rule line, proven by the
                student's own answers sitting beneath it. */
             ruleLine: "After FROM, use the country. After BE, use the nationality.",
           },
           {
-            n: 8, exerciseType: "own_word", title: "Complete the question with your own word",
+            n: 8, exerciseType: "own_word", title: "Complete with your own word",
             openEnded: true,
             items: [
-              { stem: "Are you ______?",             hint: "adjective",   accepts: "any adjective: happy, tired, hungry\u2026" },
-              { stem: "Is your teacher ______?",     hint: "adjective",   accepts: "any adjective: friendly, nice\u2026" },
-              { stem: "Are you from ______?",        hint: "country",     accepts: "any country" },
-              { stem: "Are your classmates ______?", hint: "nationality", accepts: "any nationality" },
-              { stem: "Is it ______ today?",         hint: "adjective",   accepts: "hot, cold\u2026" },
+              { stem: "I'm from ___.",      hint: "country",     accepts: "any country" },
+              { stem: "I'm ___.",           hint: "nationality", accepts: "any nationality" },
+              { stem: "I'm a ___.",         hint: "occupation",  accepts: "student, worker, or similar" },
+              { stem: "I'm ___.",           hint: "adjective",   accepts: "happy, tired, hungry\u2026" },
+              { stem: "My teacher is ___.", hint: "adjective",   accepts: "any adjective: friendly, nice\u2026" },
             ],
           },
         ],
@@ -3895,12 +3894,52 @@ function SectionSwitch({ sections, page, onSelect }) {
   );
 }
 
+/* Genesis ruling, 2nd-pass walkthrough: "app open" was always meant to
+   trigger the resume moment (§1.5), not just navigating in from home —
+   Phase 7 only built the latter half. Rather than touching the app's
+   boot-sequence routing (auth/onboarding/placement gating, a different
+   risk class), this is a self-contained banner on the home screen
+   itself: it reads the SAME storage key LessonPage already reads, and
+   is the first thing the student sees on reopening the app, without
+   changing what decides that HomeScreen renders in the first place. */
+function ContinueLessonBanner({ onOpen }) {
+  const [pending, setPending] = useState(null); // { stageLabel } | null
+  const [dismissed, setDismissed] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const saved = await loadKey("esl-task:" + todayStr(), null);
+      if (cancelled || !saved || !saved.blueprint) return;
+      const done = !!(saved.status && saved.status.done);
+      if (done || !(saved.stage > 0)) return;
+      const stage = LESSON_STAGES[saved.stage];
+      setPending({ stageLabel: (stage && stage.label) || "your lesson" });
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  if (!pending || dismissed) return null;
+  return (
+    <div className="continue-banner leo-accent">
+      <p className="continue-banner-line text-leo">
+        {/* §1.5 — names only the held stage, never invents progress. */}
+        Welcome back. We were in the middle of {String(pending.stageLabel).toLowerCase()} — let's pick it up from there.
+      </p>
+      <div className="continue-banner-actions">
+        <button className="primary-btn" onClick={() => onOpen("task")}>Continue</button>
+        <button className="ghost-btn" onClick={() => setDismissed(true)}>Not now</button>
+      </div>
+    </div>
+  );
+}
+
 function HomeScreen({ profile, onOpen, animate, todayInfo, continuity, noticed }) {
   const nextItem = DAILY_JOURNEY.find((item) => !item.isDone(todayInfo) && !(item.isGated && item.isGated(todayInfo)));
   return (
     <div className="home-screen">
       {/* The mark is unanchored: deleting this one element leaves the layout intact. */}
       <div className="brand-mark-sm"><WhiteboardLogo width={132} /></div>
+
+      <ContinueLessonBanner onOpen={onOpen} />
 
       <div className="home-greet">
         <HomeGreeting name={profile.name} />
@@ -4601,7 +4640,13 @@ function speakText(text, opts) {
       .replace(/\*\*(.+?)\*\*/g, "$1")   // **bold**
       .replace(/__(.+?)__/g, "$1")        // __bold__
       .replace(/\*(.+?)\*/g, "$1")        // *italic*
-      .replace(/_(.+?)_/g, "$1");         // _italic_
+      .replace(/_(.+?)_/g, "$1")          // _italic_
+      /* Bug fix (Leo's live walkthrough): a bare " / " (e.g. "I'm happy /
+         I'm sad") was read aloud as "forward slash". This app never uses
+         slash for anything but an alternatives separator — never a URL,
+         date, or fraction — so " / " -> " or " is always the correct
+         reading, not a narrow patch for one screen. */
+      .replace(/\s+\/\s+/g, " or ");
     const u = new SpeechSynthesisUtterance(clean);
     u.lang = "en-AU";
     /* Default rate, unchanged. A slower override is opt-in per call —
@@ -5758,6 +5803,12 @@ function VocabularySection({ bp, onVocabTap, leoMemory, onSkip, onDone, header }
   const [missed, setMissed] = useState({});        // word -> true (had a wrong attempt)
   const [selected, setSelected] = useState(null);  // word chosen by tap/keyboard
   const [done, setDone] = useState(false);
+  /* Bug fix (Leo's live walkthrough): "Show the answers" used to set
+     `done` directly, which jumps straight to StageComplete — the drawn
+     connector lines this reveal computes never got a chance to render.
+     `revealed` holds the filled-in board on screen; the student taps
+     Continue when ready, which is what actually advances. */
+  const [revealed, setRevealed] = useState(false);
   const [vocabPhase, setVocabPhase] = useState("cards"); // "cards" | "matching" | "review"
   const [matchScore, setMatchScore] = useState({ correct: 0, total: 0 });
   const hasReview = !!(bp.vocabReviewExercises && (bp.vocabReviewExercises.oddOneOut || bp.vocabReviewExercises.completeSentences));
@@ -5853,7 +5904,7 @@ function VocabularySection({ bp, onVocabTap, leoMemory, onSkip, onDone, header }
       newMatched[it.word] = di;
       newLines.push({ word: it.word, wordIdx: wi, defIdx: di });
     });
-    setMatched(newMatched); setMissed(newMissed); setLines(newLines); setSelected(null); setDone(true);
+    setMatched(newMatched); setMissed(newMissed); setLines(newLines); setSelected(null); setRevealed(true);
   };
 
   const correct = items.filter((it) => matched[it.word] !== undefined && !missed[it.word]).length;
@@ -5982,7 +6033,9 @@ function VocabularySection({ bp, onVocabTap, leoMemory, onSkip, onDone, header }
         </div>
       </div>
 
-      <button className="ghost-btn" onClick={reveal}>Show the answers</button>
+      {revealed
+        ? <button className="primary-btn" onClick={() => setDone(true)}>Continue</button>
+        : <button className="ghost-btn" onClick={reveal}>Show the answers</button>}
     </SectionShell>
   );
 }
@@ -6318,8 +6371,12 @@ function AuthoredSpeaking({ bp, onSkip, onDone, header }) {
       )}
       {/* Authored images for this turn (e.g. happy / sad), when present. */}
       {turn.images && !replied && (
-        <div className="ex-chips">
-          {turn.images.map((im, i) => <span key={i} className="frame-chip">{im.alt}</span>)}
+        <div className="turn-images">
+          {turn.images.map((im, i) => (
+            <div key={i} className="turn-image-slot">
+              <LessonImage src={im.src} alt={im.alt} caption={im.alt} />
+            </div>
+          ))}
         </div>
       )}
       <div className="speak-thread">
@@ -6841,6 +6898,13 @@ function GrammarBoardSheet({ blocks, onClose }) {
     <div className="vocab-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="The board">
       <div className="vocab-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="vocab-sheet-handle" />
+        {/* Bug fix (Leo's live walkthrough): tap-outside and swipe-down
+            both worked, but neither is discoverable — the student had no
+            visible way back to the exercise. This button is additive;
+            the gestures still work exactly as before. */}
+        <button type="button" className="vocab-sheet-close" onClick={onClose} aria-label="Back to the exercise">
+          &larr; Back to the exercise
+        </button>
         <div className="vocab-sheet-scroll">
           <div className="grammar-card">{list.map((b) => <div key={b.key}>{b.node}</div>)}</div>
         </div>
@@ -10368,16 +10432,32 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
   }
 
   if (phase === "done") {
-    const unitRec = currentUnitRecord;
-    const store = leoMemory && leoMemory.store;
-    const unitNum = store && store.currentUnit;
-    const lessonNum = store && store.lessonInUnit;
-    const lastHistory = store && store.unitHistory && store.unitHistory[store.unitHistory.length - 1];
-    const justCompleted = lastHistory && lastHistory.unit === (unitNum ? unitNum - 1 : 0) && (lastHistory.status === "complete" || lastHistory.status === "force_complete");
-    const completedUnit = justCompleted && UNIT_RECORDS.find(r => r.unit === lastHistory.unit);
-    const nextUnit = unitNum && UNIT_RECORDS.find(r => r.unit === unitNum);
     const resetLesson = async () => { setLesson(null); await saveKey("esl-task:" + todayStr(), null); setPhase("chooser"); };
     const goHome = () => { setLesson(null); onExit(); };
+    /* Bug fix (Leo's live walkthrough): tapping through to this screen
+       sometimes produced a blank white page with no way forward — the
+       single worst failure mode, since the student's only path back was
+       to close and reopen the app. Root cause could not be reproduced
+       without a stack trace, but a blank page after "Finish lesson" is
+       consistent with an uncaught throw during this block's unit-progress
+       computation (a render-time exception here unmounts the whole tree).
+       Guarded so a computation failure degrades to the simple completion
+       card below, which never depends on unit/sequencer data — it ALWAYS
+       renders, and the two navigation buttons ALWAYS work. */
+    let unitRec = null, store = null, unitNum = null, lessonNum = null, justCompleted = false, completedUnit = null, nextUnit = null, lastHistory = null;
+    try {
+      unitRec = currentUnitRecord;
+      store = leoMemory && leoMemory.store;
+      unitNum = store && store.currentUnit;
+      lessonNum = store && store.lessonInUnit;
+      lastHistory = store && store.unitHistory && store.unitHistory[store.unitHistory.length - 1];
+      justCompleted = lastHistory && lastHistory.unit === (unitNum ? unitNum - 1 : 0) && (lastHistory.status === "complete" || lastHistory.status === "force_complete");
+      completedUnit = justCompleted && UNIT_RECORDS.find(r => r.unit === lastHistory.unit);
+      nextUnit = unitNum && UNIT_RECORDS.find(r => r.unit === unitNum);
+    } catch (e) {
+      console.error("[LessonPage] unit-progress computation failed on the done screen — falling back to the simple card", e);
+      unitRec = null; store = null; justCompleted = false; completedUnit = null;
+    }
     return (
       <div>
         <SectionTitle>Leo’s Lesson</SectionTitle>
@@ -12776,6 +12856,21 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 /* Bug fix — the plain word, above the breakdown a student otherwise
    can't decode. */
 .pp-word-plain{font-size:17px; font-weight:600; color:var(--text-primary); margin:0;}
+
+/* Bug fix — happy/sad (and similar small paired prompts) now use the
+   same LessonImage treatment as every other image, sized to sit two
+   up rather than one full-width frame each. */
+.turn-images{display:flex; gap:var(--space-3); justify-content:center; margin:var(--space-3) 0;}
+.turn-image-slot{flex:1; max-width:160px;}
+.turn-image-slot .li-frame{margin:0;}
+
+.vocab-sheet-close{display:block; width:fit-content; margin:0 auto var(--space-3); background:none; border:none; font-size:14px; font-weight:500; color:var(--leo-green); cursor:pointer; padding:12px 16px; min-height:44px;}
+
+.continue-banner{background:var(--leo-green-light); border-radius:12px; padding:var(--space-4); margin:0 0 var(--space-4); display:flex; flex-direction:column; gap:var(--space-3);}
+.continue-banner-line{font-size:15px; line-height:1.6; margin:0;}
+.continue-banner-actions{display:flex; gap:var(--space-3);}
+.continue-banner-actions .primary-btn{flex:1;}
+.continue-banner-actions .ghost-btn{flex-shrink:0;}
 
 .grammar-form-box{background:var(--sage); border-radius:10px; padding:12px 16px; margin:4px 0; line-height:1.6;}
 .grammar-form-box .gram-form{background:none; padding:0;}
