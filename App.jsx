@@ -1278,6 +1278,7 @@ const AUTHORED_LESSONS = [
           },
           {
             n: 5, exerciseType: "correct_the_mistake", title: "Correct the mistake (one word is wrong)",
+            hintWord: "the facts in the text",
             items: [
               { stem: "Ana is from Japan.",                     wrongWord: "Japan",   answer: "Brazil" },
               { stem: "Mr Lee is a student.",                   wrongWord: "student", answer: "teacher" },
@@ -1448,6 +1449,7 @@ const AUTHORED_LESSONS = [
           },
           {
             n: 5, exerciseType: "correct_the_mistake", title: "Correct the mistake",
+            hintWord: "the verb",
             items: [
               { stem: "She am happy.",        wrongWord: "am",  answer: "is" },
               { stem: "I is a student.",      wrongWord: "is",  answer: "am" },
@@ -1766,6 +1768,7 @@ const AUTHORED_LESSONS = [
           },
           {
             n: 5, exerciseType: "correct_the_mistake", title: "Correct the mistake (the article is wrong)",
+            hintWord: "the article",
             items: [
               { stem: "Tomas is a engineer.", wrongWord: "a",  answer: "an" },
               { stem: "Sam is an chef.",      wrongWord: "an", answer: "a" },
@@ -1885,6 +1888,7 @@ const AUTHORED_LESSONS = [
           },
           {
             n: 4, exerciseType: "correct_the_mistake", title: "Correct the mistake",
+            hintWord: "the article",
             items: [
               { stem: "He's a engineer.", wrongWord: "a",  answer: "an" },
               { stem: "She's an cleaner.", wrongWord: "an", answer: "a" },
@@ -2127,6 +2131,7 @@ const AUTHORED_LESSONS = [
           },
           {
             n: 5, exerciseType: "correct_the_mistake", title: "Correct the mistake (his or her)",
+            hintWord: "who it belongs to \u2014 his or her",
             items: [
               { stem: "This is my mum. His name is Rosa.",     wrongWord: "His", answer: "Her", note: "Rosa is a woman." },
               { stem: "This is my dad. Her name is Carlos.",   wrongWord: "Her", answer: "His", note: "Carlos is a man." },
@@ -2251,10 +2256,11 @@ const AUTHORED_LESSONS = [
           },
           {
             n: 4, exerciseType: "correct_the_mistake", title: "Correct the mistake",
+            hintWord: "who it belongs to \u2014 his or her",
             items: [
               { stem: "Sam is happy. Her mum is a nurse.",       wrongWord: "Her", answer: "His" },
               { stem: "Maria is a chef. His brother is a student.", wrongWord: "His", answer: "Her" },
-              { stem: "This is my sister. She's a artist.",      wrongWord: "a", answer: "an", note: "Recycled from Unit 1." },
+              { stem: "This is my sister. She's a artist.",      wrongWord: "a", answer: "an", note: "Recycled from Unit 1.", hintWord: "the article" },
               { stem: "Rosa is a nurse. His son is happy.",      wrongWord: "His", answer: "Her" },
             ],
           },
@@ -2474,9 +2480,10 @@ const AUTHORED_LESSONS = [
           },
           {
             n: 5, exerciseType: "correct_the_mistake", title: "Correct the mistake (have got / has got)",
+            hintWord: "the verb \u2014 have or has",
             items: [
               { stem: "Bao have got a wife.",       wrongWord: "have", answer: "has" },
-              { stem: "Mai has got four sister.",   wrongWord: "sister", answer: "sisters", note: "Number \u2192 plural." },
+              { stem: "Mai has got four sister.",   wrongWord: "sister", answer: "sisters", note: "Number \u2192 plural.", hintWord: "the number \u2014 how many?" },
               { stem: "Omar have got a brother.",   wrongWord: "have", answer: "has" },
               { stem: "The children has got a grandmother in Vietnam.", wrongWord: "has", answer: "have" },
             ],
@@ -2583,10 +2590,11 @@ const AUTHORED_LESSONS = [
           },
           {
             n: 4, exerciseType: "correct_the_mistake", title: "Correct the mistake",
+            hintWord: "the verb \u2014 have or has",
             items: [
               { stem: "She have got a brother.",  wrongWord: "have", answer: "has" },
-              { stem: "I've got two sister.",     wrongWord: "sister", answer: "sisters" },
-              { stem: "My mum is a artist.",      wrongWord: "a", answer: "an", note: "Recycled from Unit 1." },
+              { stem: "I've got two sister.",     wrongWord: "sister", answer: "sisters", hintWord: "the number \u2014 how many?" },
+              { stem: "My mum is a artist.",      wrongWord: "a", answer: "an", note: "Recycled from Unit 1.", hintWord: "the article" },
               { stem: "They has got a big family.", wrongWord: "has", answer: "have" },
             ],
           },
@@ -5534,7 +5542,7 @@ function ShowMeLink({ onShow, shown }) {
 function CorrectAnswerReveal({ answer, note, prefix = "The answer is" }) {
   return (
     <p className="ex-reveal text-leo">
-      {prefix} <strong className="ex-answer">{answer}</strong>
+      {prefix} <strong className="ex-answer">{answer}</strong>{note ? "." : ""}
       {note ? <span className="ex-reveal-note"> {note}</span> : null}
     </p>
   );
@@ -8715,8 +8723,24 @@ function CorrectMistakeExercise({ exercise, onDone }) {
       </div>
       {/* The moment between: told you noticed right, before repairing. */}
       {noticed && !settled && misses === 0 && <p className="cm-beat stage-enter">That's the one.</p>}
-      {noticed && !settled && misses > 0 && <p className="cm-beat stage-enter">{"Here it is \u2014 look at the verb."}</p>}
-      {!noticed && pressed !== null && <p className="cm-hint stage-enter">Not that one. Look at the verb.</p>}
+      {noticed && !settled && misses > 0 && (
+        <p className="cm-beat stage-enter">
+          {"Here it is \u2014 that's " + (item.hintWord || exercise.hintWord || "the one") + "."}
+        </p>
+      )}
+      {!noticed && pressed !== null && (
+        <p className="cm-hint stage-enter">
+          {/* Bug fix: this used to hardcode "look at the verb", which
+              was only ever true for Unit 1 Lesson 1's am/is/are
+              mistakes. Later lessons introduced article and possessive
+              mistakes, and the hint kept saying "verb" regardless —
+              actively misdirecting the student. Now reads the item's
+              or exercise's authored category; falls back to a phrase
+              that's never wrong instead of one that's specifically
+              wrong. */}
+          Not that one. Look at {item.hintWord || exercise.hintWord || "the other word"}.
+        </p>
+      )}
       {noticed && !settled && (
         <>
           {options && options.length >= 2
