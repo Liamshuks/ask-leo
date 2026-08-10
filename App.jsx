@@ -1407,24 +1407,20 @@ const AUTHORED_LESSONS = [
           ],
         },
 
-        /* The nine authored exercises, verbatim with answer keys. */
+        /* CONTENT RULING (Genesis, relayed via Leo, 2nd-pass walkthrough):
+           grammar exercises for this lesson are STATEMENTS ONLY. Question-
+           formation content is deferred to Unit 3, consistent with the
+           original syllabus map. Four exercises named in the ruling are
+           removed below and archived in deferredExercises — the original
+           authored content is preserved, not discarded, pending Genesis's
+           replacement items (for choose_the_form) or permanent deferral
+           to Unit 3 (match_question_answer, write_the_question, ask_leo).
+           AUDIT FINDING, flagged not acted on: this lesson's remaining
+           five numbered exercises (gap_fill_typed, word_order,
+           correct_the_mistake, country_or_nationality, own_word) are ALSO
+           100% question-form items and were not named in the ruling. Left
+           untouched pending explicit direction — see the CODE report. */
         exercises: [
-          {
-            n: 1, exerciseType: "choose_the_form", title: "Choose am, is or are",
-            /* NOTE: THREE options, not the spec's two chips. */
-            options: ["Am", "Is", "Are"],
-            items: [
-              { stem: "___ you Maria?",        answer: "Are" },
-              { stem: "___ he a teacher?",     answer: "Is" },
-              { stem: "___ they from Japan?",  answer: "Are" },
-              { stem: "___ it cold today?",    answer: "Is" },
-              { stem: "___ we happy?",         answer: "Are" },
-              { stem: "___ she Brazilian?",    answer: "Is" },
-              { stem: "___ I late?",           answer: "Am" },
-              { stem: "___ you students?",     answer: "Are" },
-            ],
-            note: "I \u2192 am, he/she/it \u2192 is, you/we/they \u2192 are.",
-          },
           {
             n: 2, exerciseType: "gap_fill_typed", title: "Gap-fill: write am, is or are",
             items: [
@@ -1449,18 +1445,6 @@ const AUTHORED_LESSONS = [
               { tokens: ["are", "tired", "we", "?"],            answer: "Are we tired?" },
               { tokens: ["is", "your teacher", "she", "?"],     answer: "Is she your teacher?" },
               { tokens: ["from Spain", "you", "are", "?"],      answer: "Are you from Spain?" },
-            ],
-          },
-          {
-            /* NO SPEC TYPE \u2014 matching, question to answer. */
-            n: 4, exerciseType: "match_question_answer", title: "Match the question to the answer",
-            items: [
-              { left: "Are you a student?",   right: "Yes, I am." },
-              { left: "Is she from Brazil?",  right: "Yes, she is." },
-              { left: "Are they Japanese?",   right: "Yes, they are." },
-              { left: "Is it hot today?",     right: "Yes, it is." },
-              { left: "Are we in Room 5?",    right: "Yes, we are." },
-              { left: "Is he a chef?",        right: "Yes, he is." },
             ],
           },
           {
@@ -1492,7 +1476,60 @@ const AUTHORED_LESSONS = [
             ruleLine: "After FROM, use the country. After BE, use the nationality.",
           },
           {
-            /* NO SPEC TYPE \u2014 write the question for a given answer. */
+            n: 8, exerciseType: "own_word", title: "Complete the question with your own word",
+            openEnded: true,
+            items: [
+              { stem: "Are you ______?",             hint: "adjective",   accepts: "any adjective: happy, tired, hungry\u2026" },
+              { stem: "Is your teacher ______?",     hint: "adjective",   accepts: "any adjective: friendly, nice\u2026" },
+              { stem: "Are you from ______?",        hint: "country",     accepts: "any country" },
+              { stem: "Are your classmates ______?", hint: "nationality", accepts: "any nationality" },
+              { stem: "Is it ______ today?",         hint: "adjective",   accepts: "hot, cold\u2026" },
+            ],
+          },
+        ],
+        /* Ex8 (own_word) is now the last active grammar exercise —
+           Ex9 (ask_leo) was removed with the others per the content
+           ruling. Open-ended items are marked on communicative success,
+           never exact string matching. */
+        markingNote: "Open-ended answers are marked on communicative success \u2014 never exact string matching.",
+
+        /* ARCHIVE — content ruling (Genesis, relayed via Leo, 2nd-pass
+           walkthrough, 9 Aug 2026): grammar exercises for THIS lesson
+           are statements only. These four are question-formation
+           content, deferred to Unit 3 per the original syllabus map.
+           Preserved verbatim, not discarded — no code reads this field.
+           choose_the_form (was Ex1) is expected to RETURN for this
+           lesson with new statement-only items; the other three are
+           question-shaped by definition (matching/writing/asking a
+           question) and are not expected back for Unit 1. */
+        deferredExercises: [
+          {
+            n: 1, exerciseType: "choose_the_form", title: "Choose am, is or are",
+            options: ["Am", "Is", "Are"],
+            items: [
+              { stem: "___ you Maria?",        answer: "Are" },
+              { stem: "___ he a teacher?",     answer: "Is" },
+              { stem: "___ they from Japan?",  answer: "Are" },
+              { stem: "___ it cold today?",    answer: "Is" },
+              { stem: "___ we happy?",         answer: "Are" },
+              { stem: "___ she Brazilian?",    answer: "Is" },
+              { stem: "___ I late?",           answer: "Am" },
+              { stem: "___ you students?",     answer: "Are" },
+            ],
+            note: "I \u2192 am, he/she/it \u2192 is, you/we/they \u2192 are.",
+          },
+          {
+            n: 4, exerciseType: "match_question_answer", title: "Match the question to the answer",
+            items: [
+              { left: "Are you a student?",   right: "Yes, I am." },
+              { left: "Is she from Brazil?",  right: "Yes, she is." },
+              { left: "Are they Japanese?",   right: "Yes, they are." },
+              { left: "Is it hot today?",     right: "Yes, it is." },
+              { left: "Are we in Room 5?",    right: "Yes, we are." },
+              { left: "Is he a chef?",        right: "Yes, he is." },
+            ],
+          },
+          {
             n: 7, exerciseType: "write_the_question", title: "Write the question for the answer",
             items: [
               { given: "Yes, I'm a student.",   answer: "Are you a student?" },
@@ -1504,20 +1541,6 @@ const AUTHORED_LESSONS = [
             ],
           },
           {
-            n: 8, exerciseType: "own_word", title: "Complete the question with your own word",
-            openEnded: true,
-            items: [
-              { stem: "Are you ______?",             hint: "adjective",   accepts: "any adjective: happy, tired, hungry\u2026" },
-              { stem: "Is your teacher ______?",     hint: "adjective",   accepts: "any adjective: friendly, nice\u2026" },
-              { stem: "Are you from ______?",        hint: "country",     accepts: "any country" },
-              { stem: "Are your classmates ______?", hint: "nationality", accepts: "any nationality" },
-              { stem: "Is it ______ today?",         hint: "adjective",   accepts: "hot, cold\u2026" },
-            ],
-          },
-          {
-            /* INVERTS spec Type 8: the STUDENT asks, LEO answers.
-               In a 1-to-1 app Leo is the partner \u2014 this gives the
-               student genuine question production. */
             n: 9, exerciseType: "ask_leo", title: "Ask Leo",
             openEnded: true,
             studentAsks: true,
@@ -1531,7 +1554,6 @@ const AUTHORED_LESSONS = [
             ],
           },
         ],
-        markingNote: "Open-ended answers in Exercises 8-9 are marked on communicative success \u2014 never exact string matching.",
       },
     },
 
@@ -1625,8 +1647,14 @@ function prepareAuthoredBlueprint(lesson) {
       return f;
     })(),
 
-    // Teacher reference (not rendered to student, used by summary AI)
+    // Teacher reference (not rendered to student, used by summary AI).
+    // Both names are carried: generated blueprints use _teacherNotes and
+    // that is what the consumer reads, so an authored lesson's notes
+    // would otherwise never arrive.
     teacherNotes: lesson.teacherNotes,
+    _teacherNotes: typeof lesson.teacherNotes === "string"
+      ? lesson.teacherNotes
+      : (lesson.teacherNotes ? JSON.stringify(lesson.teacherNotes) : undefined),
 
     /* ---- schemaVersion 2 fields (A1 authored lessons) ----
        Carried through only when the lesson supplies them, so v1
@@ -4476,6 +4504,11 @@ function VocabText({ text, vocab = [], onTap }) {
 
 // Bottom-sheet vocabulary card — slides up over the lesson content.
 function VocabCardSheet({ card, lesson, onClose, onSave, isSaved }) {
+  /* Same fix as GrammarBoardSheet, same reason: this sheet shares the
+     identical vocab-overlay mechanism and would show the identical
+     scroll-trap symptom on a real phone. Hook runs before the early
+     return, per React's rules — active only while a card is showing. */
+  useBodyScrollLock(!!card);
   if (!card) return null;
   const { word, data, loading } = card;
   const isTarget = lesson && lesson.useWord && lesson.useWord.word.toLowerCase() === word.toLowerCase();
@@ -4560,7 +4593,7 @@ function VocabCardSheet({ card, lesson, onClose, onSave, isSaved }) {
 ==================================================================================== */
 
 /* ---------- Voice: TTS + speech input, both optional with graceful fallback ---------- */
-function speakText(text) {
+function speakText(text, opts) {
   try {
     if (!window.speechSynthesis) return false;
     // Strip markdown emphasis so TTS doesn't read "star star word star star"
@@ -4570,7 +4603,11 @@ function speakText(text) {
       .replace(/\*(.+?)\*/g, "$1")        // *italic*
       .replace(/_(.+?)_/g, "$1");         // _italic_
     const u = new SpeechSynthesisUtterance(clean);
-    u.lang = "en-AU"; u.rate = 0.95;
+    u.lang = "en-AU";
+    /* Default rate, unchanged. A slower override is opt-in per call —
+       contraction forms in the grammar paradigm table are hard to hear
+       at the default rate, and only those pass one. */
+    u.rate = (opts && typeof opts.rate === "number") ? opts.rate : 0.95;
     const voices = window.speechSynthesis.getVoices();
     const auVoices = voices.filter((v) => v.lang === "en-AU" || v.lang.startsWith("en-AU"));
     if (auVoices.length) u.voice = auVoices[text.length % auVoices.length];
@@ -5951,7 +5988,7 @@ function VocabularySection({ bp, onVocabTap, leoMemory, onSkip, onDone, header }
 }
 
 /* ---------- Stage 3: Pronunciation — model, listen, try ---------- */
-function PronunciationSection({ bp, onVocabTap, onSkip, onDone, header }) {
+function PronunciationSection({ bp, onVocabTap, onSkip, onDone, header, studentCountry }) {
   // Defect 4 fix: cards are built DIRECTLY from focusSections — each one
   // already carries everything a card needs (targetWord, ipa, instructions,
   // practiceWords, correct, incorrect). No backward matching onto
@@ -5963,7 +6000,27 @@ function PronunciationSection({ bp, onVocabTap, onSkip, onDone, header }) {
      items (the stress shift is the content). Without this the authored
      pronunciation stage silently fell back to bare vocabulary cards
      and the shift — the actual teaching point — never rendered. */
-  const targets = (bp.pronunciation && bp.pronunciation.targets) || null;
+  const rawTargets = (bp.pronunciation && bp.pronunciation.targets) || null;
+  /* First real use of the personalisation seat (Leo's 2nd-pass ruling).
+     REORDERS authored, teacher-vetted pairs only — it never invents new
+     IPA or stress data. Phase 0's contract listed pronunciation.targets
+     under mayNotTouch; this is read as Genesis narrowly amending that to
+     "may reorder, may never fabricate content", which keeps the
+     contract's real purpose (linguistic accuracy) intact. If the
+     student's country isn't among the authored pairs, order is
+     unchanged — there is no invented pronunciation data to fall back on. */
+  const targets = React.useMemo(() => {
+    if (!rawTargets || !studentCountry) return rawTargets;
+    const said = String(studentCountry).trim().toLowerCase();
+    if (!said) return rawTargets;
+    const idx = rawTargets.findIndex((t) => t.type === "pair" &&
+      (String(t.from.word).toLowerCase() === said || String(t.to.word).toLowerCase() === said));
+    if (idx <= 0) return rawTargets;
+    const reordered = rawTargets.slice();
+    const [mine] = reordered.splice(idx, 1);
+    reordered.unshift(mine);
+    return reordered;
+  }, [rawTargets, studentCountry]);
   const [done, setDone] = useState(false);
   const [everSpoke, setEverSpoke] = useState(false);
   const [pairIdx, setPairIdx] = useState(0);
@@ -5975,10 +6032,18 @@ function PronunciationSection({ bp, onVocabTap, onSkip, onDone, header }) {
     return (
       <SectionShell header={header} title="Say it like a local" onSkip={onSkip}>
         <ExerciseChrome index={pairIdx} total={targets.length} label="Sound" />
+        {/* Shown only when factually true: the leading pair genuinely
+            matches the student's own stated country. */}
+        {pairIdx === 0 && studentCountry && t.type === "pair" &&
+          (String(t.from.word).toLowerCase() === String(studentCountry).toLowerCase()
+            || String(t.to.word).toLowerCase() === String(studentCountry).toLowerCase()) && (
+          <p className="ex-instruction">Your own country first.</p>
+        )}
         {t.type === "pair"
           ? <PronPairCard pair={t} />
           : <div className="pp-card"><div className="pp-rows">
               <div className="pp-word">
+                <p className="pp-word-plain">{t.word}</p>
                 <div className="pp-syls">{(t.syllables || [t.word]).map((s, i) => (
                   <span key={i} className={"pp-syl" + (i === t.stressIndex ? " pp-syl-on" : "")}>{s}</span>))}</div>
                 <p className="pp-ipa">{t.ipa}</p>
@@ -6066,12 +6131,12 @@ function SentenceFramesPanel({ frames, label }) {
    stress and IPA.
 
    No persistent played-state: hearing again is always equally invited. */
-function SpeakButton({ text, label, className }) {
+function SpeakButton({ text, label, className, rate }) {
   const [playing, setPlaying] = useState(false);
   if (!TTS_OK || !text) return null;
   const speak = () => {
     setPlaying(true);
-    speakText(text);
+    speakText(text, rate ? { rate } : undefined);
     /* The utterance has no reliable end event across browsers, so the
        dimmed state is time-boxed rather than pretending to track it. */
     setTimeout(() => setPlaying(false), Math.min(6000, 900 + String(text).length * 55));
@@ -6092,6 +6157,10 @@ function PronPairCard({ pair }) {
   if (!pair || !pair.from || !pair.to) return null;
   const row = (w, highlightShift) => (
     <div className="pp-word">
+      {/* Bug fix (Leo's live walkthrough, 2nd pass): the plain word was
+          spoken by the button but never shown — a student saw only the
+          syllable/IPA breakdown with no way to know which word it was. */}
+      <p className="pp-word-plain">{w.word}</p>
       <div className="pp-dots" aria-hidden="true">
         {(w.syllables || []).map((s, i) => (
           <span key={i} className={"pp-dot" + (i === w.stressIndex ? (highlightShift ? " pp-dot-moved" : " pp-dot-on") : "")} />
@@ -6167,7 +6236,138 @@ function ListeningPlayer({ text, onPlayed }) {
   );
 }
 
+/* §3e — the AUTHORED speaking stage.
+   The generic free conversation below is right for generated lessons.
+   An authored lesson carries a designed sequence: a scenario, ordered
+   turns, a repeat-after-me model before each student turn, and ONE
+   sentence frame visible per turn.
+
+   The one-frame rule is not cosmetic. The lesson plan states it
+   prevents the stage's main error — reaching for "I'm ___" during the
+   country turn and producing "I'm Brazil". Showing all three frames at
+   once actively causes the mistake the teacher designed against. */
+function AuthoredSpeaking({ bp, onSkip, onDone, header }) {
+  const turns = bp.speakingTurns || [];
+  const [idx, setIdx] = useState(0);
+  const [thread, setThread] = useState([]);
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [replied, setReplied] = useState(false);
+  const turn = turns[idx];
+  const name = (bp._studentName || "").trim();
+
+  if (!turn) {
+    return (
+      <SectionShell header={header} title="Speaking practice" onSkip={onSkip}>
+        <StageComplete correct={turns.length} total={turns.length}
+          message={{ title: "Nicely done", sub: "You introduced yourself — name, country and how you feel." }}
+          onContinue={() => onDone(thread.filter((t) => t.role === "you").length, thread)} />
+      </SectionShell>
+    );
+  }
+
+  const prompt = turn.leoPromptTemplate
+    ? String(turn.leoPromptTemplate).replace(/\{name\}/g, name || "there")
+    : turn.leoPrompt;
+
+  const send = async () => {
+    if (!input.trim() || busy) return;
+    const said = input.trim();
+    setThread((t) => t.concat([{ role: "you", text: said }]));
+    setInput("");
+    setBusy(true);
+    try {
+      /* The authored correction bank is the teacher's own per-turn
+         guidance. Passing it means Leo corrects the way this lesson
+         says to correct, rather than improvising. */
+      const bank = (bp.speakingCorrectionBank || [])
+        .filter((c) => c.turn === turn.id || c.turn === "any")
+        .map((c) => `- If they say ${c.studentSays} -> ${c.leoResponds}`)
+        .join("\n");
+      const raw = await askClaude(
+        `${AUSTRALIAN_SPELLING}You are Leo, an ELICOS teacher. Scenario: ${bp.speakingScenario || bp.context}.\n` +
+        `You asked: "${prompt}". The student answered: "${said}".\n` +
+        `The target for this turn is: ${turn.frame}. They may answer in full or short form; BOTH are accepted.\n` +
+        (bank ? `Correction guidance authored by their teacher — follow it:\n${bank}\n` : "") +
+        `Reply warmly in ONE or TWO short sentences, max 20 words. If they need the form, model it and invite one more try. Never say "Wrong". Plain text only.`,
+        { intent: "speaking_reply" }
+      );
+      setThread((t) => t.concat([{ role: "leo", text: String(raw || "").trim() }]));
+      setReplied(true);
+    } catch {
+      setThread((t) => t.concat([{ role: "leo", text: "I couldn't reply just then — but I heard you. Let's keep going.", _failed: true }]));
+      setReplied(true);
+    } finally { setBusy(false); }
+  };
+
+  const next = () => { setIdx(idx + 1); setThread([]); setInput(""); setReplied(false); };
+
+  return (
+    <SectionShell header={header} title="Speaking practice" onSkip={onSkip}>
+      <ExerciseChrome index={idx} total={turns.length} label="Turn" />
+      {bp.speakingScenario && idx === 0 && <p className="ex-instruction">{bp.speakingScenario}</p>}
+      <div className="bubble bubble-bot">
+        {prompt}
+        <SpeakButton text={prompt} />
+      </div>
+      {/* Repeat-after-me: the model comes BEFORE the student's turn. */}
+      {turn.repeatAfterMe && !replied && (
+        <div className="grammar-form-box">
+          <p className="gb-keypoint-text">Repeat after me: <strong className="ex-answer">{turn.repeatAfterMe}</strong></p>
+        </div>
+      )}
+      {/* Authored images for this turn (e.g. happy / sad), when present. */}
+      {turn.images && !replied && (
+        <div className="ex-chips">
+          {turn.images.map((im, i) => <span key={i} className="frame-chip">{im.alt}</span>)}
+        </div>
+      )}
+      <div className="speak-thread">
+        {thread.map((t, i) => (
+          <div key={i} className={"speak-turn " + (t.role === "leo" ? "speak-leo" : "speak-you")}>
+            <p>{t.text}</p>
+            {t.role === "leo" && !t._failed && <SpeakButton text={t.text} />}
+          </div>
+        ))}
+        {busy && <Spinner label="Leo is listening…" />}
+      </div>
+      {!replied ? (
+        <>
+          {/* ONE frame for THIS turn — unless the lesson explicitly
+              turns the rule off, in which case every frame shows and
+              the current one leads. The authored flag decides. */}
+          {turn.frame && (
+            <FrameChips
+              frames={bp.speakingOneFramePerTurn === false
+                ? [{ frame: turn.frame }].concat(turns.filter((t) => t.frame && t.frame !== turn.frame).map((t) => ({ frame: t.frame })))
+                : [{ frame: turn.frame }]}
+              onInsert={(f) => setInput((v) => (v ? v + " " : "") + String(f).replace(/_+/g, "").trim())} />
+          )}
+          <div className="input-row">
+            <input className="text-input" value={input} placeholder="Say or type your reply…"
+              onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()}
+              disabled={busy} {...EXERCISE_INPUT_PROPS_PROPER_NOUN} />
+            <MicButton onText={(t) => setInput(t)} />
+          </div>
+          <div className="ex-actions">
+            <button className="primary-btn" onClick={send} disabled={busy || !input.trim()}>Reply</button>
+          </div>
+        </>
+      ) : (
+        <button className="primary-btn wide" onClick={next}>
+          {idx + 1 >= turns.length ? "Finish speaking" : "Next →"}
+        </button>
+      )}
+    </SectionShell>
+  );
+}
+
 function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone, header }) {
+  /* §3e — an authored lesson runs its designed sequence; a generated
+     lesson runs the free conversation below, unchanged. */
+  if (bp.speakingTurns && bp.speakingTurns.length) {
+    return <AuthoredSpeaking bp={bp} onSkip={onSkip} onDone={onDone} header={header} />;
+  }
   const notes = bp._teacherNotes ? bp._teacherNotes.slice(0, 200) : "";
   // Capability: use discussion questions as prompts when available
   const discussionQs = bp.discussionQuestions || [];
@@ -6404,7 +6604,10 @@ function SkillSection({ bp, section, vocab, onVocabTap, onSkip, onDone, header }
         <button className="primary-btn wide" onClick={() => setHasRead(true)}>I've read it →</button>
       ) : (
         <div ref={questionsRef}>
-          <McqQuiz questions={section.questions} vocab={vocab} onVocabTap={onVocabTap}
+          <AuthoredExerciseRunner
+            exercises={bp.readingExercises}
+            fallbackQuestions={section.questions}
+            bp={bp} vocab={vocab} onVocabTap={onVocabTap}
             onAdvance={scrollToQuestions}
             onDone={(c, t) => {
               if (isDual) {
@@ -6484,7 +6687,11 @@ function GrammarBlockParadigm({ block }) {
             <span className="gb-para-full">{r.full}</span>
             <span className="gb-para-short">{r.short}</span>
             <span className="gb-para-sound">
-              <SpeakButton text={r.short} label={`Hear ${r.short}`} className="speak-btn-sm" />
+              {/* Bug fix (Leo's live walkthrough, 2nd pass): contraction
+                  forms (he's/she's/it's, etc.) played too fast to hear.
+                  Applied to every row — the whole "short" column is
+                  contractions, not just the three examples reported. */}
+              <SpeakButton text={r.short} label={`Hear ${r.short}`} className="speak-btn-sm" rate={0.7} />
             </span>
           </div>
         ))}
@@ -6594,8 +6801,41 @@ function grammarBlockList(blocks) {
    Reuses the VocabCardSheet mechanism (handle, scroll area,
    tap-outside-to-close) so the gesture is one the student already
    knows. The sheet closes onto exactly where they were. */
+/* Bug fix (Leo's live walkthrough, 2nd pass): "Review the board" did not
+   return the student to their place on close, contrary to §2a.5's
+   spec ("closes onto exactly where they were"). Root cause: the sheet's
+   fixed-position overlay has no body-scroll lock, which on real phones
+   lets the background page's scroll position drift while the sheet is
+   open — closing it then drops the student somewhere other than where
+   they tapped from. This is the SAME overlay mechanism VocabCardSheet
+   uses, so both sheets get the fix; a shared bug in a shared mechanism
+   left half-fixed is still the bug.
+   The lock captures the exact scroll position on open and explicitly
+   restores it on close — a guarantee, not a hope. */
+function useBodyScrollLock(active) {
+  const savedY = React.useRef(0);
+  React.useEffect(() => {
+    if (!active || typeof document === "undefined") return;
+    savedY.current = window.scrollY || window.pageYOffset || 0;
+    const body = document.body;
+    const prevPosition = body.style.position;
+    const prevTop = body.style.top;
+    const prevWidth = body.style.width;
+    body.style.position = "fixed";
+    body.style.top = "-" + savedY.current + "px";
+    body.style.width = "100%";
+    return () => {
+      body.style.position = prevPosition;
+      body.style.top = prevTop;
+      body.style.width = prevWidth;
+      window.scrollTo(0, savedY.current);
+    };
+  }, [active]);
+}
+
 function GrammarBoardSheet({ blocks, onClose }) {
   const list = grammarBlockList(blocks);
+  useBodyScrollLock(list.length > 0);
   if (!list.length) return null;
   return (
     <div className="vocab-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="The board">
@@ -6683,10 +6923,14 @@ function GapSentence({ stem, filled }) {
             stays visible at 40% — no strikethrough, no red, no shake.
    No retry within the item: with a short option list a retry is a coin
    flip, not learning. The item re-attempts later via the Phase 1 queue. */
-function TapChoiceItem({ item, options, onSettled, settled, chosen, shown, onPick, onShowMe }) {
+function TapChoiceItem({ item, options, onSettled, settled, chosen, shown, onPick, onShowMe, accepted }) {
   const answer = item.answer;
-  const isCorrect = chosen === answer;
-  const fill = settled ? answer : null;
+  const list = accepted || [answer];
+  const isCorrect = list.indexOf(chosen) !== -1;
+  /* If the student chose an answer the teacher also accepts, the
+     sentence completes with THEIR word — replacing it with the primary
+     answer would imply theirs was not the one that counted. */
+  const fill = settled ? (isCorrect && chosen ? chosen : answer) : null;
   return (
     <>
       <GapSentence stem={item.stem} filled={fill} />
@@ -6720,14 +6964,19 @@ function ChooseFormExercise({ exercise, onDone }) {
   }
   const options = item.options || exercise.options || [];
   const settled = !!chosen || shown;
-  const wasCorrect = chosen === item.answer;
-  const pick = (opt) => { if (settled) return; setChosen(opt); if (opt === item.answer) setCorrect((c) => c + 1); };
+  /* An item the teacher marked as having more than one correct answer
+     must accept every one of them. Without this, a student choosing a
+     teacher-approved answer is told they are wrong — the app
+     contradicting the teacher. */
+  const accepted = [item.answer].concat(item.alsoAccept || []);
+  const wasCorrect = accepted.indexOf(chosen) !== -1;
+  const pick = (opt) => { if (settled) return; setChosen(opt); if (accepted.indexOf(opt) !== -1) setCorrect((c) => c + 1); };
   const next = () => { q.advance(wasCorrect); setChosen(null); setShown(false); };
   return (
     <div className="ex-item">
       <ExerciseChrome index={q.index} total={q.total} />
       <TapChoiceItem item={item} options={options} settled={settled} chosen={chosen} shown={shown}
-        onPick={pick} onShowMe={() => { setShown(true); }} />
+        accepted={accepted} onPick={pick} onShowMe={() => { setShown(true); }} />
       {settled && (
         <>
           {shown
@@ -6854,6 +7103,14 @@ const EXERCISE_RENDERERS = {
   correct_the_mistake: CorrectMistakeExercise,
   ask_leo: AskLeoExercise,
   answer_leo: AskLeoExercise,
+  /* Reading-stage shapes. Each maps onto an interaction the student has
+     already met, which is why they are adapters rather than new
+     renderers: one interaction language across the product. */
+  true_false: TrueFalseExercise,
+  who_is_it: ChooseFormExercise,
+  complete_from_text: GapFillExercise,
+  yes_no_questions: GapFillExercise,
+  about_you: OwnWordExercise,
 };
 /* bp is passed through because the conversation types read the
    lesson's sentence frames; the other renderers ignore it. */
@@ -7482,6 +7739,54 @@ function AskLeoExercise({ exercise, bp, onDone }) {
   );
 }
 
+/* §2b — True/false is a two-chip choice wearing different clothes.
+   Adapting it here rather than writing a fourth near-identical
+   renderer keeps one interaction language across the product. */
+function TrueFalseExercise({ exercise, onDone }) {
+  const adapted = {
+    ...exercise,
+    options: ["True", "False"],
+    items: (exercise.items || []).map((it) => ({
+      ...it,
+      options: ["True", "False"],
+      answer: it.answer === true || String(it.answer).toLowerCase() === "true" ? "True" : "False",
+    })),
+  };
+  return <ChooseFormExercise exercise={adapted} onDone={onDone} />;
+}
+
+/* Runs a list of authored exercises through their renderers in the
+   authored order, falling through to the MCQ adapter for shapes with
+   no renderer yet. Shared by the grammar and reading stages so neither
+   can silently drop authored content the other renders. */
+function AuthoredExerciseRunner({ exercises, fallbackQuestions, bp, vocab, onVocabTap, onDone, onAdvance }) {
+  const runnable = (exercises || []).filter((ex) => EXERCISE_RENDERERS[ex.exerciseType]);
+  const [step, setStep] = useState(0);
+  const [score, setScore] = useState({ correct: 0, total: 0 });
+  if (step < runnable.length) {
+    const ex = runnable[step];
+    return (
+      <div key={ex.exerciseType + step}>
+        {ex.title && <p className="ex-ex-title">{ex.title}</p>}
+        {ex.instruction && <p className="ex-instruction">{ex.instruction}</p>}
+        {renderAuthoredExercise(ex, (c, t) => {
+          setScore((s) => ({ correct: s.correct + c, total: s.total + t }));
+          setStep(step + 1);
+          if (onAdvance) onAdvance();
+        }, bp)}
+      </div>
+    );
+  }
+  /* Shapes with a renderer are excluded from the fallback, or their
+     items would be asked twice. */
+  const remaining = (fallbackQuestions || []).filter((q) => !EXERCISE_RENDERERS[q._exerciseType]);
+  if (!remaining.length) {
+    return <StageComplete correct={score.correct} total={score.total} onContinue={() => onDone(score.correct, score.total)} />;
+  }
+  return <McqQuiz questions={remaining} vocab={vocab} onVocabTap={onVocabTap} onAdvance={onAdvance}
+    onDone={(c, t) => onDone(score.correct + c, score.total + t)} />;
+}
+
 function GrammarSection({ bp, section, vocab, onVocabTap, onSkip, onDone, header }) {
   const g = bp.grammar || {};
   const hasPractice = section.questions && section.questions.length >= 3 && !section.explanationOnly;
@@ -7809,7 +8114,7 @@ function SummarySection({ bp, section, vocab, onVocabTap, onFinish }) {
     <div className="summary-flow">
       {/* §2.2.1 Drawn tick */}
       <div className="sc-tick-wrap" style={{ animation: "scRise .4s ease-out both" }}>
-        <svg className="sc-tick" viewBox="0 0 52 52"><circle className="sc-tick-ring" cx="26" cy="26" r="22" /><path className="sc-tick-mark" d="M15 27l7 7 15-15" /></svg>
+        <svg className="sc-tick" viewBox="0 0 52 52"><circle className="sc-tick-ring" cx="26" cy="26" r="22" fill="none" strokeWidth="2.5" /><path className="sc-tick-mark" fill="none" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" d="M15 27l7 7 15-15" /></svg>
       </div>
       <h3 className="summary-heading" style={{ animation: "scRise .4s ease-out both", animationDelay: "0.5s", opacity: 0 }}>That's today done</h3>
       <p className="text-leo summary-praise" style={{ animation: "scRise .4s ease-out both", animationDelay: "0.8s", opacity: 0 }}><VocabText text={s.praise} vocab={vocab} onTap={onVocabTap} /></p>
@@ -10078,7 +10383,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
         <SectionTitle>Leo’s Lesson</SectionTitle>
         <div className="summary-flow">
           <div className="sc-tick-wrap" style={{ animation: "scRise .4s ease-out both" }}>
-            <svg className="sc-tick" viewBox="0 0 52 52"><circle className="sc-tick-ring" cx="26" cy="26" r="22" /><path className="sc-tick-mark" d="M15 27l7 7 15-15" /></svg>
+            <svg className="sc-tick" viewBox="0 0 52 52"><circle className="sc-tick-ring" cx="26" cy="26" r="22" fill="none" strokeWidth="2.5" /><path className="sc-tick-mark" fill="none" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" d="M15 27l7 7 15-15" /></svg>
           </div>
           <h3 className="summary-heading" style={{ animation: "scRise .4s ease-out both", animationDelay: "0.5s", opacity: 0 }}>Lesson complete</h3>
           {unitRec && store ? (
@@ -10128,7 +10433,11 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
   const stageHeader = bp.stageHeaders
     ? { ...stageHeaderFor(bp, stage.id, stage.label), stageIndex: lesson.stage, totalStages: LESSON_STAGES.length }
     : null;
-  const stageProps = { bp, vocab: vocabWords, onVocabTap: handleVocabTap, onSkip: skip, header: stageHeader, stageIndex: lesson.stage, totalStages: LESSON_STAGES.length };
+  const stageProps = { bp, vocab: vocabWords, onVocabTap: handleVocabTap, onSkip: skip, header: stageHeader, stageIndex: lesson.stage, totalStages: LESSON_STAGES.length,
+    /* Personalisation seat, first real use (§ Phase 0 contract). A
+       genuinely known fact — profile.country is captured at onboarding,
+       never guessed — passed down for the pronunciation stage to read. */
+    studentCountry: countryDisplay(profile.country) || null };
 
   /* §1.5 — one line, one button, claiming only state the code holds. */
   if (resuming) return (
@@ -12463,6 +12772,10 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .lp-label{font-size:14px; font-weight:500; color:var(--text-secondary); margin:0;}
 /* The permission line IS the display of unlimited replays. */
 .lp-permission{font-size:13px; font-weight:400; color:var(--text-tertiary); margin:0;}
+
+/* Bug fix — the plain word, above the breakdown a student otherwise
+   can't decode. */
+.pp-word-plain{font-size:17px; font-weight:600; color:var(--text-primary); margin:0;}
 
 .grammar-form-box{background:var(--sage); border-radius:10px; padding:12px 16px; margin:4px 0; line-height:1.6;}
 .grammar-form-box .gram-form{background:none; padding:0;}
