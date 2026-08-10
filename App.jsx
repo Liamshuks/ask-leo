@@ -4609,13 +4609,22 @@ function memRecordLesson(store, entry) {
   const today = todayStr();
   return {
     ...store,
-    lessonLog: [{ ...entry, date: today }, ...store.lessonLog].slice(0, LESSON_LOG_CAP),
+    /* Bug fix: this was the one lessonLog write site in the file that
+       never guarded against the field being absent, unlike every read
+       site (`memoryStore.lessonLog || []` appears throughout). A
+       student whose memory store lacks this field hit an uncaught
+       "not iterable" TypeError at the exact moment a lesson finished —
+       a render-time throw that blanks the whole screen with no way
+       forward. Same guard as everywhere else, just applied here too. */
+    lessonLog: [{ ...entry, date: today }, ...(store.lessonLog || [])].slice(0, LESSON_LOG_CAP),
     lessonsCompleted: (store.lessonsCompleted || 0) + 1,
     firstLessonDate: store.firstLessonDate || today,
   };
 }
 function memRecordDiaryFeedback(store, fb) {
-  return { ...store, diaryFeedbackLog: [{ ...fb, date: todayStr() }, ...store.diaryFeedbackLog].slice(0, DIARY_FEEDBACK_CAP) };
+  // Same fix, same reason — this had the identical unguarded pattern,
+  // just never triggered yet.
+  return { ...store, diaryFeedbackLog: [{ ...fb, date: todayStr() }, ...(store.diaryFeedbackLog || [])].slice(0, DIARY_FEEDBACK_CAP) };
 }
 // M6: remember what the learner asks Leo about, so future lessons can reference
 // their real questions. Deduped (case-insensitive) and capped so nothing bloats.
