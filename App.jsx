@@ -11303,6 +11303,14 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
      same component rendering. Zero AI calls for content generation.
      ================================================================ */
   const startAuthored = async (authoredLesson) => {
+    // Cost-logging fix (11 Aug 2026): plan() sets _currentLessonId for the
+    // legacy live-generation path, but startAuthored() — the entry point
+    // every current lesson actually uses under the hybrid architecture —
+    // never did. That left the module-level default ("no-lesson-id") in
+    // place for the whole session, so every speaking_reply/lesson_summary/
+    // own_word_reply log during an authored lesson was unattributable.
+    // Mirrors plan()'s assignment exactly.
+    _currentLessonId = "lesson-" + Date.now();
     const { blueprint, sections } = prepareAuthoredBlueprint(authoredLesson);
     const problems = validateBlueprint(blueprint);
     if (problems.length) {
