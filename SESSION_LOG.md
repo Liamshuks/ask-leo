@@ -1,3 +1,4 @@
+[Uploading SESSION_LOG.md…]()
 # Ask Leo — Session Log
 Default between-session artifact from 11 August 2026.
 Full handovers are the exception; log entries are the default.
