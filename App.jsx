@@ -13984,10 +13984,9 @@ const CSS = `
   /* Legacy tokens (preserved for existing components) */
   --paper:#FFFFFF; --ink:#22302A; --euca:#37624B; --euca-deep:#274A39;
   --wattle:#E8A91D; --sage:#E9EFE7; --line:#D7E1D6; --rust:#B95737; --card:#FFFFFF;
-  --sand:#F2E7CF; --sand-2:#E6D4AF; --sand-grain:#C9B287; --sand-shadow:#A98D5E;
   --thong-sole:#242424; --thong-wall:#0D0D0D; --thong-tex:#4A4A4A; --thong-rim:#6B6B6B; --thong-strap:#1A1A1A; --thong-shine:#8A8A8A;
   /* P2 Design System */
-  --leo-green:#2A7C6F; --leo-green-light:#E8F4F2; --leo-neutral:#5C5248; /* warm neutral — retained for future design use */
+  --leo-green:#2A7C6F; --leo-green-light:#E8F4F2;
   --bg-warm:#FFFFFF; --bg-card:#FFFFFF;
   --text-primary:#1A1A1A; --text-secondary:#6B7280; --text-tertiary:#9CA3AF;
   --divider:#EDEDEA; /* Ruling 4 — rows inside a card, and the tab bar's top edge. Never an outer edge. */
