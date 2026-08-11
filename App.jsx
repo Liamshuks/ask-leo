@@ -13058,10 +13058,26 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
      reviewed line and looks faithful. Do both, or neither. */
   const HELLO_L1 = {};
 
+  /* Progress indicator (ONBOARDING_PROGRESS_INDICATOR_SPECIFICATION_v1).
+     Read-only derivation from obStep — does not touch navigation state.
+     stepIndex clamps a not-found step to 0 (spec §4 edge case: fall back
+     to the first step rather than render a broken indicator). Hidden on
+     'welcome' by simply not being included in that branch's render. */
+  const stepIndex = Math.max(OB_STEPS.indexOf(obStep), 0);
+  const obDots = (
+    <div className="ob-dots" aria-label={`Step ${stepIndex + 1} of ${OB_STEPS.length}`}>
+      {OB_STEPS.map((step, i) => (
+        <span key={step} aria-hidden="true"
+          className={"ob-dot " + (i < stepIndex ? "ob-dot-done" : i === stepIndex ? "ob-dot-current" : "ob-dot-ahead")} />
+      ))}
+    </div>
+  );
+
   // ── PAGE 1: THE LANGUAGE ── (no Back)
   if (obStep === "language") return (
     <div className="onboard">
       <div className="ob-card fade-in" style={{ textAlign: "left" }}>
+        {obDots}
         <p className="text-leo" style={{ marginBottom: "var(--space-4)" }}>What is your first language?</p>
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
           {Object.entries(LANGS).map(([code, l]) => (
@@ -13110,6 +13126,7 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
     return (
     <div className="onboard">
       <div className="ob-card fade-in" style={{ textAlign: "left" }}>
+        {obDots}
         <p className="text-leo" style={{ marginBottom: "var(--space-4)" }}>I'd like to get to know you a little.</p>
 
         {/* Group one — Who you are */}
@@ -13211,6 +13228,7 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
   if (obStep === "interests") return (
     <div className="onboard">
       <div className="ob-card fade-in" style={{ textAlign: "left" }}>
+        {obDots}
         <p className="text-leo" style={{ marginBottom: "var(--space-2)" }}>What are you interested in?</p>
         <p className="text-supporting" style={{ margin: "0 0 var(--space-4)", opacity: 0.8 }}>Choose as many as you like. This helps me plan lessons around things you enjoy.</p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
@@ -13241,6 +13259,7 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
   if (obStep === "level" && showLevelPicker) return (
     <div className="onboard">
       <div className="ob-card fade-in" style={{ textAlign: "left" }}>
+        {obDots}
         <p className="text-leo" style={{ marginBottom: "var(--space-3)" }}>Select your English level</p>
         <div className="level-grid">
           {LEVELS.map(([code, label]) => (
@@ -13262,6 +13281,7 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
   if (obStep === "level") return (
     <div className="onboard">
       <div className="ob-card fade-in" style={{ textAlign: "left" }}>
+        {obDots}
         <p className="text-leo" style={{ marginBottom: "var(--space-4)" }}>One last thing, {name.trim() || "there"} — what is your English level?</p>
 
         <button className="level-choice-card" style={{ textAlign: "left", width: "100%", marginBottom: "var(--space-2)" }}
@@ -14882,6 +14902,15 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 /* ---- Onboarding wizard ---- */
 .ob-card{max-width:440px; width:100%; background:#fff; border:1px solid var(--line); border-radius:20px; padding:26px 24px 22px; text-align:center;}
 .ob-dots{display:flex; gap:8px; justify-content:center; margin:14px 0 22px;}
+.ob-dot{width:8px; height:8px; border-radius:50%; flex-shrink:0; transition:width .25s ease, height .25s ease, background-color .25s ease, border-color .25s ease;}
+.ob-dot-done{background:var(--leo-green); border:none;}
+/* Genesis amendment (11 Aug 2026): current dot is 10px, not the spec's default same-size-as-done —
+   size increase only, same --leo-green fill, no ring. The distinction the base spec carried via the
+   entering transition is carried here by size as well, since this state is otherwise visually identical
+   to done. */
+.ob-dot-current{width:10px; height:10px; background:var(--leo-green); border:none;}
+.ob-dot-ahead{background:var(--divider); border:1px solid var(--text-tertiary); box-sizing:border-box;}
+@media (prefers-reduced-motion: reduce){.ob-dot{transition:none;}}
 .ob-question{font-family:'Fraunces',serif; font-size:24px; color:var(--euca-deep); margin-bottom:16px;}
 .ob-help{font-size:13.5px; color:var(--ink); opacity:.6; margin:-8px 0 16px;}
 .ob-input{text-align:center; font-size:18px;}
