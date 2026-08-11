@@ -8291,6 +8291,10 @@ const EXERCISE_RENDERERS = {
   answer_leo: AskLeoExercise,
   /* Phase 10 */
   match_question_answer: MatchQuestionAnswerExercise,
+  /* match_halves: identical {left, right} field shape as match_question_answer —
+     alias, not a new renderer. Fixes silent-discard: items previously failed
+     both EXERCISE_RENDERERS and the MCQ fallback (no {stem, answer}). */
+  match_halves: MatchQuestionAnswerExercise,
   write_the_question: WriteTheQuestionExercise,
   /* Structural mismatch fixes */
   sort_into_groups: SortIntoGroupsExercise,
