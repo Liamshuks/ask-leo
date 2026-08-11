@@ -13029,6 +13029,7 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
   const [country, setCountry] = useState(() => countryMigrate(ip.country || ""));
   const [countrySearch, setCountrySearch] = useState("");
   const [interests, setInterests] = useState(ip.interests || []);
+  const [hasAcknowledged, setHasAcknowledged] = useState(false);
   const [settlement, setSettlement] = useState(ip.settlement || null);
   const [goals, setGoals] = useState(ip.goals || []);
   const [hardest, setHardest] = useState(ip.hardest || []);
@@ -13043,9 +13044,14 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
     "Australian life", "Reading", "Art & design", "Other",
   ];
 
-  const toggleInterest = (item) => setInterests((prev) =>
-    prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item]
-  );
+  const toggleInterest = (item) => {
+    setInterests((prev) =>
+      prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item]
+    );
+    // Fires once, on the first tap of any kind — stays true permanently after,
+    // regardless of later selection/deselection. Never flickers, never resets.
+    if (!hasAcknowledged) setHasAcknowledged(true);
+  };
   const toggleFrom = (setter, item) => setter((prev) =>
     prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item]
   );
@@ -13262,7 +13268,7 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
             Leo acknowledgement line on first chip selection.
             scRise entrance, leo-accent block, fires once only.
             PLACEHOLDER WORDING — Lessons to supply final copy. */}
-        {interests.length > 0 && (
+        {hasAcknowledged && (
           <p className="leo-accent" style={{ animation: "scRise .35s ease-out both", marginTop: "var(--space-4)" }}>
             Good — I'll keep that in mind when I plan your lessons.
           </p>
@@ -13984,7 +13990,6 @@ const CSS = `
   /* Legacy tokens (preserved for existing components) */
   --paper:#FFFFFF; --ink:#22302A; --euca:#37624B; --euca-deep:#274A39;
   --wattle:#E8A91D; --sage:#E9EFE7; --line:#D7E1D6; --rust:#B95737; --card:#FFFFFF;
-  --thong-sole:#242424; --thong-wall:#0D0D0D; --thong-tex:#4A4A4A; --thong-rim:#6B6B6B; --thong-strap:#1A1A1A; --thong-shine:#8A8A8A;
   /* P2 Design System */
   --leo-green:#2A7C6F; --leo-green-light:#E8F4F2;
   --bg-warm:#FFFFFF; --bg-card:#FFFFFF;
