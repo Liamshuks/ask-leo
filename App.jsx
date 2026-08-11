@@ -10531,6 +10531,41 @@ const volumeBlock = (lvl) => {
   if (v.max_words_per_leo_turn == null) return "\n\nTEXT VOLUME (density, separate from difficulty): " + v.density_notes;
   return "\n\nTEXT VOLUME — how MUCH text is on screen, SEPARATE from difficulty: max " + v.max_words_per_leo_turn + " words / " + v.max_sentences_per_leo_turn + " sentences per Leo turn; max " + v.max_words_per_stage_teaching + " on-screen teaching words per stage; max " + v.max_words_per_reading_passage + " words per reading passage. LAYOUT: " + v.whitespace_directive + " " + v.density_notes;
 };
+const SUMMARY_LENGTH_STANDARD = {
+  A1: {
+    per_field_max_sentences: { praise: 1, summary: 1, strength: 1, improvement: 1, connection: 1, tomorrowPreview: 1 },
+    max_words_per_sentence: 20,
+  },
+  A2: {
+    per_field_max_sentences: { praise: 1, summary: 2, strength: 1, improvement: 1, connection: 1, tomorrowPreview: 1 },
+    max_words_per_sentence: 30,
+  },
+  B1: {
+    per_field_max_sentences: { praise: 1, summary: 2, strength: 1, improvement: 2, connection: 2, tomorrowPreview: 1 },
+    max_words_per_sentence: 45,
+  },
+  B2: {
+    per_field_max_sentences: { praise: 1, summary: 2, strength: 1, improvement: 2, connection: 2, tomorrowPreview: 1 },
+    max_words_per_sentence: 70,
+  },
+  C1: null, // coherence-governed, not volume-governed — see summaryLengthBlock's C1 branch
+};
+
+const summaryLengthBlock = (lvl) => {
+  const s = SUMMARY_LENGTH_STANDARD[lvl];
+  if (!s) {
+    return "\n\nSUMMARY LENGTH — " + lvl + ": no fixed sentence count for most fields, and no fixed per-sentence word cap — sentence length is coherence-governed, matching the sentences this student has been reading throughout the lesson. But no field may run past 3 sentences, and tomorrowPreview stays at max 1 sentence at every level, including this one — a preview is a teaser, never a plan. The whole summary must still read as a closing reflection, not an essay. If a field feels long, the problem is focus, not permission to keep writing.";
+  }
+  const perField = Object.entries(s.per_field_max_sentences)
+    .map(([field, max]) => field + ": max " + max + " sentence" + (max > 1 ? "s" : ""))
+    .join(" | ");
+  return "\n\nSUMMARY LENGTH — " + lvl + " (this is a teaching standard, not a token limit):\n" +
+    "Per-field sentence limits — " + perField + ".\n" +
+    "Per-sentence word limit — no sentence in this summary may exceed " + s.max_words_per_sentence + " words. This matches the outer bound of any Leo turn the student has been reading all lesson (TEXT VOLUME " + lvl + "): no sentence in the closing reflection may be harder to read than the sentences the lesson itself has been feeding them. Both limits — sentences per field, and words per sentence — must be obeyed.\n" +
+    "The whole summary must be readable by this student, at this level, in under a minute on a phone screen, with no scrolling.\n" +
+    "If either limit and full completeness are in tension, protect specificity: one true, observed detail beats several vague ones. Cut breadth before you cut truth, and never pad a field with filler to reach either limit.\n" +
+    "These limits do not relax the honesty rules above. Shorter is not licence to praise generically, invent a detail, or skip pointing forward — every claim must still trace to today's transcript, vocabulary list, or performance line.";
+};
 const singlePointBlock = (lvl) => {
   const d = SINGLE_POINT_DIRECTIVE[lvl];
   if (!d) return "";
@@ -11692,7 +11727,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
         data.questions = validateQuestions(data.questions);
         if (data.questions.length < 3) throw new Error("grammar section invalid");
       } else {
-        raw = await askClaude(`${AUSTRALIAN_SPELLING}You are Leo, an experienced ELICOS teacher, writing the closing reflection for today's lesson.\nContext: ${bp.context}\nObjective: ${bp.communicativeObjective}\nEmotional objective: ${bp.emotionalObjective || "build confidence"}\nToday's objective — what the lesson aimed at, NOT an achievement to certify: ${bp.learningOutcome}\nMemorable moment: ${bp.memorableMoment || ""}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\nTomorrow: ${bp.tomorrowConnection || ""}\nStudent: ${memory}\n${perfLine}${vocabList}${speakingTranscript}\n${priorCtx}\n\nWrite a closing summary as a teacher who genuinely cares.\n\n${SUMMARY_HONESTY_RULES}\n\nThey should close feeling: "${bp.emotionalObjective || "more confident"}".\nRespond ONLY with JSON, no fences: {"praise":"","summary":"","strength":"","improvement":"","connection":"","tomorrowPreview":""}${narrationGuidance(bp.cefr, "framing")}`,
+        raw = await askClaude(`${AUSTRALIAN_SPELLING}You are Leo, an experienced ELICOS teacher, writing the closing reflection for today's lesson.\nContext: ${bp.context}\nObjective: ${bp.communicativeObjective}\nEmotional objective: ${bp.emotionalObjective || "build confidence"}\nToday's objective — what the lesson aimed at, NOT an achievement to certify: ${bp.learningOutcome}\nMemorable moment: ${bp.memorableMoment || ""}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\nTomorrow: ${bp.tomorrowConnection || ""}\nStudent: ${memory}\n${perfLine}${vocabList}${speakingTranscript}\n${priorCtx}\n\nWrite a closing summary as a teacher who genuinely cares.\n\n${SUMMARY_HONESTY_RULES}${summaryLengthBlock(bp.cefr)}\n\nThey should close feeling: "${bp.emotionalObjective || "more confident"}".\nRespond ONLY with JSON, no fences: {"praise":"","summary":"","strength":"","improvement":"","connection":"","tomorrowPreview":""}${narrationGuidance(bp.cefr, "framing")}`,
           { intent: "lesson_summary" });
         data = parseJSON(raw);
         if (!data.praise) throw new Error("summary invalid");
@@ -11710,7 +11745,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
             ? `{"passage":"the text","questions":[{"stem":"","options":["four options"],"answer":"exact text of correct option","note":"one warm teaching line"}]}`
             : `{"grammarPoint":"${bp.grammar && bp.grammar.point}","questions":[{"stem":"","options":["four options"],"answer":"exact text of correct option","note":"one warm teaching line that names the rule"}]}`;
         const retryGuidance = stageId === "summary"
-          ? `\nMemorable moment: ${bp.memorableMoment || ""}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\n${perfLine}${vocabList}${speakingTranscript}\n${priorCtx}\n\n${SUMMARY_HONESTY_RULES}`
+          ? `\nMemorable moment: ${bp.memorableMoment || ""}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\n${perfLine}${vocabList}${speakingTranscript}\n${priorCtx}\n\n${SUMMARY_HONESTY_RULES}${summaryLengthBlock(bp.cefr)}`
           : `\nToday's lesson: "${bp.context}" (CEFR ${bp.cefr}). Objective: "${bp.communicativeObjective}". Today's vocabulary: ${(bp.vocabulary || []).map((v) => v.word).join(", ")}.\nTHE ONE GRAMMAR POINT: "${bp.grammar && bp.grammar.point}" — form: ${bp.grammar && bp.grammar.form}. Every question must drill THAT form, and every note must name the rule.`;
         try {
           const retryRaw = await askClaude(`${AUSTRALIAN_SPELLING}You are Leo, regenerating a lesson exercise. Your ${stageId} exercise was:\n${JSON.stringify(data)}\n\nIt had these problems: ${qaProblems.join("; ")}.\n\nRegenerate this exercise, fixing ALL the problems.${retryGuidance}\n\nRespond ONLY with JSON, no fences:\n${retryShape}`,
