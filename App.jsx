@@ -4853,6 +4853,13 @@ const DAILY_JOURNEY = [
    "Tuesday, 21 July" in British English regardless of device locale. */
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+const LESSON_PREP_LINES = {
+  'u1l1': "Today we start with how you say who you are — the first thing anyone asks.",
+  'u1l2': "Today we're on jobs — one small word decides whether it sounds right.",
+  'u2l1': "Today we're on how you talk about the people around you — the small words that show they're yours.",
+  'u2l2': "Today we're on how you say how many — brothers, sisters, kids, whoever's in your life.",
+};
 const longDate = (d) => `${DAY_NAMES[d.getDay()]}, ${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
 
 /* Greeting is English, not L1: an Australian teacher greets a student in
@@ -5048,8 +5055,9 @@ function ContinueLessonBanner({ onOpen }) {
   );
 }
 
-function HomeScreen({ profile, onOpen, animate, todayInfo, continuity, noticed }) {
+function HomeScreen({ profile, onOpen, animate, todayInfo, continuity, noticed, lessonPrepKey }) {
   const nextItem = DAILY_JOURNEY.find((item) => !item.isDone(todayInfo) && !(item.isGated && item.isGated(todayInfo)));
+  const prepLine = LESSON_PREP_LINES[lessonPrepKey];
   return (
     <div className="home-screen">
       {/* The mark is unanchored: deleting this one element leaves the layout intact. */}
@@ -5057,9 +5065,15 @@ function HomeScreen({ profile, onOpen, animate, todayInfo, continuity, noticed }
 
       <ContinueLessonBanner onOpen={onOpen} />
 
-      <div className="home-greet">
-        <HomeGreeting name={profile.name} />
-        {continuity && <p className="greet-cont">{continuity}</p>}
+      {/* Warm zone — greeting block only. Never a fallback line: absent when
+          no LESSON_PREP_LINES entry exists for lessonPrepKey, the zone still
+          renders with just the greeting inside it. */}
+      <div className="home-warm-zone">
+        {prepLine && <p className="home-prep-line">{prepLine}</p>}
+        <div className="home-greet">
+          <HomeGreeting name={profile.name} />
+          {continuity && <p className="greet-cont">{continuity}</p>}
+        </div>
       </div>
 
       {/* Today card — active state (nextItem exists) */}
@@ -14249,7 +14263,8 @@ export default function App() {
       <div className="app-body">
       {page === null ? (
         <HomeScreen profile={profile} onOpen={goTo} animate={!skylineSeen} todayInfo={todayInfo}
-          continuity={continuityLine(memoryStore.lessonLog)} noticed={noticedLine(stats)} />
+          continuity={continuityLine(memoryStore.lessonLog)} noticed={noticedLine(stats)}
+          lessonPrepKey={`u${memoryStore.currentUnit || 1}l${memoryStore.lessonInUnit || 1}`} />
       ) : (
         <>
           {!isSection && (
@@ -14432,7 +14447,13 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 
 /* ---- Home screen (A2) — settled tokens only ---- */
 .home-screen{max-width:520px; margin:0 auto; padding:var(--space-4) var(--space-3) var(--space-5); text-align:left;}
-.home-greet{margin-bottom:var(--space-6);}
+/* Full-width within home-screen's own 520px content box (negative margins
+   cancel home-screen's horizontal padding) — not a viewport-edge breakout.
+   Every other screen in this app uses the same 520px max-width pattern;
+   reading "full-width" as spanning that content box, not the true browser
+   viewport, keeps this consistent with the rest of the system. */
+.home-warm-zone{background:var(--bg-warm); margin:0 calc(-1 * var(--space-3)) var(--space-6); padding:var(--space-5) var(--space-4) var(--space-4);}
+.home-prep-line{font-size:16px; font-weight:400; color:var(--text-secondary); margin:0 0 var(--space-3);}
 .greet-time{font-size:22px; font-weight:400; line-height:1.25; color:var(--text-secondary); margin:0;}
 .greet-name{font-size:28px; font-weight:600; line-height:1.2; color:var(--text-primary); margin:0;}
 /* Genesis amendment (11 Aug 2026): --text-tertiary, not --text-secondary as
