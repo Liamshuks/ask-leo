@@ -3418,15 +3418,17 @@ function PlacementTestPage({ profile, onComplete }) {
       functional: observedAreas(funcHistory),
       strengths, improvements, areas,
       grammarDetail: grammar.byLevel, vocabDetail: vocab.byLevel,
-      /* totalCorrect is DELETED, not left unrendered. It summed correct answers
-         across banded, counted and PINNED sections — the same blend, in one
-         integer, that made C1 unreachable. A field that may never be read must
-         not exist: leaving it here relies on every future reader knowing why.
-         totalQuestions is RETAINED by Genesis ruling (23 July), superseding the
-         specification's deletion of the pair. Its reader is named: Leo's line
-         above the band on the results screen. It counts questions ANSWERED, not
-         presented — a count of effort, not of performance. */
-      totalQuestions: grammarHistory.length + vocabHistory.length + readingScore.total + pronHistory.length + funcHistory.length,
+      /* totalCorrect and totalQuestions are both DELETED, not left unrendered.
+         PLACEMENT_RESULTS_BREAKDOWN_SPECIFICATION_v2 (11 Aug 2026) supersedes
+         the earlier Genesis ruling (23 July) that had retained totalQuestions
+         for the Leo line above the band. That line has been rewritten to make
+         no count claim (see the temporary bridge copy at its render site), so
+         totalQuestions now has no reader. A field that may never be read must
+         not exist: leaving it here relies on every future reader knowing why
+         it's unused. Both totalCorrect (summed across banded, counted and
+         pinned sections in one blend that made C1 unreachable) and
+         totalQuestions are gone for the same reason — a combined total across
+         five sections is the prohibited thing, however it's presented. */
     };
   };
 
@@ -3449,6 +3451,23 @@ function PlacementTestPage({ profile, onComplete }) {
       </div>
     );
   };
+
+  /* §5.1 — computed once here, not inline in the JSX, so the empty-state
+     conditional below and the row-rendering map both read the same array
+     without running the map-and-filter twice. Guarded for results being
+     null before the test completes. */
+  const filteredAreas = results ? results.areas.map((a) => a.kind === "areas"
+      ? { ...a, handled: placementAreaList(a.handled), harder: placementAreaList(a.harder) }
+      : a
+    ).filter((a) =>
+      a.kind === "band" ? !!a.level
+      : a.kind === "count" ? a.total > 0
+      /* G-04: a section whose every tag is unmapped has nothing it can
+         honestly say, so the whole row goes rather than rendering an
+         empty label. Observed-but-unnameable is not the same as
+         observed, and neither is it worth an empty line. */
+      : (a.handled.length + a.harder.length) > 0
+    ) : [];
 
   return (
     <div>
@@ -3520,13 +3539,14 @@ function PlacementTestPage({ profile, onComplete }) {
                   numeral directly above it and pre-empted the closing line.
                   Structure is now observation -> evidence -> forward step, with
                   the evidence between the lines rather than a line standing in
-                  for it.
-                  Sub-five guard: below five questions the number is dropped
-                  entirely rather than reported small. */}
+                  for it. */}
+              {/* TEMPORARY — pending Lessons copy. PLACEMENT_RESULTS_BREAKDOWN_
+                  SPECIFICATION_v2 §4/§9: totalQuestions is deleted from
+                  computeResults, so this line makes no count claim. This is
+                  the honest bridge copy, not final — Lessons must supply the
+                  replacement. Do not restore a totalQuestions branch here. */}
               <p className="text-leo" style={{ marginBottom: "var(--space-3)" }}>
-                {results.totalQuestions >= 5
-                  ? `${results.totalQuestions} questions, ${profile.name} — and you answered every one. Here's where I'd start you today.`
-                  : `You've got through it, ${profile.name}. Here's where I'd start you today.`}
+                {`You've got through it, ${profile.name}. Here's where I'd start you today.`}
               </p>
               <div className="placement-overall">
                 <span className="placement-overall-level">{results.overall}</span>
@@ -3543,50 +3563,41 @@ function PlacementTestPage({ profile, onComplete }) {
               total expressed in geometry — the prohibited thing, in a costume.
               A section holding no observation is OMITTED, never rendered empty:
               an empty row asserts a measurement happened and returned nothing. */}
-          <Card style={{ marginTop: "var(--space-4)" }}>
-            <div className="pl-breakdown">
-              {results.areas.map((a) => a.kind === "areas"
-                  ? { ...a, handled: placementAreaList(a.handled), harder: placementAreaList(a.harder) }
-                  : a
-              ).filter((a) =>
-                a.kind === "band" ? !!a.level
-                : a.kind === "count" ? a.total > 0
-                /* G-04: a section whose every tag is unmapped has nothing it can
-                   honestly say, so the whole row goes rather than rendering an
-                   empty label. Observed-but-unnameable is not the same as
-                   observed, and neither is it worth an empty line. */
-                : (a.handled.length + a.harder.length) > 0
-              ).map((a, i) => (
-                <div key={i} className="pl-row">
-                  <span className="text-supporting pl-row-name">{a.name}</span>
-                  <span className="pl-row-evidence">
-                    {a.kind === "band" && (
-                      <span className="text-body">{a.level} <span className="text-supporting">{CEFR_LABELS[a.level]}</span></span>
-                    )}
-                    {a.kind === "count" && (
-                      <span className="text-body">{a.correct} of {a.total}</span>
-                    )}
-                    {a.kind === "areas" && (
-                      <span className="pl-areas">
-                        {a.handled.length > 0 && (
-                          <span className="pl-area-line">
-                            <span className="text-supporting pl-area-key">Areas handled</span>
-                            <span className="text-body">{a.handled.join(", ")}</span>
-                          </span>
-                        )}
-                        {a.harder.length > 0 && (
-                          <span className="pl-area-line">
-                            <span className="text-supporting pl-area-key">Areas found harder</span>
-                            <span className="text-body">{a.harder.join(", ")}</span>
-                          </span>
-                        )}
-                      </span>
-                    )}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </Card>
+          {results.areas && results.areas.length > 0 && filteredAreas.length > 0 && (
+            <Card style={{ marginTop: "var(--space-4)" }}>
+              <div className="pl-breakdown">
+                {filteredAreas.map((a, i) => (
+                  <div key={i} className="pl-row">
+                    <span className="text-supporting pl-row-name">{a.name}</span>
+                    <span className="pl-row-evidence">
+                      {a.kind === "band" && (
+                        <span className="text-body">{a.level} <span className="text-supporting">{CEFR_LABELS[a.level]}</span></span>
+                      )}
+                      {a.kind === "count" && (
+                        <span className="text-body">{a.correct} of {a.total}</span>
+                      )}
+                      {a.kind === "areas" && (
+                        <span className="pl-areas">
+                          {a.handled.length > 0 && (
+                            <span className="pl-area-line">
+                              <span className="text-supporting pl-area-key">Areas handled</span>
+                              <span className="text-body">{a.handled.join(", ")}</span>
+                            </span>
+                          )}
+                          {a.harder.length > 0 && (
+                            <span className="pl-area-line">
+                              <span className="text-supporting pl-area-key">Areas found harder</span>
+                              <span className="text-body">{a.harder.join(", ")}</span>
+                            </span>
+                          )}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
 
           <div className="leo-accent" style={{ marginTop: "var(--space-5)" }}>
             <p className="text-leo">A short test only tells me where to begin — the rest I learn by teaching you. Let's start your first lesson.</p>
@@ -15035,14 +15046,14 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .pl-areas{display:flex; flex-direction:column; gap:var(--space-2);}
 .pl-area-line{display:flex; flex-direction:column; gap:2px;}
 .pl-area-key{color:var(--text-tertiary);}
-.placement-overall-desc{font-size:16px; color:var(--text-primary); opacity:.7;}
+.placement-overall-desc{font-size:16px; color:var(--text-secondary);}
 .placement-skill-row{display:flex; align-items:center; gap:10px; margin:10px 0;}
 .placement-skill-name{width:130px; font-size:14px; font-weight:600; color:var(--text-primary);}
 .placement-skill-bar-track{flex:1; height:10px; border-radius:99px; background:var(--leo-green-light); overflow:hidden;}
-.placement-skill-bar-fill{height:100%; border-radius:99px; transition:width .6s ease;}
+.placement-skill-bar-fill{height:100%; border-radius:99px; background:var(--leo-green); transition:width .6s ease;}
 .placement-skill-level{font-family:'Inter',sans-serif; font-size:16px; font-weight:500; color:var(--text-primary); min-width:28px; text-align:right;}
 
-.lang-select{width:100%; padding:14px 16px; border-radius:12px; font-family:'Inter',sans-serif; font-size:17px; color:var(--text-primary); background:#fff; appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2337624B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 16px center; cursor:pointer;}
-.lang-select:focus{outline:3px solid rgba(55,98,75,.3); border-color:var(--leo-green);}
+.lang-select{width:100%; padding:14px 16px; border-radius:12px; font-family:'Inter',sans-serif; font-size:17px; color:var(--text-primary); background:#fff; appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%232A7C6F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 16px center; cursor:pointer;}
+.lang-select:focus{outline:3px solid rgba(42,124,111,.25); border-color:var(--leo-green);}
 
 `;
