@@ -11466,7 +11466,12 @@ function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext
     // first tap that makes the button spent must still show the real
     // explanation flow, not the gate message.
     setGated(isSpent);
-    setTimeout(() => setPanelOpen(true), 200);
+    // Mounted at 100ms, not 200ms: the overlay (rendered inside AskLeoPanel)
+    // fades in the instant it mounts, matching "100ms: overlay fades in".
+    // The panel's own slide-up animation carries a 100ms CSS animation-delay
+    // (see .al-panel), so its visual movement doesn't begin until 200ms —
+    // both timings hit from a single mount point, no second timeout needed.
+    setTimeout(() => setPanelOpen(true), 100);
     setTimeout(() => setIlluminating(false), 500);
     if (!profile.isPaid) setUsedThisLesson(true);
   };
@@ -11622,7 +11627,7 @@ function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, currentExerciseC
                 </div>
               )}
 
-              {explanation && <p className="text-leo">{explanation}</p>}
+              {explanation && <p className="text-leo al-explanation-enter">{explanation}</p>}
 
               {explanation && phase !== "pivot" && <div className="al-separator" />}
 
@@ -14633,12 +14638,19 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
    own currentColor stroke. */
 .ask-leo-mark{width:16px; height:16px; border-radius:50%; background:currentColor; flex-shrink:0; display:inline-block;}
 .ask-leo-btn.spent{border-color:var(--divider); color:var(--text-tertiary);}
-.ask-leo-btn::before{content:''; position:absolute; top:50%; left:50%; width:0; height:0; border-radius:50%; background:radial-gradient(circle, rgba(42,124,111,.18) 0%, rgba(42,124,111,.06) 50%, transparent 70%); transform:translate(-50%,-50%); pointer-events:none; z-index:-1; opacity:0;}
-.ask-leo-btn.illuminating::before{animation:leoArrive .5s ease-out forwards;}
-@keyframes leoArrive{0%{width:0; height:0; opacity:1;} 60%{width:200px; height:200px; opacity:.8;} 100%{width:280px; height:280px; opacity:0;}}
+@keyframes leoFill{0%{background-color:transparent; color:var(--leo-green);} 100%{background-color:var(--leo-green); color:#ffffff;}}
+@keyframes leoRing{0%{width:0; height:0; opacity:.6;} 100%{width:300px; height:300px; opacity:0;}}
+.ask-leo-btn.illuminating{animation:leoFill 200ms ease-out forwards;}
+.ask-leo-btn.illuminating::before{content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); border-radius:50%; background:var(--leo-green); animation:leoRing 500ms ease-out forwards; pointer-events:none;}
 .al-overlay{position:fixed; inset:0; background:rgba(26,26,26,.45); z-index:40; animation:alOverlayIn .35s ease-out forwards;}
 @keyframes alOverlayIn{from{opacity:0;} to{opacity:1;}}
-.al-panel{position:fixed; left:0; right:0; bottom:0; max-height:62vh; min-height:320px; background:var(--bg-card); border-radius:24px 24px 0 0; z-index:41; display:flex; flex-direction:column; overflow:hidden; animation:alPanelUp .35s cubic-bezier(.32,.72,0,1) forwards;}
+/* animation-delay:100ms — the button, overlay, and panel all mount at the
+   same 100ms JS timeout (see AskLeoButton), but the panel's own visual
+   slide must not start until 200ms per the sequence. The overlay has no
+   delay (its fade starts the instant it mounts, at 100ms); this delay is
+   what stages the panel 100ms behind it without needing separate mount
+   timing for the two. */
+.al-panel{position:fixed; left:0; right:0; bottom:0; max-height:62vh; min-height:320px; background:var(--bg-card); border-radius:24px 24px 0 0; z-index:41; display:flex; flex-direction:column; overflow:hidden; animation:alPanelUp .35s cubic-bezier(.32,.72,0,1) 100ms both;}
 @keyframes alPanelUp{from{transform:translateY(100%);} to{transform:translateY(0);}}
 .al-panel.dismissing{animation:alPanelDown .28s ease-in forwards;}
 @keyframes alPanelDown{from{transform:translateY(0);} to{transform:translateY(100%);}}
@@ -14651,15 +14663,24 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 .al-typing-dot:nth-child(2){animation-delay:.2s;}
 .al-typing-dot:nth-child(3){animation-delay:.4s;}
 @keyframes alDotPulse{0%,80%,100%{opacity:.3; transform:scale(.85);} 40%{opacity:1; transform:scale(1);}}
+/* Scoped to the explanation specifically — .text-leo is shared across many
+   unrelated surfaces throughout the app and must not carry an animation
+   that would replay on every other use of that class. */
+.al-explanation-enter{animation:scRise .4s ease-out both;}
 .al-confirm{font-size:16px; font-weight:400; line-height:1.6; color:var(--leo-green); margin-bottom:var(--space-4); animation:scRise .4s ease-out both;}
 .al-back{width:100%; margin-top:var(--space-3); font-size:15px;}
 @media (prefers-reduced-motion: reduce){
-  .ask-leo-btn.illuminating::before{animation:none;}
+  /* The fill still happens under reduced motion — it is not decorative,
+     it tells the student the button heard them. No transition duration,
+     no ring. */
+  .ask-leo-btn.illuminating{animation:none; transition:none; background-color:var(--leo-green); color:#ffffff;}
+  .ask-leo-btn.illuminating::before{display:none;}
   .al-overlay{animation:none;}
   .al-panel{animation:none; transform:none;}
   .al-panel.dismissing{animation:none; display:none;}
   .al-typing-dot{animation:none; opacity:.5;}
   .al-confirm{animation:none;}
+  .al-explanation-enter{animation:none;}
 }
 
 /* ---- Settings screen (SETTINGS_SCREEN_SPECIFICATION_v1 §8) ---- */
