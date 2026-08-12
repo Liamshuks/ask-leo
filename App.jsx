@@ -8315,13 +8315,33 @@ function TapChoiceItem({ item, options, onSettled, settled, chosen, shown, onPic
 }
 
 /* §2b.1 — Type 1. Choose the correct form (recognition). */
-function ChooseFormExercise({ exercise, onDone }) {
+function ChooseFormExercise({ exercise, onDone, onExerciseChange }) {
   const items = exercise.items || [];
   const q = useExerciseQueue(items);
   const [chosen, setChosen] = useState(null);
   const [shown, setShown] = useState(false);
   const [correct, setCorrect] = useState(0);
   const item = q.current;
+  // Phase 2 lift 1 of 7 — fires on mount (first item) and whenever the
+  // queue advances to a new item, including re-queued repeats (item's
+  // object reference recurring after other items in between is still a
+  // genuine "advanced to a new position" event). Optional chaining: every
+  // existing call site that passes no onExerciseChange is unaffected.
+  useEffect(() => {
+    if (!item) return;
+    onExerciseChange?.({
+      exerciseType: exercise.exerciseType,
+      title: exercise.title ?? null,
+      instruction: exercise.instruction ?? null,
+      stem: item.stem ?? null,
+      options: item.options ?? null,
+      answer: item.answer ?? null,
+      alsoAccept: item.alsoAccept ?? null,
+      note: item.note ?? null,
+      hint: item.hint ?? null,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item]);
   if (q.finished || !item) {
     return <StageComplete correct={correct} total={items.length} onContinue={() => onDone(correct, items.length)} />;
   }
@@ -8487,11 +8507,11 @@ const EXERCISE_RENDERERS = {
 };
 /* bp is passed through because the conversation types read the
    lesson's sentence frames; the other renderers ignore it. */
-function renderAuthoredExercise(exercise, onDone, bp) {
+function renderAuthoredExercise(exercise, onDone, bp, onExerciseChange) {
   if (!exercise || !exercise.exerciseType) return null;
   const R = EXERCISE_RENDERERS[exercise.exerciseType];
   if (!R) return null;
-  return <R exercise={exercise} bp={bp} onDone={onDone} />;
+  return <R exercise={exercise} bp={bp} onDone={onDone} onExerciseChange={onExerciseChange} />;
 }
 
 /* Runs an authored lesson's grammar practice. Exercises whose renderer
@@ -8500,7 +8520,7 @@ function renderAuthoredExercise(exercise, onDone, bp) {
    silently dropped while the remaining types are under construction.
    As each phase lands, exercises move from the fallback into their own
    renderer with no change here. */
-function AuthoredGrammarPractice({ bp, section, vocab, onVocabTap, onDone }) {
+function AuthoredGrammarPractice({ bp, section, vocab, onVocabTap, onDone, onExerciseChange }) {
   /* Active exercises with registered renderers, PLUS deferred exercises
      that now have renderers (Phase 10 / structural fixes). U1L1's
      question-form deferred items (match_question_answer, write_the_question,
@@ -8530,7 +8550,7 @@ function AuthoredGrammarPractice({ bp, section, vocab, onVocabTap, onDone }) {
         {renderAuthoredExercise(ex, (c, t) => {
           setScore((s) => ({ correct: s.correct + c, total: s.total + t }));
           setStep(step + 1);
-        }, bp)}
+        }, bp, onExerciseChange)}
       </div>
     );
   }
@@ -9553,7 +9573,7 @@ function BuildTheSentenceExercise({ exercise, onDone }) {
   );
 }
 
-function GrammarSection({ bp, section, vocab, onVocabTap, onSkip, onDone, header }) {
+function GrammarSection({ bp, section, vocab, onVocabTap, onSkip, onDone, header, onExerciseChange }) {
   const g = bp.grammar || {};
   const hasPractice = section.questions && section.questions.length >= 3 && !section.explanationOnly;
   const [practising, setPractising] = useState(false);
@@ -9580,7 +9600,7 @@ function GrammarSection({ bp, section, vocab, onVocabTap, onSkip, onDone, header
 
   if (practising && hasBlocks) return (
     <SectionShell header={header} title={`Grammar: ${g.point}`} onSkip={onSkip}>
-      <AuthoredGrammarPractice bp={bp} section={section} vocab={vocab} onVocabTap={onVocabTap} onDone={onDone} />
+      <AuthoredGrammarPractice bp={bp} section={section} vocab={vocab} onVocabTap={onVocabTap} onDone={onDone} onExerciseChange={onExerciseChange} />
       {/* §2a.5 — reference reachable without leaving the task. */}
       <ReviewBoardLink onOpen={() => setBoardOpen(true)} />
       {boardOpen && <GrammarBoardSheet blocks={blocks} onClose={() => setBoardOpen(false)} />}
@@ -11431,7 +11451,7 @@ function buildTeacherContext({ profile, memoryStore, words, heard, diaryPages, a
 
 /* ---------------- Ask Leo panel (ASK_LEO_HELP_PANEL_PEDAGOGY_v1, Phase 1) ---------------- */
 
-function AskLeoButton({ stageId, stageLabel, bp, profile }) {
+function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext }) {
   const [illuminating, setIlluminating] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [usedThisLesson, setUsedThisLesson] = useState(false);
@@ -11462,9 +11482,10 @@ function AskLeoButton({ stageId, stageLabel, bp, profile }) {
         </button>
       </div>
       {panelOpen && (
+        // PHASE 2: currentExerciseContext populated by ChooseFormExercise only at this stage — add other renderers incrementally
         <AskLeoPanel
           stageId={stageId} stageLabel={stageLabel} bp={bp} profile={profile}
-          gated={gated}
+          gated={gated} currentExerciseContext={currentExerciseContext}
           onDismiss={() => setPanelOpen(false)}
         />
       )}
@@ -11472,7 +11493,7 @@ function AskLeoButton({ stageId, stageLabel, bp, profile }) {
   );
 }
 
-function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, onDismiss }) {
+function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, currentExerciseContext, onDismiss }) {
   const touchStartY = React.useRef(null);
   const panelRef = React.useRef(null);
   const [dismissing, setDismissing] = useState(false);
@@ -11514,7 +11535,17 @@ function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, onDismiss }) {
     `${AUSTRALIAN_SPELLING}You are Leo, an experienced ELICOS teacher. A student has tapped "Ask Leo" during the ${stageLabel} stage of today's lesson because they want a moment of your attention.\n` +
     `Why this stage exists: ${STAGE_PEDAGOGY[stageId] || ""}\n` +
     `Lesson level: ${bp.cefr}. Lesson objective: ${bp.communicativeObjective}. Today's situation: ${bp.context}.\n` +
-    `Student: ${profile.name || "the student"}, first language ${(LANGS[profile.lang] && LANGS[profile.lang].english) || profile.lang || "unknown"}.\n`;
+    `Student: ${profile.name || "the student"}, first language ${(LANGS[profile.lang] && LANGS[profile.lang].english) || profile.lang || "unknown"}.\n` +
+    (currentExerciseContext
+      ? `The student is currently on this exercise item — ${currentExerciseContext.exerciseType}${currentExerciseContext.title ? `, "${currentExerciseContext.title}"` : ""}.\n` +
+        (currentExerciseContext.instruction ? `Instruction: ${currentExerciseContext.instruction}\n` : "") +
+        (currentExerciseContext.stem ? `The item: ${currentExerciseContext.stem}\n` : "") +
+        (currentExerciseContext.options ? `Options: ${JSON.stringify(currentExerciseContext.options)}\n` : "") +
+        (currentExerciseContext.answer ? `The correct answer is: ${currentExerciseContext.answer}${currentExerciseContext.alsoAccept ? ` (also accepted: ${JSON.stringify(currentExerciseContext.alsoAccept)})` : ""}\n` : "") +
+        (currentExerciseContext.note ? `Teacher's note on this item: ${currentExerciseContext.note}\n` : "") +
+        (currentExerciseContext.hint ? `Teacher's hint on this item: ${currentExerciseContext.hint}\n` : "") +
+        `You know the correct answer to the current exercise item. You must never state it, quote it, or lead the student to it directly. Your job is to explain the concept, not solve the item.\n`
+      : "");
 
   async function fetchExplanation(wrongAttempt) {
     setLoading(true);
@@ -11640,6 +11671,11 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
   const [planFail, setPlanFail] = useState(null);
   const [currentUnitRecord, setCurrentUnitRecord] = useState(null);  // Task 3: unit preview during loading
   const [lesson, setLesson] = useState(null);      // { blueprint, sections:{}, stage, perf:{}, status }
+  // Phase 2 lift 1 of 7 — populated by ChooseFormExercise only, via
+  // GrammarSection -> AuthoredGrammarPractice -> renderAuthoredExercise.
+  // null for every other renderer and every other stage; the Ask Leo
+  // panel prompt falls back to stage-level context only when null.
+  const [currentExerciseContext, setCurrentExerciseContext] = useState(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [req, setReq] = useState({ context: "", grammar: "", vocabulary: "", skill: "", pronunciation: "" });
   const [sectionLoading, setSectionLoading] = useState(false);
@@ -12529,10 +12565,10 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       {stage.id === "pron" && <PronunciationSection {...stageProps} onDone={() => advance({ pron: "done" })} />}
       {stage.id === "speak" && <SpeakingSection {...stageProps} memory={memory} onDone={(n, transcript) => advance({ speak: n, speakingTranscript: transcript })} />}
       {stage.id === "skill" && section && !section.skipped && <SkillSection {...stageProps} section={section} onDone={(c, t) => advance({ skill: `${c}/${t}` })} />}
-      {stage.id === "grammar" && section && !section.skipped && <GrammarSection {...stageProps} section={section} onDone={(c, t) => advance({ grammar: `${c}/${t}` })} />}
+      {stage.id === "grammar" && section && !section.skipped && <GrammarSection {...stageProps} section={section} onDone={(c, t) => advance({ grammar: `${c}/${t}` })} onExerciseChange={setCurrentExerciseContext} />}
       {stage.id === "summary" && section && <SummarySection bp={bp} section={section} vocab={vocabWords} onVocabTap={handleVocabTap} onFinish={finish} />}
 
-      <AskLeoButton stageId={stage.id} stageLabel={stage.label} bp={bp} profile={profile} />
+      <AskLeoButton stageId={stage.id} stageLabel={stage.label} bp={bp} profile={profile} currentExerciseContext={currentExerciseContext} />
 
       <VocabCardSheet card={vocabCard} lesson={null} onClose={() => setVocabCard(null)}
         onSave={() => vocabCard && leoMemory.saveWord && leoMemory.saveWord(vocabCard.word)}
