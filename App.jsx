@@ -5114,7 +5114,7 @@ function formatShortDate(dateStr) {
 function ProgressPage({ stats, noticed, lessonLog, onOpenSettings, onGoToPlacement }) {
   const hasData = stats.entries > 0 || stats.words > 0 || stats.tasks > 0;
   // §13 item 5 — exact definition, no other form.
-  const isNewStudent = !noticed && !hasData && (!lessonLog || lessonLog.length === 0);
+  const isNewStudent = !noticed && (!lessonLog || lessonLog.length === 0);
   const recentLessons = (lessonLog || []).slice(0, 10);
   const olderCount = Math.max(0, (lessonLog || []).length - 10);
 
