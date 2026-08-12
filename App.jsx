@@ -5111,57 +5111,66 @@ function formatShortDate(dateStr) {
   return `${d.getDate()} ${MONTH_NAMES[d.getMonth()].slice(0, 3)}`;
 }
 
-function ProgressPage({ stats, noticed, lessonLog, onOpenSettings, onTakePlacement }) {
+function ProgressPage({ stats, noticed, lessonLog, onOpenSettings, onGoToPlacement }) {
   const hasData = stats.entries > 0 || stats.words > 0 || stats.tasks > 0;
+  // §13 item 5 — exact definition, no other form.
+  const isNewStudent = !noticed && !hasData && (!lessonLog || lessonLog.length === 0);
   const recentLessons = (lessonLog || []).slice(0, 10);
   const olderCount = Math.max(0, (lessonLog || []).length - 10);
 
   return (
     <div className="progress-page">
 
-      {/* Settings entry — already built; confirmed present */}
+      {/* Settings entry — confirmed present from SETTINGS_SCREEN_SPECIFICATION_v1 */}
       <div className="progress-header">
         <button className="settings-entry-link" onClick={onOpenSettings}>Settings</button>
       </div>
 
-      {/* 1. Leo's observation — most important, first */}
-      {noticed && (
-        <div className="leo-card prog-noticed">
-          <p className="text-leo">{noticed}</p>
+      {/* 1. Leo's observation — or opening card for new students */}
+      {(noticed || isNewStudent) && (
+        <div className="prog-noticed-card">
+          <p className="prog-noticed-text">
+            {/* PLACEHOLDER — Lessons to supply the final opening-card copy.
+                Inline for now per PROGRESS_SCREEN_SPECIFICATION_v2 §8. */}
+            {noticed || "This is where I'll keep track of what we've covered together. Come back after your first lesson."}
+          </p>
         </div>
       )}
 
       {/* 2. Supporting facts — only when there is real data */}
       {hasData && (
-        <div className="prog-facts-card">
+        <div className="prog-facts">
           {buildFactSentences(stats).map((s, i) => (
             <p key={i} className="prog-fact">{s}</p>
           ))}
         </div>
       )}
 
-      {/* 3. Lesson shelf — only when lessons exist */}
+      {/* 3. Journey timeline */}
       {recentLessons.length > 0 && (
-        <div className="prog-lesson-shelf">
+        <div className="prog-timeline">
           {recentLessons.map((lesson, i) => (
-            <div key={i} className="prog-lesson-row">
-              <span className="prog-lesson-date">{formatShortDate(lesson.date)}</span>
-              <span className="prog-lesson-title">{lesson.scenario || "Lesson"}</span>
+            <div key={i} className="prog-tl-row">
+              <span className="prog-tl-date">{formatShortDate(lesson.date)}</span>
+              <span className="prog-tl-sep" aria-hidden="true">·</span>
+              <span className="prog-tl-title">{lesson.scenario || "Lesson"}</span>
             </div>
           ))}
           {olderCount > 0 && (
-            <p className="prog-shelf-more">
-              {olderCount} earlier {olderCount === 1 ? "lesson" : "lessons"} — keep going.
-            </p>
+            <div className="prog-tl-more">
+              And {olderCount} more {olderCount === 1 ? "lesson" : "lessons"} before that.
+            </div>
           )}
         </div>
       )}
 
-      {/* Genesis addition, not in the original spec (this build's ruling):
-          quiet secondary action, below Leo's observation and the lesson
-          shelf. Ghost button, not primary — must not be the most prominent
-          element on screen. */}
-      <button className="ghost-btn" onClick={onTakePlacement}>Take a new placement test</button>
+      {/* 4. Level Check action */}
+      <button
+        className="ghost-btn wide prog-level-check-btn"
+        onClick={onGoToPlacement}
+      >
+        Take a new Level Check
+      </button>
 
     </div>
   );
@@ -14206,7 +14215,7 @@ export default function App() {
                 noticed={noticedLine(stats)}
                 lessonLog={memoryStore.lessonLog || []}
                 onOpenSettings={() => goTo("settings")}
-                onTakePlacement={() => goTo("placement")}
+                onGoToPlacement={() => { selectTab("progress"); goTo("placement"); }}
               />
             )}
             {page === "settings" && <SettingsPage profile={profile}
@@ -15038,16 +15047,26 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
    not explicitly named, but this build removed their only remaining JSX
    usage — confirmed via direct search before deleting, not assumed. ---- */
 .progress-page{max-width:520px; margin:0 auto; padding:var(--space-3) var(--space-3) var(--space-7);}
-.prog-noticed{margin-bottom:var(--space-4);}
-.prog-facts-card{background:var(--bg-card); border-radius:12px; padding:20px; margin-bottom:var(--space-4);}
-.prog-fact{font-size:16px; font-weight:400; line-height:1.6; color:var(--text-primary); margin:0;}
-.prog-fact + .prog-fact{margin-top:var(--space-2);}
-.prog-lesson-shelf{background:var(--bg-card); border-radius:12px; overflow:hidden; margin-bottom:var(--space-5);}
-.prog-lesson-row{display:flex; align-items:baseline; gap:var(--space-3); padding:var(--space-3) 20px; border-bottom:1px solid var(--divider);}
-.prog-lesson-row:last-of-type{border-bottom:none;}
-.prog-lesson-date{font-size:14px; font-weight:400; color:var(--text-tertiary); flex-shrink:0; min-width:44px;}
-.prog-lesson-title{font-size:16px; font-weight:400; color:var(--text-primary); flex:1;}
-.prog-shelf-more{font-size:14px; font-weight:400; color:var(--text-tertiary); padding:var(--space-2) 20px var(--space-3); margin:0;}
+/* Leo's observation / opening card */
+.prog-noticed-card{background:var(--leo-green-light); border-left:3px solid var(--leo-green); border-radius:0 12px 12px 0; padding:var(--space-4) var(--space-4) var(--space-4) calc(var(--space-4) - 3px); margin-bottom:var(--space-5);}
+.prog-noticed-text{font-size:18px; font-weight:500; line-height:1.65; color:var(--text-primary); margin:0;}
+/* Supporting facts — no card container, sit directly on --bg-warm */
+.prog-facts{margin-bottom:var(--space-5);}
+.prog-fact{font-size:15px; font-weight:400; line-height:1.6; color:var(--text-secondary); margin:0 0 var(--space-1);}
+.prog-fact:last-child{margin-bottom:0;}
+/* Journey timeline — no card container */
+.prog-timeline{margin-bottom:var(--space-5);}
+.prog-tl-row{display:flex; align-items:baseline; gap:var(--space-2); padding:var(--space-2) 0; border-bottom:1px solid var(--divider);}
+.prog-tl-row:first-child{border-top:1px solid var(--divider);}
+.prog-tl-date{font-size:14px; font-weight:400; color:var(--text-tertiary); flex-shrink:0; min-width:44px;}
+.prog-tl-sep{font-size:14px; color:var(--text-tertiary); flex-shrink:0; user-select:none;}
+.prog-tl-title{font-size:16px; font-weight:400; color:var(--text-primary); flex:1; line-height:1.4;}
+.prog-tl-more{font-size:14px; font-weight:400; color:var(--text-tertiary); padding:var(--space-2) 0 0; line-height:1.5;}
+/* Level Check action */
+.prog-level-check-btn{margin-top:var(--space-4); margin-bottom:var(--space-2); color:var(--text-secondary);}
+/* Deleted from v1 — must not exist: .prog-noticed, .prog-facts-card,
+   .prog-lesson-shelf, .prog-lesson-row, .prog-lesson-date,
+   .prog-lesson-title, .prog-shelf-more */
 /* ---- Diary book ---- */
 .diary-nav{display:flex; justify-content:space-between; align-items:center; margin:2px 0 12px; gap:8px;}
 .date-wrap{text-align:center;}
