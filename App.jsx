@@ -11456,7 +11456,9 @@ function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext
   const [panelOpen, setPanelOpen] = useState(false);
   const [usedThisLesson, setUsedThisLesson] = useState(false);
   const [gated, setGated] = useState(false);
-  const isSpent = !profile.isPaid && usedThisLesson;
+  // TEMPORARILY SUSPENDED — one-per-lesson gate disabled for development testing; reinstate when billing is live
+  // const isSpent = !profile.isPaid && usedThisLesson;
+  const isSpent = false;
 
   const handleTap = () => {
     setIlluminating(true);
@@ -13527,8 +13529,8 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
     level: lvl || level, interests,
     settlement, goals, hardest, occupation, spokenVariety,
     reminderTime,
-    // BILLING PLACEHOLDER — isPaid defaults false (all users treated as free) until real billing infrastructure exists
-    isPaid: false,
+    // TEMPORARY — isPaid hardcoded true for development testing; revert when real billing exists
+    isPaid: true,
   }, wantsPlacement);
 
   /* Leo's greeting, L1 line — SUPPRESSED. §13.4a (Genesis, 22 July 2026);
