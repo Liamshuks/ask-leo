@@ -4881,7 +4881,7 @@ function HomeGreeting({ name }) {
   }, []);
   return (
     <>
-      <h1 className="greet-hello">{timeGreeting(now)}, {name}</h1>
+      <h1 className="greet-hello">{timeGreeting(now)}{name && `, ${name}`}</h1>
       <p className="greet-date">{longDate(now)} <span className="greet-clock">{clockTime(now)}</span></p>
     </>
   );
@@ -5054,7 +5054,7 @@ function HomeScreen({ profile, onOpen, animate, todayInfo, continuity, noticed }
           const gated = item.isGated && item.isGated(todayInfo);
           const Icon = item.icon;
           return (
-            <button key={item.key} className="tc-row" disabled={gated}
+            <button key={item.key} className={"tc-row" + (done ? " tc-row-done" : "") + (gated ? " tc-row-gated" : "")} disabled={gated}
               onClick={() => onOpen(item.page)}
               aria-label={done ? `${item.label} — done. Open again.` : item.label}>
               <Icon size={20} className="tc-icon" />
@@ -5067,12 +5067,12 @@ function HomeScreen({ profile, onOpen, animate, todayInfo, continuity, noticed }
         {nextItem ? (
           <button className="primary-btn wide tc-cta" onClick={() => onOpen(nextItem.page)}>{nextItem.ctaLabel}</button>
         ) : (
-          <p className="tc-alldone">That's everything for today. See you next time.</p>
+          <p className="tc-alldone">That's everything for today. I'll see you tomorrow.</p>
         )}
       </div>
 
       {noticed && (
-        <button className="noticed-card" onClick={() => onOpen("progress")}>{noticed}</button>
+        <button className="noticed-card" onClick={() => onOpen("progress")} aria-label="View your progress">{noticed}</button>
       )}
 
       <div className="home-skyline"><SkylineSketch animate={animate} /></div>
@@ -14021,7 +14021,7 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
   transition:color 200ms ease;}
 .tab-item-label{font-size:12px; font-weight:500; line-height:1;}
 .tab-item-on{color:var(--leo-green);}
-.tab-item:focus-visible{outline:2px solid var(--leo-green); outline-offset:-2px; border-radius:8px;}
+.tab-item:focus-visible{outline:2px solid var(--leo-green); outline-offset:-2px; border-radius:4px;}
 .seg-control{display:flex; gap:var(--space-2); margin:0 0 var(--space-4);}
 .seg-item{flex:1; min-height:44px; border:none; background:transparent; border-radius:10px;
   font-family:'Inter',-apple-system,sans-serif; font-size:15px; font-weight:400;
@@ -14073,17 +14073,18 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 /* ---- Home screen (A2) — settled tokens only ---- */
 .home-screen{max-width:520px; margin:0 auto; padding:var(--space-4) var(--space-3) var(--space-5); text-align:left;}
 .home-greet{margin-bottom:var(--space-5);}
-.greet-hello{font-family:'Inter',-apple-system,sans-serif; font-size:22px; font-weight:600; line-height:1.3; color:var(--text-primary); margin:0; text-align:center;}
-.greet-date{font-size:14px; font-weight:400; color:var(--text-secondary); margin-top:var(--space-1); text-align:center;}
+.greet-hello{font-family:'Inter',-apple-system,sans-serif; font-size:22px; font-weight:600; line-height:1.3; color:var(--text-primary); margin:0; text-align:left;}
+.greet-date{font-size:14px; font-weight:400; color:var(--text-secondary); margin-top:var(--space-1); text-align:left;}
 .greet-clock{margin-left:var(--space-2); color:var(--text-tertiary);}
-.greet-cont{font-size:16px; font-weight:500; line-height:1.6; color:var(--text-primary); margin-top:var(--space-3);}
-.today-card{display:flex; flex-direction:column; gap:var(--space-3);}
+.greet-cont{font-size:16px; font-weight:500; line-height:1.6; color:var(--leo-green); margin-top:var(--space-3);}
+.today-card{display:flex; flex-direction:column; gap:var(--space-3); margin-top:var(--space-5);}
 .tc-row{display:flex; align-items:center; gap:var(--space-3); width:100%; min-height:48px;
   background:none; border:none; padding:var(--space-2) 0; text-align:left; cursor:pointer;
   font-family:'Inter',-apple-system,sans-serif; color:var(--text-primary); border-radius:8px;}
 .tc-row:disabled{cursor:default;}
 .tc-row:focus-visible{outline:2px solid var(--leo-green); outline-offset:2px;}
 .tc-icon{color:var(--leo-green); flex-shrink:0;}
+.tc-row-gated .tc-icon{color:var(--text-tertiary);}
 .tc-label{flex:1; font-size:16px; font-weight:400;}
 .tc-done{display:inline-flex; align-items:center; gap:var(--space-1); font-size:14px; font-weight:400; color:var(--color-success);}
 .tc-gate{font-size:14px; font-weight:400; color:var(--text-tertiary);}
@@ -14677,14 +14678,6 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .rev-wrong{border-color:#D64040; background:#FBEAEA; color:#B22B2B; font-weight:700;}
 .rev-dim{opacity:.5;}
 .bot-avatar-leo{width:34px; height:34px; border-radius:10px; background:var(--leo-green); color:var(--bg-warm); font-family:'Inter',sans-serif; font-weight:700; font-size:18px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
-.today-panel{background:#fff; border-radius:16px; padding:14px 16px 16px; margin:16px auto 6px; max-width:440px; text-align:left;}
-.today-head{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
-.today-head-text{flex:1;}
-.today-title{display:block; font-weight:700; color:var(--text-primary); font-size:16px;}
-.today-sub{display:block; font-size:12.5px; opacity:.6;}
-.today-row{display:flex; align-items:center; gap:10px; padding:9px 0; border-top:1.5px dashed var(--divider);}
-.today-row-label{flex:1; font-size:14.5px;}
-.today-done{display:inline-flex; align-items:center; gap:4px; color:#1B7A42; font-weight:700; font-size:13.5px;}
 .today-cta{margin-top:12px;}
 .today-all-done{text-align:center; font-weight:700; color:var(--text-primary); margin-top:12px; font-size:14.5px;}
 .leo-feedback-head{display:flex; align-items:center; gap:7px; margin-bottom:6px; color:var(--text-primary);}
