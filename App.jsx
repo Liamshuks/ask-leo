@@ -12994,6 +12994,20 @@ const countryMigrate = (v) => {
   return hit ? hit[0] : v; // retain unmatched free-text as-is
 };
 
+// Legacy interest values (12-option set) mapped to the 24-option set (§3.2).
+// Australian life and Other have no target and are dropped silently — no
+// error, no prompt. Anything not in this table (already-new-format labels,
+// or free text) is retained as-is, same non-destructive principle as
+// countryMigrate above.
+const LEGACY_INTEREST_MAP = {
+  "Sport": "Sport", "Music": "Music", "Movies & TV": "Film & TV",
+  "Food & cooking": "Cooking", "Travel": "Getting around", "Gaming": "Gaming",
+  "Study": "Study", "Work": "Work", "Reading": "Reading", "Art & design": "Drawing & art",
+  "Australian life": null, "Other": null,
+};
+const interestsMigrate = (arr) => (!Array.isArray(arr) ? arr :
+  arr.map((v) => (v in LEGACY_INTEREST_MAP ? LEGACY_INTEREST_MAP[v] : v)).filter((v) => v !== null));
+
 // ── About-you group two: the four questions (Lessons-signed, about-you-questions-signoff.md 6f2e4a96). Chips per §5, all skippable, none gates Continue. ──
 const Q_SETTLEMENT = ["Just arrived", "Less than a year", "1–3 years", "More than 3 years", "Not in Australia yet"]; // Q1 single
 const Q_GOALS = ["Work", "Study", "Everyday life", "Family", "Citizenship"]; // Q2 multi
@@ -13553,7 +13567,15 @@ export default function App() {
         loadKey("esl-lessondone:" + todayStr(), false),
         loadKey("esl-placement", null),
       ]);
-      setProfile(p); setDiaryPages(e); setWords(w); setHeard(h); setActivity(a); setErrorLog(el); setTaskCount(tc);
+      // §3.2 migration, applied at load — not inside the interests screen —
+      // so a returning student who never re-enters onboarding still gets
+      // corrected values. Write back only when migration actually changed
+      // something, so a clean profile isn't re-saved on every load.
+      const migratedP = (p && p.interests) ? { ...p, interests: interestsMigrate(p.interests) } : p;
+      if (migratedP && p && JSON.stringify(migratedP.interests) !== JSON.stringify(p.interests)) {
+        saveKey("esl-profile", migratedP);
+      }
+      setProfile(migratedP); setDiaryPages(e); setWords(w); setHeard(h); setActivity(a); setErrorLog(el); setTaskCount(tc);
       // Same Continuity Integrity fix as the remote hydrate below: don't let
       // placementDone depend solely on the esl-placement local key. If the
       // locally-cached profile already carries a level, placement is done.
@@ -13632,8 +13654,14 @@ export default function App() {
       }
       if (isWrapped) {
         if (remoteMemory.profile !== undefined) {
-          setProfile(remoteMemory.profile);
-          saveKey("esl-profile", remoteMemory.profile);
+          // §3.2 migration, same as the local-cache load path above — a
+          // student hydrating on a new device must not reintroduce stale
+          // interest values into local storage.
+          const migratedRemoteProfile = (remoteMemory.profile && remoteMemory.profile.interests)
+            ? { ...remoteMemory.profile, interests: interestsMigrate(remoteMemory.profile.interests) }
+            : remoteMemory.profile;
+          setProfile(migratedRemoteProfile);
+          saveKey("esl-profile", migratedRemoteProfile);
           // Continuity Integrity fix: placementDone must never depend solely on
           // the separately-tracked esl-placement key. Any hydrate that brings in
           // a profile with a level already set means placement is done, full
