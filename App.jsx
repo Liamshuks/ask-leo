@@ -11503,6 +11503,7 @@ function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext
 function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, currentExerciseContext, onDismiss }) {
   const touchStartY = React.useRef(null);
   const panelRef = React.useRef(null);
+  const handRaiseRef = React.useRef(null);
   const [dismissing, setDismissing] = useState(false);
   const [loading, setLoading] = useState(!gated);
   const [explanation, setExplanation] = useState(null);
@@ -11567,6 +11568,8 @@ function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, currentExerciseC
         ? `The student just answered your check question with: "${wrongAttempt}" — this did not show understanding. Explain from a genuinely different angle than before; do not repeat yourself.\n`
         : "") +
       `Write ONE short, warm explanation (2-3 sentences) of what this stage of the lesson is about and why it matters right now — as if you walked over to their desk and said one thing quietly. Then write ONE short question of your own that checks whether they understood, answerable in a word or short phrase.\n` +
+      `Your check question must be specific to this item — never "Does that make sense?" (prohibited: polite yes/no, tells you nothing), never a restatement of the exercise. The check question tests whether the student understood your explanation by asking them to apply the concept to a concrete example different from the current item.\n` +
+      `At A1, your entire response — explanation plus check question — must fit within 3 sentences of maximum 20 words each. If you cannot explain the concept and ask the check question within that envelope, cut the explanation, not the check question. Shorter is always better at A1.\n` +
       `Respond ONLY with JSON, no fences: {"explanation":"","checkQuestion":""}`;
     const raw = await askClaude(prompt, { intent: "ask_leo_explain" });
     let parsed = {};
@@ -11673,7 +11676,7 @@ function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, currentExerciseC
                   <button className="primary-btn wide" onClick={handleCheck} disabled={!input.trim() || loading}
                     style={{ marginTop: "var(--space-3)" }}>Check</button>
 
-                  <div className="al-hand-raise">
+                  <div className="al-hand-raise" ref={handRaiseRef}>
                     {handRaisePhase === "idle" && (
                       <>
                         <span className="al-hand-raise-label">Not sure about something? Ask me.</span>
@@ -11695,7 +11698,18 @@ function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, currentExerciseC
                       <>
                         <p className="text-leo al-explanation-enter">{handRaiseA}</p>
                         <button className="al-hand-raise-return"
-                          onClick={() => { setHandRaisePhase("idle"); setHandRaiseQ(""); setHandRaiseA(null); }}>
+                          onClick={() => {
+                            setHandRaisePhase("idle"); setHandRaiseQ(""); setHandRaiseA(null);
+                            // The "answered" content (Leo's reply) is taller than the
+                            // "idle" content (label + input) it's replaced by. If the
+                            // student scrolled down to read the answer, the shorter
+                            // idle content reappears below the visible viewport unless
+                            // explicitly scrolled back into view — this, not the state
+                            // reset itself, was the actual cause of "doesn't reappear".
+                            requestAnimationFrame(() => {
+                              handRaiseRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                            });
+                          }}>
                           Back to the question
                         </button>
                       </>
@@ -14698,8 +14712,10 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 .ask-leo-btn.spent{border-color:var(--divider); color:var(--text-tertiary);}
 @keyframes leoFill{0%{background-color:transparent; color:var(--leo-green);} 100%{background-color:var(--leo-green); color:#ffffff;}}
 @keyframes leoRing{0%{width:0; height:0; opacity:.6;} 100%{width:300px; height:300px; opacity:0;}}
+@keyframes leoRingOuter{0%{width:0; height:0; opacity:.4;} 100%{width:500px; height:500px; opacity:0;}}
 .ask-leo-btn.illuminating{animation:leoFill 200ms ease-out forwards;}
 .ask-leo-btn.illuminating::before{content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); border-radius:50%; background:var(--leo-green); animation:leoRing 500ms ease-out forwards; pointer-events:none;}
+.ask-leo-btn.illuminating::after{content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); border-radius:50%; background:var(--leo-green); animation:leoRingOuter 800ms ease-out forwards; pointer-events:none;}
 .al-overlay{position:fixed; inset:0; background:rgba(26,26,26,.45); z-index:40; animation:alOverlayIn .35s ease-out forwards;}
 @keyframes alOverlayIn{from{opacity:0;} to{opacity:1;}}
 /* animation-delay:100ms — the button, overlay, and panel all mount at the
@@ -14715,7 +14731,7 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 /* Panel top tint — Leo's presence without chrome (§A.3). Contains only
    .al-handle — no label, no icon, no avatar. Clean edge into .al-scroll:
    no gradient, no border, no shadow — the warmth is ambient, not announced. */
-.al-panel-top{background:var(--bg-warm); padding:0 var(--space-4) var(--space-3); flex-shrink:0;}
+.al-panel-top{background:var(--bg-warm); min-height:80px; padding:0 var(--space-4) var(--space-3); flex-shrink:0;}
 .al-handle{width:36px; height:4px; background:var(--divider); border-radius:2px; margin:12px auto 0; flex-shrink:0;}
 .al-scroll{flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:var(--space-4) var(--space-4) var(--space-5); overscroll-behavior:contain;}
 .al-separator{height:1px; background:var(--divider); margin:var(--space-4) 0 var(--space-3);}
@@ -14748,6 +14764,7 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
      no ring. */
   .ask-leo-btn.illuminating{animation:none; transition:none; background-color:var(--leo-green); color:#ffffff;}
   .ask-leo-btn.illuminating::before{display:none;}
+  .ask-leo-btn.illuminating::after{display:none;}
   .al-overlay{animation:none;}
   .al-panel{animation:none; transform:none;}
   .al-panel.dismissing{animation:none; display:none;}
