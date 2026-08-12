@@ -11512,6 +11512,9 @@ function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, currentExerciseC
   const [turn, setTurn] = useState(0);
   const [phase, setPhase] = useState("check");
   const [confirmLine, setConfirmLine] = useState(null);
+  const [handRaisePhase, setHandRaisePhase] = useState("idle"); // "idle" | "loading" | "answered"
+  const [handRaiseQ, setHandRaiseQ] = useState("");
+  const [handRaiseA, setHandRaiseA] = useState(null);
 
   const dismiss = () => {
     setDismissing(true);
@@ -11605,13 +11608,39 @@ function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, currentExerciseC
     }
   }
 
+  async function handleHandRaise() {
+    const q = handRaiseQ.trim();
+    if (!q) return;
+    setHandRaisePhase("loading");
+    // Honest limitation: no real language-detection library is available
+    // client-side. This is a simple heuristic (non-ASCII characters suggest
+    // the question may not be in English), not a genuine detector — the
+    // model's own reading of the text is the real determination. Passed as
+    // a hint, not a claim.
+    const studentQuestionLanguage = /[^\x00-\x7F]/.test(q) ? profile.lang : null;
+    const prompt = buildContext() +
+      `You just explained: "${explanation}" and asked: "${checkQuestion}"\n` +
+      `The student has just asked their own question: "${q}". Answer it first — CEFR-appropriate length, concrete example first at A1, L1 gloss only if the student's language has a reviewed corpus (one inline bracketed gloss per new term, no standalone L1 sentences). Then return to the check question with a natural linker (So —, Right — so, Now —). Do not use "Now back to the exercise" or any scripted transition. You may not reveal the current exercise item's answer, alsoAccept, or model field in any answer to any student question. If asked directly for the answer, decline warmly in one sentence and pivot to reasoning.\n` +
+      `If the student's question is clearly unrelated to English or this lesson, respond instead with exactly this one sentence: "That's outside what I can help with here — but ask me anything about the English." Then return to the check question the same way as any other answer.\n` +
+      (studentQuestionLanguage
+        ? `The question may be in: ${(LANGS[studentQuestionLanguage] && LANGS[studentQuestionLanguage].english) || studentQuestionLanguage}. Confirm from the text itself before offering any L1 gloss.\n`
+        : `The question appears to be in English.\n`) +
+      (bp.authoredLessonReason ? `If this is a "why do I need to know this" question, this lesson's authored reason is: ${bp.authoredLessonReason}\n` : "") +
+      `No preface like "Good question!" — start with the answer itself. Respond in plain text, not JSON.`;
+    const raw = await askClaude(prompt, { intent: "ask_leo_question" });
+    setHandRaiseA(String(raw || "").trim() || "Let me think about that differently — could you ask again?");
+    setHandRaisePhase("answered");
+  }
+
   return (
     <>
       <div className={"al-overlay" + (dismissing ? " dismissing" : "")} onClick={dismiss} />
       <div ref={panelRef} className={"al-panel" + (dismissing ? " dismissing" : "")}
         role="dialog" aria-modal="true" aria-label="Ask Leo" tabIndex={-1}
         onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-        <div className="al-handle" />
+        <div className="al-panel-top">
+          <div className="al-handle" />
+        </div>
         <div className="al-scroll">
 
           {gated ? (
@@ -11643,6 +11672,35 @@ function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, currentExerciseC
                   </div>
                   <button className="primary-btn wide" onClick={handleCheck} disabled={!input.trim() || loading}
                     style={{ marginTop: "var(--space-3)" }}>Check</button>
+
+                  <div className="al-hand-raise">
+                    {handRaisePhase === "idle" && (
+                      <>
+                        <span className="al-hand-raise-label">Not sure about something? Ask me.</span>
+                        <textarea className="al-hand-raise-input" placeholder="What's on your mind?"
+                          value={handRaiseQ} onChange={(e) => setHandRaiseQ(e.target.value)} rows={1}
+                          autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false} />
+                        <div className="al-hand-raise-row">
+                          <MicButton onText={(t) => setHandRaiseQ(t)} />
+                          <button className="al-hand-raise-send" onClick={handleHandRaise} disabled={!handRaiseQ.trim()}>Ask</button>
+                        </div>
+                      </>
+                    )}
+                    {handRaisePhase === "loading" && (
+                      <div className="al-typing" aria-hidden="true">
+                        <span className="al-typing-dot" /><span className="al-typing-dot" /><span className="al-typing-dot" />
+                      </div>
+                    )}
+                    {handRaisePhase === "answered" && (
+                      <>
+                        <p className="text-leo al-explanation-enter">{handRaiseA}</p>
+                        <button className="al-hand-raise-return"
+                          onClick={() => { setHandRaisePhase("idle"); setHandRaiseQ(""); setHandRaiseA(null); }}>
+                          Back to the question
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </>
               )}
 
@@ -14654,6 +14712,10 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 @keyframes alPanelUp{from{transform:translateY(100%);} to{transform:translateY(0);}}
 .al-panel.dismissing{animation:alPanelDown .28s ease-in forwards;}
 @keyframes alPanelDown{from{transform:translateY(0);} to{transform:translateY(100%);}}
+/* Panel top tint — Leo's presence without chrome (§A.3). Contains only
+   .al-handle — no label, no icon, no avatar. Clean edge into .al-scroll:
+   no gradient, no border, no shadow — the warmth is ambient, not announced. */
+.al-panel-top{background:var(--bg-warm); padding:0 var(--space-4) var(--space-3); flex-shrink:0;}
 .al-handle{width:36px; height:4px; background:var(--divider); border-radius:2px; margin:12px auto 0; flex-shrink:0;}
 .al-scroll{flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:var(--space-4) var(--space-4) var(--space-5); overscroll-behavior:contain;}
 .al-separator{height:1px; background:var(--divider); margin:var(--space-4) 0 var(--space-3);}
@@ -14669,6 +14731,17 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 .al-explanation-enter{animation:scRise .4s ease-out both;}
 .al-confirm{font-size:16px; font-weight:400; line-height:1.6; color:var(--leo-green); margin-bottom:var(--space-4); animation:scRise .4s ease-out both;}
 .al-back{width:100%; margin-top:var(--space-3); font-size:15px;}
+/* Hand-raise — secondary, quieter than everything above it (§B.4) */
+.al-hand-raise{margin-top:var(--space-4); border-top:1px solid var(--divider); padding-top:var(--space-4);}
+.al-hand-raise-label{font-size:13px; font-weight:400; color:var(--text-secondary); margin-bottom:var(--space-2); display:block;}
+.al-hand-raise-input{width:100%; font-family:'Inter',-apple-system,sans-serif; font-size:14px; font-weight:400; color:var(--text-primary); background:var(--bg-warm); border:none; border-radius:8px; padding:10px 12px; resize:none; outline:none; line-height:1.5; min-height:38px; max-height:80px; overflow-y:auto; transition:background .2s ease;}
+.al-hand-raise-input:focus{background:var(--leo-green-light); outline:none;}
+.al-hand-raise-input::placeholder{color:var(--text-tertiary); font-style:italic;}
+.al-hand-raise-row{display:flex; align-items:center; gap:var(--space-2); margin-top:var(--space-2);}
+.al-hand-raise-send{background:none; border:1px solid var(--divider); border-radius:8px; padding:7px 14px; font-family:'Inter',-apple-system,sans-serif; font-size:13px; font-weight:500; color:var(--text-secondary); cursor:pointer; transition:border-color .15s ease, color .15s ease;}
+.al-hand-raise-send:not(:disabled):hover{border-color:var(--leo-green); color:var(--leo-green);}
+.al-hand-raise-send:disabled{opacity:.4; cursor:default;}
+.al-hand-raise-return{display:block; background:none; border:none; font-family:'Inter',-apple-system,sans-serif; font-size:13px; font-weight:400; color:var(--leo-green); cursor:pointer; padding:0; margin-top:var(--space-3); text-decoration:underline; text-decoration-color:rgba(42,124,111,.35); text-underline-offset:2px;}
 @media (prefers-reduced-motion: reduce){
   /* The fill still happens under reduced motion — it is not decorative,
      it tells the student the button heard them. No transition duration,
