@@ -11345,6 +11345,16 @@ const STAGE_BRIDGE_TEXT = {
   summary: "Let's see how you went today.",
 };
 
+const STAGE_PEDAGOGY = {
+  intro: "This is where the student meets the day's situation before any language demands land, so the whole lesson has a place to sit rather than floating as a set of exercises.",
+  vocab: "This is where the words the whole lesson will need get placed on the table, meeting them for the first time or waking them up, so no later stage has to stop and teach a word.",
+  pron: "This is where the words the vocab stage just placed get physical, so the student's mouth knows them before the speaking stage asks the student's mind to reach for them.",
+  speak: "This is where the lesson's language gets tried, unpolished, in the situation it was built for, because a pattern the student has only recognised and never produced hasn't been learned yet.",
+  skill: "This is where the student meets the language the day's situation would actually put in front of them — a sign, a message, a short exchange overheard — so the lesson isn't only what the student says but what the student meets.",
+  grammar: "This is where the pattern the speaking stage just used gets taken apart on purpose, so the student sees the shape they were already making and can make it deliberately next time.",
+  summary: "This is where the lesson closes with one honest reflection on what happened today, so the student leaves knowing what shifted rather than what they attempted.",
+};
+
 const LESSON_STAGES = [
   { id: "intro",   label: "Introduction" },
   { id: "vocab",   label: "Vocabulary" },
@@ -11417,6 +11427,204 @@ function buildTeacherContext({ profile, memoryStore, words, heard, diaryPages, a
     weak.length || practised.length ? `These words need more encounters to stick: ${[...weak, ...practised].map(([w]) => w).join(", ")}.` : "No specific words to recycle yet.",
   ];
   return lines.filter((l) => l !== "").join("\n");
+}
+
+/* ---------------- Ask Leo panel (ASK_LEO_HELP_PANEL_PEDAGOGY_v1, Phase 1) ---------------- */
+
+function AskLeoButton({ stageId, stageLabel, bp, profile }) {
+  const [illuminating, setIlluminating] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [usedThisLesson, setUsedThisLesson] = useState(false);
+  const [gated, setGated] = useState(false);
+  const isSpent = !profile.isPaid && usedThisLesson;
+
+  const handleTap = () => {
+    setIlluminating(true);
+    // Captures the PRE-tap spent state for this specific panel-open — the
+    // first tap that makes the button spent must still show the real
+    // explanation flow, not the gate message.
+    setGated(isSpent);
+    setTimeout(() => setPanelOpen(true), 200);
+    setTimeout(() => setIlluminating(false), 500);
+    if (!profile.isPaid) setUsedThisLesson(true);
+  };
+
+  return (
+    <>
+      <div className="ask-leo-btn-wrap">
+        <button type="button"
+          className={"ask-leo-btn" + (illuminating ? " illuminating" : "") + (isSpent ? " spent" : "")}
+          onClick={handleTap}>
+          {/* WhiteboardLogo returns null below 24px (verified this session) —
+              Genesis's authorised fallback: a plain Leo Green circle. */}
+          <span className="ask-leo-mark" aria-hidden="true" />
+          Ask Leo
+        </button>
+      </div>
+      {panelOpen && (
+        <AskLeoPanel
+          stageId={stageId} stageLabel={stageLabel} bp={bp} profile={profile}
+          gated={gated}
+          onDismiss={() => setPanelOpen(false)}
+        />
+      )}
+    </>
+  );
+}
+
+function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, onDismiss }) {
+  const touchStartY = React.useRef(null);
+  const panelRef = React.useRef(null);
+  const [dismissing, setDismissing] = useState(false);
+  const [loading, setLoading] = useState(!gated);
+  const [explanation, setExplanation] = useState(null);
+  const [checkQuestion, setCheckQuestion] = useState(null);
+  const [prevExplanations, setPrevExplanations] = useState([]);
+  const [input, setInput] = useState("");
+  const [turn, setTurn] = useState(0);
+  const [phase, setPhase] = useState("check");
+  const [confirmLine, setConfirmLine] = useState(null);
+
+  const dismiss = () => {
+    setDismissing(true);
+    setTimeout(onDismiss, 280);
+  };
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") dismiss(); };
+    document.addEventListener("keydown", onKey);
+    // Focus trap: move focus into the panel on mount.
+    if (panelRef.current) panelRef.current.focus();
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Swipe-down-to-dismiss, built fresh (no existing pattern in this file to
+  // follow — confirmed by direct search this session). 60px threshold.
+  const onTouchStart = (e) => { touchStartY.current = e.touches[0].clientY; };
+  const onTouchEnd = (e) => {
+    if (touchStartY.current == null) return;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    touchStartY.current = null;
+    if (dy > 60) dismiss();
+  };
+
+  // PHASE 2: add exercise-level context here (exerciseType, stem, options,
+  // answer, note) once renderers report current item upward.
+  const buildContext = () =>
+    `${AUSTRALIAN_SPELLING}You are Leo, an experienced ELICOS teacher. A student has tapped "Ask Leo" during the ${stageLabel} stage of today's lesson because they want a moment of your attention.\n` +
+    `Why this stage exists: ${STAGE_PEDAGOGY[stageId] || ""}\n` +
+    `Lesson level: ${bp.cefr}. Lesson objective: ${bp.communicativeObjective}. Today's situation: ${bp.context}.\n` +
+    `Student: ${profile.name || "the student"}, first language ${(LANGS[profile.lang] && LANGS[profile.lang].english) || profile.lang || "unknown"}.\n`;
+
+  async function fetchExplanation(wrongAttempt) {
+    setLoading(true);
+    const prompt = buildContext() +
+      (prevExplanations.length
+        ? `You have already explained this ${prevExplanations.length} time(s) this visit: ${prevExplanations.map((e, i) => `(${i + 1}) ${e}`).join(" ")}\n`
+        : "") +
+      (wrongAttempt
+        ? `The student just answered your check question with: "${wrongAttempt}" — this did not show understanding. Explain from a genuinely different angle than before; do not repeat yourself.\n`
+        : "") +
+      `Write ONE short, warm explanation (2-3 sentences) of what this stage of the lesson is about and why it matters right now — as if you walked over to their desk and said one thing quietly. Then write ONE short question of your own that checks whether they understood, answerable in a word or short phrase.\n` +
+      `Respond ONLY with JSON, no fences: {"explanation":"","checkQuestion":""}`;
+    const raw = await askClaude(prompt, { intent: "ask_leo_explain" });
+    let parsed = {};
+    try { parsed = JSON.parse(String(raw || "").replace(/```json|```/g, "").trim()); } catch { parsed = {}; }
+    const ex = parsed.explanation || "Let's look at this together for a moment.";
+    setExplanation(ex);
+    setCheckQuestion(parsed.checkQuestion || "What's your understanding so far?");
+    setPrevExplanations((p) => p.concat([ex]));
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    if (!gated) fetchExplanation(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleCheck() {
+    const attempt = input.trim();
+    if (!attempt) return;
+    setLoading(true);
+    const prompt = buildContext() +
+      `You just explained: "${explanation}" and asked: "${checkQuestion}"\n` +
+      `The student answered: "${attempt}"\n` +
+      `Judge only whether this shows they understood YOUR explanation and question above — you are not grading against any external answer key.\n` +
+      `Respond ONLY with JSON, no fences: {"correct":true or false,"confirmLine":"a short warm line if correct, specific to what they showed understanding of — never just 'Correct!'"}`;
+    const raw = await askClaude(prompt, { intent: "ask_leo_check" });
+    let parsed = {};
+    try { parsed = JSON.parse(String(raw || "").replace(/```json|```/g, "").trim()); } catch { parsed = {}; }
+    setLoading(false);
+    if (parsed.correct) {
+      setConfirmLine(parsed.confirmLine || "That's it — you've got it.");
+      setPhase("correct");
+    } else if (turn >= 2) {
+      setPhase("pivot");
+    } else {
+      setTurn((t) => t + 1);
+      setInput("");
+      await fetchExplanation(attempt);
+    }
+  }
+
+  return (
+    <>
+      <div className={"al-overlay" + (dismissing ? " dismissing" : "")} onClick={dismiss} />
+      <div ref={panelRef} className={"al-panel" + (dismissing ? " dismissing" : "")}
+        role="dialog" aria-modal="true" aria-label="Ask Leo" tabIndex={-1}
+        onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        <div className="al-handle" />
+        <div className="al-scroll">
+
+          {gated ? (
+            <>
+              <p className="text-leo">You've got one Ask Leo per lesson — upgrade for unlimited.</p>
+              <button className="ghost-btn wide al-back" onClick={dismiss}>Back to the lesson</button>
+            </>
+          ) : (
+            <>
+              {loading && !explanation && (
+                <div className="al-typing" aria-hidden="true">
+                  <span className="al-typing-dot" /><span className="al-typing-dot" /><span className="al-typing-dot" />
+                </div>
+              )}
+
+              {explanation && <p className="text-leo">{explanation}</p>}
+
+              {explanation && phase !== "pivot" && <div className="al-separator" />}
+
+              {phase === "check" && explanation && (
+                <>
+                  <p className="al-check-q">{checkQuestion}</p>
+                  <div className="input-row">
+                    <input className="text-input" placeholder="Type your answer…" value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleCheck()}
+                      autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false} />
+                    <MicButton onText={(t) => setInput(t)} />
+                  </div>
+                  <button className="primary-btn wide" onClick={handleCheck} disabled={!input.trim() || loading}
+                    style={{ marginTop: "var(--space-3)" }}>Check</button>
+                </>
+              )}
+
+              {phase === "correct" && (
+                <>
+                  <p className="al-confirm">{confirmLine}</p>
+                  <button className="ghost-btn wide al-back" onClick={dismiss}>Back to the lesson</button>
+                </>
+              )}
+
+              {phase === "pivot" && (
+                <button className="ghost-btn wide al-back" onClick={dismiss}>Back to the lesson</button>
+              )}
+            </>
+          )}
+
+        </div>
+      </div>
+    </>
+  );
 }
 
 function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, activity, errorLog, stats, markActivity, bumpTasks, onExit }) {
@@ -12323,6 +12531,8 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       {stage.id === "skill" && section && !section.skipped && <SkillSection {...stageProps} section={section} onDone={(c, t) => advance({ skill: `${c}/${t}` })} />}
       {stage.id === "grammar" && section && !section.skipped && <GrammarSection {...stageProps} section={section} onDone={(c, t) => advance({ grammar: `${c}/${t}` })} />}
       {stage.id === "summary" && section && <SummarySection bp={bp} section={section} vocab={vocabWords} onVocabTap={handleVocabTap} onFinish={finish} />}
+
+      <AskLeoButton stageId={stage.id} stageLabel={stage.label} bp={bp} profile={profile} />
 
       <VocabCardSheet card={vocabCard} lesson={null} onClose={() => setVocabCard(null)}
         onSave={() => vocabCard && leoMemory.saveWord && leoMemory.saveWord(vocabCard.word)}
@@ -13281,6 +13491,8 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
     level: lvl || level, interests,
     settlement, goals, hardest, occupation, spokenVariety,
     reminderTime,
+    // BILLING PLACEHOLDER — isPaid defaults false (all users treated as free) until real billing infrastructure exists
+    isPaid: false,
   }, wantsPlacement);
 
   /* Leo's greeting, L1 line — SUPPRESSED. §13.4a (Genesis, 22 July 2026);
@@ -14314,7 +14526,12 @@ export default function App() {
         </>
       )}
       </div>
-      {page !== "settings" && <TabBar tab={tab} onSelect={selectTab} />}
+      {/* page !== "task" added: the Ask Leo button occupies the tab bar's
+          position during a lesson (spec §1.1). Without this, the tab bar
+          and the fixed-bottom Ask Leo button would overlap — the spec
+          claimed the tab bar was already hidden during lesson view; it
+          wasn't, only "settings" was excluded here. */}
+      {page !== "settings" && page !== "task" && <TabBar tab={tab} onSelect={selectTab} />}
     </div>
   );
 }
@@ -14366,6 +14583,46 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 .tab-item-label{font-size:12px; font-weight:500; line-height:1;}
 .tab-item-on{color:var(--leo-green);}
 .tab-item:focus-visible{outline:2px solid var(--leo-green); outline-offset:-2px; border-radius:4px;}
+
+/* ---- Ask Leo panel (ASK_LEO_HELP_PANEL_PEDAGOGY_v1, Phase 1) ---- */
+.ask-leo-btn-wrap{position:fixed; bottom:0; left:0; right:0; padding:var(--space-2) var(--space-3) calc(var(--space-2) + env(safe-area-inset-bottom, 0px)); background:var(--bg-card); border-top:1px solid var(--divider); z-index:30; display:flex; justify-content:center;}
+.ask-leo-btn{display:inline-flex; align-items:center; gap:var(--space-2); background:none; border:1.5px solid var(--leo-green); border-radius:999px; padding:10px 24px; font-family:'Inter',-apple-system,sans-serif; font-size:15px; font-weight:500; color:var(--leo-green); cursor:pointer; position:relative; overflow:visible; min-height:44px; min-width:140px; transition:opacity .3s ease, border-color .3s ease, color .3s ease; letter-spacing:-.01em;}
+.ask-leo-btn:focus-visible{outline:2px solid var(--leo-green); outline-offset:3px; border-radius:999px;}
+/* WhiteboardLogo returns null below 24px (verified this session, not
+   assumed) — Genesis's authorised fallback. background:currentColor so
+   the mark fades to --text-tertiary with the rest of the button when
+   .spent applies, matching the behaviour the spec wanted from the logo's
+   own currentColor stroke. */
+.ask-leo-mark{width:16px; height:16px; border-radius:50%; background:currentColor; flex-shrink:0; display:inline-block;}
+.ask-leo-btn.spent{border-color:var(--divider); color:var(--text-tertiary);}
+.ask-leo-btn::before{content:''; position:absolute; top:50%; left:50%; width:0; height:0; border-radius:50%; background:radial-gradient(circle, rgba(42,124,111,.18) 0%, rgba(42,124,111,.06) 50%, transparent 70%); transform:translate(-50%,-50%); pointer-events:none; z-index:-1; opacity:0;}
+.ask-leo-btn.illuminating::before{animation:leoArrive .5s ease-out forwards;}
+@keyframes leoArrive{0%{width:0; height:0; opacity:1;} 60%{width:200px; height:200px; opacity:.8;} 100%{width:280px; height:280px; opacity:0;}}
+.al-overlay{position:fixed; inset:0; background:rgba(26,26,26,.45); z-index:40; animation:alOverlayIn .35s ease-out forwards;}
+@keyframes alOverlayIn{from{opacity:0;} to{opacity:1;}}
+.al-panel{position:fixed; left:0; right:0; bottom:0; max-height:62vh; min-height:320px; background:var(--bg-card); border-radius:24px 24px 0 0; z-index:41; display:flex; flex-direction:column; overflow:hidden; animation:alPanelUp .35s cubic-bezier(.32,.72,0,1) forwards;}
+@keyframes alPanelUp{from{transform:translateY(100%);} to{transform:translateY(0);}}
+.al-panel.dismissing{animation:alPanelDown .28s ease-in forwards;}
+@keyframes alPanelDown{from{transform:translateY(0);} to{transform:translateY(100%);}}
+.al-handle{width:36px; height:4px; background:var(--divider); border-radius:2px; margin:12px auto 0; flex-shrink:0;}
+.al-scroll{flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:var(--space-4) var(--space-4) var(--space-5); overscroll-behavior:contain;}
+.al-separator{height:1px; background:var(--divider); margin:var(--space-4) 0 var(--space-3);}
+.al-check-q{font-size:16px; font-weight:500; line-height:1.6; color:var(--text-primary); margin-bottom:var(--space-3);}
+.al-typing{display:flex; gap:4px; align-items:center; padding:var(--space-2) 0;}
+.al-typing-dot{width:6px; height:6px; border-radius:50%; background:var(--text-tertiary); animation:alDotPulse 1.2s ease-in-out infinite;}
+.al-typing-dot:nth-child(2){animation-delay:.2s;}
+.al-typing-dot:nth-child(3){animation-delay:.4s;}
+@keyframes alDotPulse{0%,80%,100%{opacity:.3; transform:scale(.85);} 40%{opacity:1; transform:scale(1);}}
+.al-confirm{font-size:16px; font-weight:400; line-height:1.6; color:var(--leo-green); margin-bottom:var(--space-4); animation:scRise .4s ease-out both;}
+.al-back{width:100%; margin-top:var(--space-3); font-size:15px;}
+@media (prefers-reduced-motion: reduce){
+  .ask-leo-btn.illuminating::before{animation:none;}
+  .al-overlay{animation:none;}
+  .al-panel{animation:none; transform:none;}
+  .al-panel.dismissing{animation:none; display:none;}
+  .al-typing-dot{animation:none; opacity:.5;}
+  .al-confirm{animation:none;}
+}
 
 /* ---- Settings screen (SETTINGS_SCREEN_SPECIFICATION_v1 §8) ---- */
 .progress-header{display:flex; justify-content:flex-end; margin-bottom:var(--space-3);}
