@@ -4974,7 +4974,7 @@ const TABS = [
 
 /* Screens that belong to a tab but are not sections of it — reached from the
    Today card, and returned from via the header back control. */
-const TAB_SUBSCREENS = { diary: "today", task: "today" };
+const TAB_SUBSCREENS = { diary: "today", task: "today", settings: "progress" };
 
 const tabOfPage = (p) => {
   if (TAB_SUBSCREENS[p]) return TAB_SUBSCREENS[p];
@@ -5095,10 +5095,13 @@ function HomeScreen({ profile, onOpen, animate, todayInfo, continuity, noticed }
 
 /* ---------------- Progress ---------------- */
 
-function ProgressPage({ stats }) {
+function ProgressPage({ stats, onOpenSettings }) {
   const hasData = stats.entries > 0 || stats.words > 0 || stats.tasks > 0;
   return (
     <div>
+      <div className="progress-header">
+        <button className="settings-entry-link" onClick={onOpenSettings}>Settings</button>
+      </div>
       {/* Item 6 — Psychological Design Audit (Genesis, Aug 2026):
           §4.2 descriptive/no-numerics/no-CTA empty state.
           Stat-grid only renders when at least one count is real.
@@ -5163,6 +5166,128 @@ function ProgressPage({ stats }) {
         <Card>
           <p className="muted">This is where your progress lives — lessons, words, and skills, building up over time.</p>
         </Card>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- Settings ---------------- */
+
+const REMINDER_TIMES = [["morning", "Morning"], ["afternoon", "Afternoon"], ["evening", "Evening"]];
+
+function SettingsPage({ profile, onProfileChange, onSignOut, onStartOver }) {
+  const p = profile || {};
+  const [nameDraft, setNameDraft] = useState(p.name || "");
+  const [nameAck, setNameAck] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const ackTimer = React.useRef(null);
+  useEffect(() => () => { if (ackTimer.current) clearTimeout(ackTimer.current); }, []);
+
+  const saveProfile = (patch) => {
+    const next = { ...p, ...patch };
+    saveKey("esl-profile", next);
+    onProfileChange(next);
+  };
+
+  const commitName = () => {
+    const trimmed = nameDraft.trim();
+    // §3.2 — never save an empty name; restore the previous value silently,
+    // no error state, nothing shown to the student.
+    if (!trimmed) { setNameDraft(p.name || ""); return; }
+    if (trimmed === (p.name || "")) return; // no genuine change — no ack line
+    saveProfile({ name: trimmed });
+    setNameAck(true);
+    if (ackTimer.current) clearTimeout(ackTimer.current);
+    ackTimer.current = setTimeout(() => setNameAck(false), 3000);
+  };
+
+  // §4.2/§9 — "undecided" is onboarding-only; in Settings it reads as null,
+  // and the student cannot set it back to "undecided" from here.
+  const reminderTime = p.reminderTime === "undecided" ? null : (p.reminderTime ?? null);
+
+  const toggleSettingsInterest = (item) => {
+    const current = p.interests || [];
+    const next = current.includes(item) ? current.filter((x) => x !== item) : [...current, item];
+    saveProfile({ interests: next });
+  };
+
+  return (
+    <div className="settings-page">
+      {/* Card 1 — Name (§3) */}
+      <div className="settings-card">
+        <label className="settings-label" htmlFor="settings-name">Your name</label>
+        <hr className="settings-divider" />
+        <input id="settings-name" className="settings-name-input" type="text"
+          value={nameDraft} placeholder="Your name" maxLength={40}
+          autoCapitalize="words" autoCorrect="off" spellCheck={false}
+          onChange={(e) => setNameDraft(e.target.value)}
+          onBlur={commitName} />
+        {nameAck && (
+          <p className="settings-name-ack">Got it — I'll use that from now on.</p>
+        )}
+      </div>
+
+      {/* Card 2 — Lesson reminders (§4).
+          reminderTime does not exist as an onboarding step anywhere in the
+          codebase yet — there is nothing to be "pixel-identical" to (§4.4).
+          Built here fresh, following the spec's own described treatment
+          exactly: same .chip/.chip-on classes and hierarchy as every other
+          chip in the system, so that whenever the real onboarding
+          notification step is built, it has this exact treatment to match
+          — not the other way around, since this predates it. */}
+      <div className="settings-card">
+        <label className="settings-label">Lesson reminders</label>
+        <hr className="settings-divider" />
+        <div className="settings-chips">
+          {REMINDER_TIMES.map(([value, label]) => (
+            <button key={value} type="button"
+              className={"chip" + (reminderTime === value ? " chip-on" : "")}
+              onClick={() => saveProfile({ reminderTime: value })}>{label}</button>
+          ))}
+          <button type="button"
+            className={"chip" + (reminderTime === null ? " chip-on" : "")}
+            onClick={() => saveProfile({ reminderTime: null })}>No reminders</button>
+        </div>
+      </div>
+
+      {/* Card 3 — Interests (§5). INTEREST_LABELS — the flat 24-option v5
+          array, not the retired 12-option constant. No pictograms, no
+          free-text card, no Leo acknowledgement line (§5.3: this is a
+          preference update, not an introduction). */}
+      <div className="settings-card">
+        <label className="settings-label">What you're interested in</label>
+        <hr className="settings-divider" />
+        <div className="settings-chips">
+          {INTEREST_LABELS.map((item) => (
+            <button key={item} type="button"
+              className={"chip" + ((p.interests || []).includes(item) ? " chip-on" : "")}
+              onClick={() => toggleSettingsInterest(item)}>{item}</button>
+          ))}
+        </div>
+        <p className="settings-supporting">Changes take effect next time Leo plans a lesson.</p>
+      </div>
+
+      <div className="settings-actions">
+        <button className="ghost-btn wide settings-sign-out" onClick={onSignOut}>Sign out</button>
+        <button className="ghost-btn wide settings-start-over" onClick={() => setSheetOpen(true)}>Set up Leo again</button>
+      </div>
+
+      {sheetOpen && (
+        <div className="settings-sheet-overlay" onClick={() => setSheetOpen(false)} role="dialog" aria-modal="true" aria-label="Start fresh with Leo">
+          <div className="settings-sheet" onClick={(e) => e.stopPropagation()}>
+            <p className="settings-sheet-title">Start fresh with Leo</p>
+            <p className="settings-sheet-body">This will take you back to the beginning so we can set things up again. Your diary entries, words and learning history stay safe.</p>
+            {/* §7.4 / testing note (CODE): this is the primary way to reach and
+                test every onboarding screen — including the interests screen
+                and any surface that only appears on a fresh profile — without
+                incognito mode. Only esl-profile and esl-placement are cleared;
+                diary, words, heard, activity, errors, taskcount and
+                skyline-seen all survive, so testers reach onboarding from a
+                lived-in account state, not a wiped one. */}
+            <button className="primary-btn wide" onClick={() => { setSheetOpen(false); onStartOver(); }}>Let's start again</button>
+            <button className="ghost-btn wide" style={{ marginTop: "var(--space-2)" }} onClick={() => setSheetOpen(false)}>Go back</button>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -14079,7 +14204,17 @@ export default function App() {
             {isSection && currentTab.sections.length > 1 && (
               <SectionSwitch sections={currentTab.sections} page={page} onSelect={goTo} />
             )}
-            {page === "progress" && <ProgressPage stats={stats} />}
+            {page === "progress" && <ProgressPage stats={stats} onOpenSettings={() => goTo("settings")} />}
+            {page === "settings" && <SettingsPage profile={profile}
+              onProfileChange={(p) => setProfile(p)}
+              onSignOut={async () => { await supabase.auth.signOut(); setAuthView("signin"); }}
+              onStartOver={async () => {
+                await saveKey("esl-profile", null);
+                await saveKey("esl-placement", null);
+                setObResume(null);
+                setPlacementDone(false);
+                setProfile(null);
+              }} />}
             {page === "diary" && <DiaryPage profile={profile} memory={memory} leoMemory={leoMemory} pages={diaryPages} setPages={setDiaryPages} markActivity={markActivity} addErrors={addErrors} />}
             {page === "task" && <LessonPage profile={profile} memory={memory} leoMemory={leoMemory} words={words} heard={heard} diaryPages={diaryPages} activity={activity} errorLog={errorLog} stats={stats} markActivity={markActivity} bumpTasks={bumpTasks} onExit={() => goTo(null)} />}
             {page === "questions" && <QuestionsPage profile={profile} memory={memory} leoMemory={leoMemory} pendingAsk={pendingAsk} onPendingHandled={() => setPendingAsk(null)} markActivity={markActivity} onOpenAustralia={(term) => { setAusQuery(term); goTo("australia"); }} />}
@@ -14092,7 +14227,7 @@ export default function App() {
         </>
       )}
       </div>
-      <TabBar tab={tab} onSelect={selectTab} />
+      {page !== "settings" && <TabBar tab={tab} onSelect={selectTab} />}
     </div>
   );
 }
@@ -14144,6 +14279,37 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 .tab-item-label{font-size:12px; font-weight:500; line-height:1;}
 .tab-item-on{color:var(--leo-green);}
 .tab-item:focus-visible{outline:2px solid var(--leo-green); outline-offset:-2px; border-radius:4px;}
+
+/* ---- Settings screen (SETTINGS_SCREEN_SPECIFICATION_v1 §8) ---- */
+.progress-header{display:flex; justify-content:flex-end; margin-bottom:var(--space-3);}
+.settings-entry-link{background:none; border:none; padding:0; cursor:pointer; font-family:'Inter',sans-serif; font-size:14px; font-weight:400; color:var(--text-secondary);}
+.settings-page{max-width:520px; margin:0 auto; padding:var(--space-4) var(--space-3) var(--space-7); animation:scRise .4s ease-out both;}
+@media (prefers-reduced-motion: reduce){.settings-page{animation:none;}}
+.settings-card{background:var(--bg-card); border-radius:12px; padding:20px; margin-bottom:var(--space-5);}
+.settings-label{font-size:14px; font-weight:400; color:var(--text-secondary); line-height:1.5; margin-bottom:var(--space-2); display:block;}
+.settings-divider{height:1px; background:var(--divider); margin:0 0 var(--space-3); border:none;}
+.settings-name-input{width:100%; font-family:'Inter',-apple-system,sans-serif; font-size:17px; font-weight:400; color:var(--text-primary); background:transparent; border:none; outline:none; padding:0; line-height:1.5;}
+.settings-name-input::placeholder{color:var(--text-tertiary);}
+.settings-name-input:focus{outline:none;}
+.settings-name-input:focus-visible{outline:2px solid var(--leo-green); outline-offset:2px; border-radius:4px;}
+.settings-name-ack{font-size:14px; font-weight:400; color:var(--text-secondary); margin-top:var(--space-2); animation:scRise .4s ease-out both;}
+@media (prefers-reduced-motion: reduce){.settings-name-ack{animation:none;}}
+.settings-chips{display:flex; flex-wrap:wrap; gap:var(--space-2);}
+.settings-supporting{font-size:14px; font-weight:400; color:var(--text-tertiary); margin-top:var(--space-3); line-height:1.5;}
+.settings-actions{margin-top:var(--space-5); display:flex; flex-direction:column; gap:var(--space-3);}
+/* Spec text says "same as every ghost button" for Sign out's colour, but
+   this codebase's .ghost-btn default is --leo-green, not --text-primary.
+   The spec's explicit value (--text-primary — neutral, not brand-coloured,
+   not error-red) is followed here via a targeted override rather than
+   changing the shared .ghost-btn class, which would affect every ghost
+   button in the app. */
+.settings-sign-out{color:var(--text-primary);}
+.settings-start-over{color:var(--text-tertiary);}
+.settings-sheet-overlay{position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:50; display:flex; align-items:flex-end;}
+.settings-sheet{width:100%; max-width:520px; margin:0 auto; background:var(--bg-card); border-radius:20px 20px 0 0; padding:var(--space-4) var(--space-3) calc(var(--space-4) + env(safe-area-inset-bottom, 0px)); display:flex; flex-direction:column; gap:var(--space-3); animation:scRise .3s ease-out both;}
+@media (prefers-reduced-motion: reduce){.settings-sheet{animation:none;}}
+.settings-sheet-title{font-size:17px; font-weight:600; color:var(--text-primary); margin-bottom:var(--space-1);}
+.settings-sheet-body{font-size:16px; font-weight:400; line-height:1.6; color:var(--text-primary);}
 .seg-control{display:flex; gap:var(--space-2); margin:0 0 var(--space-4);}
 .seg-item{flex:1; min-height:44px; border:none; background:transparent; border-radius:10px;
   font-family:'Inter',-apple-system,sans-serif; font-size:15px; font-weight:400;
