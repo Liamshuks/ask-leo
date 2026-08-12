@@ -4894,7 +4894,8 @@ function HomeGreeting({ name }) {
   }, []);
   return (
     <>
-      <h1 className="greet-hello">{timeGreeting(now)}{name && `, ${name}`}</h1>
+      <p className="greet-time">{timeGreeting(now)}{name ? "," : "."}</p>
+      {name && <p className="greet-name">{name}.</p>}
       <p className="greet-date">{longDate(now)} <span className="greet-clock">{clockTime(now)}</span></p>
     </>
   );
@@ -5034,8 +5035,8 @@ function ContinueLessonBanner({ onOpen }) {
   }, []);
   if (!pending || dismissed) return null;
   return (
-    <div className="continue-banner leo-accent">
-      <p className="continue-banner-line text-leo">
+    <div className="continue-banner">
+      <p className="continue-banner-text">
         {/* §1.5 — names only the held stage, never invents progress. */}
         Welcome back. We were in the middle of {String(pending.stageLabel).toLowerCase()} — let's pick it up from there.
       </p>
@@ -5052,37 +5053,43 @@ function HomeScreen({ profile, onOpen, animate, todayInfo, continuity, noticed }
   return (
     <div className="home-screen">
       {/* The mark is unanchored: deleting this one element leaves the layout intact. */}
-      <div className="brand-mark-sm"><WhiteboardLogo width={132} /></div>
+      <div className="home-brand-mark"><WhiteboardLogo width={96} /></div>
 
       <ContinueLessonBanner onOpen={onOpen} />
 
       <div className="home-greet">
         <HomeGreeting name={profile.name} />
-        {continuity && <p className="greet-cont leo-accent">{continuity}</p>}
+        {continuity && <p className="greet-cont">{continuity}</p>}
       </div>
 
-      <div className="leo-card today-card">
-        {DAILY_JOURNEY.map((item) => {
-          const done = item.isDone(todayInfo);
-          const gated = item.isGated && item.isGated(todayInfo);
-          const Icon = item.icon;
-          return (
-            <button key={item.key} className={"tc-row" + (done ? " tc-row-done" : "") + (gated ? " tc-row-gated" : "")} disabled={gated}
-              onClick={() => onOpen(item.page)}
-              aria-label={done ? `${item.label} — done. Open again.` : item.label}>
-              <Icon size={20} className="tc-icon" />
-              <span className="tc-label">{item.label}</span>
-              {done && <span className="tc-done"><Check size={16} /> Done</span>}
-              {!done && gated && <span className="tc-gate">{item.gateLabel}</span>}
-            </button>
-          );
-        })}
-        {nextItem ? (
+      {/* Today card — active state (nextItem exists) */}
+      {nextItem && (
+        <div className="today-card">
+          {DAILY_JOURNEY.map((item) => {
+            const done = item.isDone(todayInfo);
+            const gated = item.isGated && item.isGated(todayInfo);
+            const Icon = item.icon;
+            return (
+              <button key={item.key} className={"tc-row" + (done ? " tc-row-done" : "") + (gated ? " tc-row-gated" : "")} disabled={gated}
+                onClick={() => onOpen(item.page)}
+                aria-label={done ? `${item.label} — done. Open again.` : item.label}>
+                <Icon size={20} className="tc-icon" />
+                <span className="tc-label">{item.label}</span>
+                {done && <span className="tc-done"><Check size={16} /> Done</span>}
+                {!done && gated && <span className="tc-gate">{item.gateLabel}</span>}
+              </button>
+            );
+          })}
           <button className="primary-btn wide tc-cta" onClick={() => onOpen(nextItem.page)}>{nextItem.ctaLabel}</button>
-        ) : (
+        </div>
+      )}
+
+      {/* Today card — all-done state (no nextItem) */}
+      {!nextItem && (
+        <div className="today-card-done">
           <p className="tc-alldone">That's everything for today. I'll see you tomorrow.</p>
-        )}
-      </div>
+        </div>
+      )}
 
       {noticed && (
         <button className="noticed-card" onClick={() => onOpen("progress")} aria-label="View your progress">{noticed}</button>
@@ -14425,30 +14432,38 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 
 /* ---- Home screen (A2) — settled tokens only ---- */
 .home-screen{max-width:520px; margin:0 auto; padding:var(--space-4) var(--space-3) var(--space-5); text-align:left;}
-.home-greet{margin-bottom:var(--space-5);}
-.greet-hello{font-family:'Inter',-apple-system,sans-serif; font-size:22px; font-weight:600; line-height:1.3; color:var(--text-primary); margin:0; text-align:left;}
-.greet-date{font-size:14px; font-weight:400; color:var(--text-secondary); margin-top:var(--space-1); text-align:left;}
+.home-greet{margin-bottom:var(--space-6);}
+.greet-time{font-size:22px; font-weight:400; line-height:1.25; color:var(--text-secondary); margin:0;}
+.greet-name{font-size:28px; font-weight:600; line-height:1.2; color:var(--text-primary); margin:0;}
+/* Genesis amendment (11 Aug 2026): --text-tertiary, not --text-secondary as
+   originally specced — three distinct hierarchy steps (name primary, time
+   greeting secondary, date/time tertiary), not two. */
+.greet-date{font-size:14px; font-weight:400; color:var(--text-tertiary); margin-top:var(--space-1);}
 .greet-clock{margin-left:var(--space-2); color:var(--text-tertiary);}
-.greet-cont{font-size:16px; font-weight:500; line-height:1.6; color:var(--leo-green); margin-top:var(--space-3);}
-.today-card{display:flex; flex-direction:column; gap:var(--space-3); margin-top:var(--space-5);}
-.tc-row{display:flex; align-items:center; gap:var(--space-3); width:100%; min-height:48px;
-  background:none; border:none; padding:var(--space-2) 0; text-align:left; cursor:pointer;
-  font-family:'Inter',-apple-system,sans-serif; color:var(--text-primary); border-radius:8px;}
+.greet-cont{font-size:16px; font-weight:500; line-height:1.6; color:var(--leo-green); border-left:3px solid var(--leo-green-light); padding-left:var(--space-3); margin-top:var(--space-3); display:block;}
+.today-card{background:var(--bg-card); border-radius:12px; padding:20px; display:flex; flex-direction:column; /* no gap — dividers handle spacing */}
+.today-card-done{background:var(--leo-green-light); border-left:3px solid var(--leo-green); border-radius:0 12px 12px 0; padding:20px 20px 20px calc(20px - 3px);}
+.tc-row{display:flex; align-items:center; gap:var(--space-3); width:100%; min-height:52px;
+  background:none; border:none; border-bottom:1px solid var(--divider); padding:var(--space-2) 0; text-align:left; cursor:pointer;
+  font-family:'Inter',-apple-system,sans-serif; color:var(--text-primary);}
+.tc-row:last-of-type{border-bottom:none;}
 .tc-row:disabled{cursor:default;}
-.tc-row:focus-visible{outline:2px solid var(--leo-green); outline-offset:2px;}
+.tc-row:focus-visible{outline:2px solid var(--leo-green); outline-offset:2px; border-radius:4px;}
 .tc-icon{color:var(--leo-green); flex-shrink:0;}
+.tc-row-done .tc-icon{color:var(--color-success);}
 .tc-row-gated .tc-icon{color:var(--text-tertiary);}
 .tc-label{flex:1; font-size:16px; font-weight:400;}
+.tc-row-done .tc-label{color:var(--text-secondary);}
 .tc-done{display:inline-flex; align-items:center; gap:var(--space-1); font-size:14px; font-weight:400; color:var(--color-success);}
 .tc-gate{font-size:14px; font-weight:400; color:var(--text-tertiary);}
-.tc-cta{margin-top:var(--space-2);}
-.tc-alldone{font-size:16px; font-weight:400; line-height:1.6; color:var(--text-primary); margin-top:var(--space-2);}
+.tc-cta{margin-top:var(--space-3);}
+.tc-alldone{font-size:17px; font-weight:500; line-height:1.6; color:var(--text-primary); margin:0;}
 .noticed-card{display:block; width:100%; text-align:left; background:var(--bg-card);
-  border:none; border-radius:12px; padding:20px; margin-top:var(--space-4);
+  border:none; border-radius:12px; padding:20px; margin-top:var(--space-5);
   font-family:'Inter',-apple-system,sans-serif; font-size:16px; font-weight:400; line-height:1.6;
   color:var(--text-primary); cursor:pointer;}
 .noticed-card:focus-visible{outline:2px solid var(--leo-green); outline-offset:2px;}
-.home-skyline{margin-top:var(--space-6); opacity:.45;}
+.home-skyline{margin-top:var(--space-7); opacity:.45;}
 .home-skyline .sky-img{width:100%; max-width:none;}
 /* Whiteboard logo */
 .wb-splash{display:flex; align-items:center; justify-content:center; min-height:100dvh; background:var(--bg-warm);}
@@ -14457,6 +14472,10 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 .wb-logo-svg{display:block;}
 .brand-mark{display:flex; justify-content:center; margin:0 auto var(--space-4);}
 .brand-mark-sm{display:flex; justify-content:center; margin:0 auto var(--space-3);}
+/* Home-screen-only logo treatment. Deliberately separate from .brand-mark-sm
+   (shared with SignUp/SignIn/CheckEmail, which correctly stay centred at
+   132px) -- the redesign's left-aligned, smaller mark applies only here. */
+.home-brand-mark{display:flex; justify-content:flex-start; margin-bottom:var(--space-4);}
 /* Logo frame — Tier 1 only. 2px stroke (addendum §3.3), thinner than the board's 2.5px. */
 .wb-frame{fill:none; stroke:var(--leo-green); stroke-width:2;}
 .wb-frame-draw{stroke-dasharray:2669; stroke-dashoffset:2669; animation:wbStroke 800ms ease-out forwards;}
@@ -14852,8 +14871,8 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 
 .vocab-sheet-close{display:block; width:fit-content; margin:0 auto var(--space-3); background:none; border:none; font-size:14px; font-weight:500; color:var(--leo-green); cursor:pointer; padding:12px 16px; min-height:44px;}
 
-.continue-banner{background:var(--leo-green-light); border-radius:12px; padding:var(--space-4); margin:0 0 var(--space-4); display:flex; flex-direction:column; gap:var(--space-3);}
-.continue-banner-line{font-size:15px; line-height:1.6; margin:0;}
+.continue-banner{background:var(--leo-green-light); border-left:3px solid var(--leo-green); border-radius:0 12px 12px 0; padding:var(--space-3) var(--space-3) var(--space-3) calc(var(--space-3) - 3px); margin-bottom:var(--space-4); display:flex; align-items:center; gap:var(--space-3);}
+.continue-banner-text{font-size:16px; font-weight:400; color:var(--text-primary); flex:1; line-height:1.5;}
 .continue-banner-actions{display:flex; gap:var(--space-3);}
 .continue-banner-actions .primary-btn{flex:1;}
 .continue-banner-actions .ghost-btn{flex-shrink:0;}
