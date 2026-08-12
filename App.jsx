@@ -11451,8 +11451,15 @@ function buildTeacherContext({ profile, memoryStore, words, heard, diaryPages, a
 
 /* ---------------- Ask Leo panel (ASK_LEO_HELP_PANEL_PEDAGOGY_v1, Phase 1) ---------------- */
 
-function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext }) {
-  const [illuminating, setIlluminating] = useState(false);
+function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext, lessonBodyRef }) {
+  const [buttonState, setButtonState] = useState("idle"); // "idle" | "filling" | "settled"
+  // Mounted (DOM present, unstyled) and "on" (class applied, triggers the CSS
+  // transition) are deliberately separate — a CSS transition only fires on a
+  // genuine class change on an already-painted element, not on an element
+  // inserted already in its "on" state. Mount at 0ms, add "on" at 40ms.
+  const [momentMounted, setMomentMounted] = useState(false);
+  const [floodOn, setFloodOn] = useState(false);
+  const [identityOn, setIdentityOn] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [usedThisLesson, setUsedThisLesson] = useState(false);
   const [gated, setGated] = useState(false);
@@ -11461,26 +11468,43 @@ function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext
   const isSpent = false;
 
   const handleTap = () => {
-    setIlluminating(true);
-    // Captures the PRE-tap spent state for this specific panel-open — the
-    // first tap that makes the button spent must still show the real
-    // explanation flow, not the gate message.
+    setButtonState("filling");
     setGated(isSpent);
-    // Mounted at 100ms, not 200ms: the overlay (rendered inside AskLeoPanel)
-    // fades in the instant it mounts, matching "100ms: overlay fades in".
-    // The panel's own slide-up animation carries a 100ms CSS animation-delay
-    // (see .al-panel), so its visual movement doesn't begin until 200ms —
-    // both timings hit from a single mount point, no second timeout needed.
-    setTimeout(() => setPanelOpen(true), 100);
-    setTimeout(() => setIlluminating(false), 500);
-    if (!profile.isPaid) setUsedThisLesson(true);
+    setMomentMounted(true);
+    setTimeout(() => {
+      setFloodOn(true);
+      lessonBodyRef?.current?.classList.add("lesson-receding");
+    }, 40);
+    setTimeout(() => setIdentityOn(true), 100);
+    setTimeout(() => {
+      setButtonState("settled");
+      setIdentityOn(false);
+      setPanelOpen(true);
+    }, 320);
+    setTimeout(() => {
+      if (!profile.isPaid) setUsedThisLesson(true);
+    }, 800);
+  };
+
+  // Called the instant the panel's own dismiss animation begins (not when it
+  // finishes 280ms later) — "flood and lesson-receding removed simultaneously"
+  // means simultaneous with dismiss starting, per the spec.
+  const handleDismissStart = () => {
+    setFloodOn(false);
+    lessonBodyRef?.current?.classList.remove("lesson-receding");
+  };
+
+  const handleDismissComplete = () => {
+    setPanelOpen(false);
+    setMomentMounted(false);
+    setButtonState("idle");
   };
 
   return (
     <>
       <div className="ask-leo-btn-wrap">
         <button type="button"
-          className={"ask-leo-btn" + (illuminating ? " illuminating" : "") + (isSpent ? " spent" : "")}
+          className={"ask-leo-btn" + (buttonState === "filling" ? " filling" : "") + (buttonState === "settled" ? " settled" : "") + (isSpent ? " spent" : "")}
           onClick={handleTap}>
           {/* WhiteboardLogo returns null below 24px (verified this session) —
               Genesis's authorised fallback: a plain Leo Green circle. */}
@@ -11488,19 +11512,38 @@ function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext
           Ask Leo
         </button>
       </div>
+      {momentMounted && (
+        <div className="leo-moment">
+          <div className={"leo-flood" + (floodOn ? " on" : "")} />
+          <div className={"leo-identity" + (identityOn ? " on" : " off")}>
+            {/* Confirmed this session: WhiteboardLogo's Tier 3 (<48px) render
+                uses fill="var(--leo-green)" directly on the SVG shape — a
+                hardcoded presentational attribute, not currentColor. Neither
+                of Design's two proposed fixes (stroke override, or opacity
+                on an inherited currentColor) actually works against this
+                real implementation — there is no stroke and no currentColor
+                to inherit at this tier. Flagged in the delivery report.
+                CSS filter forces genuine white rendering regardless of the
+                shape's own fill value, working around the limitation. */}
+            <div className="leo-identity-mark"><WhiteboardLogo width={44} /></div>
+            <span className="leo-identity-name">LEO</span>
+          </div>
+        </div>
+      )}
       {panelOpen && (
         // PHASE 2: currentExerciseContext populated by ChooseFormExercise only at this stage — add other renderers incrementally
         <AskLeoPanel
           stageId={stageId} stageLabel={stageLabel} bp={bp} profile={profile}
           gated={gated} currentExerciseContext={currentExerciseContext}
-          onDismiss={() => setPanelOpen(false)}
+          onDismissStart={handleDismissStart}
+          onDismiss={handleDismissComplete}
         />
       )}
     </>
   );
 }
 
-function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, currentExerciseContext, onDismiss }) {
+function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, currentExerciseContext, onDismissStart, onDismiss }) {
   const touchStartY = React.useRef(null);
   const panelRef = React.useRef(null);
   const handRaiseRef = React.useRef(null);
@@ -11519,6 +11562,7 @@ function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, currentExerciseC
 
   const dismiss = () => {
     setDismissing(true);
+    onDismissStart?.();
     setTimeout(onDismiss, 280);
   };
 
@@ -11643,6 +11687,12 @@ function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, currentExerciseC
         onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         <div className="al-panel-top">
           <div className="al-handle" />
+          {/* At 16px WhiteboardLogo returns null (confirmed this session) —
+              plain circle fallback, exactly as ruled. */}
+          <div className="al-who">
+            <span className="al-who-mark" aria-hidden="true" />
+            <span className="al-who-name">LEO</span>
+          </div>
         </div>
         <div className="al-scroll">
 
@@ -11659,24 +11709,24 @@ function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, currentExerciseC
                 </div>
               )}
 
-              {explanation && <p className="text-leo al-explanation-enter">{explanation}</p>}
+              {explanation && <p className="text-leo al-expl">{explanation}</p>}
 
-              {explanation && phase !== "pivot" && <div className="al-separator" />}
+              {explanation && phase !== "pivot" && <div className="al-separator al-sep-el" />}
 
               {phase === "check" && explanation && (
                 <>
                   <p className="al-check-q">{checkQuestion}</p>
-                  <div className="input-row">
-                    <input className="text-input" placeholder="Type your answer…" value={input}
+                  <div className="input-row al-inp-row">
+                    <input className="text-input al-inp" placeholder="Type your answer…" value={input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleCheck()}
                       autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false} />
                     <MicButton onText={(t) => setInput(t)} />
                   </div>
-                  <button className="primary-btn wide" onClick={handleCheck} disabled={!input.trim() || loading}
+                  <button className="primary-btn wide al-check-btn-el" onClick={handleCheck} disabled={!input.trim() || loading}
                     style={{ marginTop: "var(--space-3)" }}>Check</button>
 
-                  <div className="al-hand-raise" ref={handRaiseRef}>
+                  <div className="al-hand-raise al-raise" ref={handRaiseRef}>
                     {handRaisePhase === "idle" && (
                       <>
                         <span className="al-hand-raise-label">Not sure about something? Ask me.</span>
@@ -11755,6 +11805,11 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
   // null for every other renderer and every other stage; the Ask Leo
   // panel prompt falls back to stage-level context only when null.
   const [currentExerciseContext, setCurrentExerciseContext] = useState(null);
+  // Final illumination build — direct DOM ref, not React state. The
+  // lesson-receding effect is a rapid, purely-visual, transient toggle;
+  // lifting it into state would re-render the entire lesson body on every
+  // Ask Leo tap for no benefit.
+  const lessonBodyRef = React.useRef(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [req, setReq] = useState({ context: "", grammar: "", vocabulary: "", skill: "", pronunciation: "" });
   const [sectionLoading, setSectionLoading] = useState(false);
@@ -12618,7 +12673,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
   );
 
   return (
-    <div>
+    <div ref={lessonBodyRef}>
       {/* §1.3 — when the stage renders an authored header (which
           carries its own eyebrow, title, purpose and dots), the outer
           title and dot row would duplicate it. */}
@@ -12647,7 +12702,7 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
       {stage.id === "grammar" && section && !section.skipped && <GrammarSection {...stageProps} section={section} onDone={(c, t) => advance({ grammar: `${c}/${t}` })} onExerciseChange={setCurrentExerciseContext} />}
       {stage.id === "summary" && section && <SummarySection bp={bp} section={section} vocab={vocabWords} onVocabTap={handleVocabTap} onFinish={finish} />}
 
-      <AskLeoButton stageId={stage.id} stageLabel={stage.label} bp={bp} profile={profile} currentExerciseContext={currentExerciseContext} />
+      <AskLeoButton stageId={stage.id} stageLabel={stage.label} bp={bp} profile={profile} currentExerciseContext={currentExerciseContext} lessonBodyRef={lessonBodyRef} />
 
       <VocabCardSheet card={vocabCard} lesson={null} onClose={() => setVocabCard(null)}
         onSave={() => vocabCard && leoMemory.saveWord && leoMemory.saveWord(vocabCard.word)}
@@ -14701,41 +14756,62 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 
 /* ---- Ask Leo panel (ASK_LEO_HELP_PANEL_PEDAGOGY_v1, Phase 1) ---- */
 .ask-leo-btn-wrap{position:fixed; bottom:0; left:0; right:0; padding:var(--space-2) var(--space-3) calc(var(--space-2) + env(safe-area-inset-bottom, 0px)); background:var(--bg-card); border-top:1px solid var(--divider); z-index:30; display:flex; justify-content:center;}
-.ask-leo-btn{display:inline-flex; align-items:center; gap:var(--space-2); background:none; border:1.5px solid var(--leo-green); border-radius:999px; padding:10px 24px; font-family:'Inter',-apple-system,sans-serif; font-size:15px; font-weight:500; color:var(--leo-green); cursor:pointer; position:relative; overflow:visible; min-height:44px; min-width:140px; transition:opacity .3s ease, border-color .3s ease, color .3s ease; letter-spacing:-.01em;}
+.ask-leo-btn{display:inline-flex; align-items:center; gap:var(--space-2); background:none; border:1.5px solid var(--leo-green); border-radius:999px; padding:10px 24px; font-family:'Inter',-apple-system,sans-serif; font-size:15px; font-weight:500; color:var(--leo-green); cursor:pointer; position:relative; overflow:visible; min-height:44px; min-width:140px; transform:scale(1); box-shadow:none; transition:transform .3s ease, box-shadow .3s ease, background-color .3s ease, border-color .3s ease, color .3s ease; letter-spacing:-.01em;}
 .ask-leo-btn:focus-visible{outline:2px solid var(--leo-green); outline-offset:3px; border-radius:999px;}
-/* WhiteboardLogo returns null below 24px (verified this session, not
-   assumed) — Genesis's authorised fallback. background:currentColor so
-   the mark fades to --text-tertiary with the rest of the button when
-   .spent applies, matching the behaviour the spec wanted from the logo's
-   own currentColor stroke. */
+/* WhiteboardLogo returns null below 24px (verified this session) —
+   Genesis's authorised fallback. background:currentColor so the mark
+   fades to --text-tertiary with the rest of the button when .spent
+   applies. */
 .ask-leo-mark{width:16px; height:16px; border-radius:50%; background:currentColor; flex-shrink:0; display:inline-block;}
 .ask-leo-btn.spent{border-color:var(--divider); color:var(--text-tertiary);}
-@keyframes leoFill{0%{background-color:transparent; color:var(--leo-green);} 100%{background-color:var(--leo-green); color:#ffffff;}}
-@keyframes leoRing{0%{width:0; height:0; opacity:.6;} 100%{width:300px; height:300px; opacity:0;}}
-@keyframes leoRingOuter{0%{width:0; height:0; opacity:.4;} 100%{width:500px; height:500px; opacity:0;}}
-.ask-leo-btn.illuminating{animation:leoFill 200ms ease-out forwards;}
-.ask-leo-btn.illuminating::before{content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); border-radius:50%; background:var(--leo-green); animation:leoRing 500ms ease-out forwards; pointer-events:none;}
-.ask-leo-btn.illuminating::after{content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); border-radius:50%; background:var(--leo-green); animation:leoRingOuter 800ms ease-out forwards; pointer-events:none;}
+/* 0ms — fills instantly, scales up, double shadow bloom announces the moment */
+.ask-leo-btn.filling{background-color:var(--leo-green); color:#ffffff; border-color:var(--leo-green); transform:scale(1.08); box-shadow:0 0 0 6px rgba(42,124,111,.18), 0 0 24px 10px rgba(42,124,111,.22);}
+/* 320ms — settles: fill stays, scale and shadow release */
+.ask-leo-btn.settled{background-color:var(--leo-green); color:#ffffff; border-color:var(--leo-green); transform:scale(1); box-shadow:none;}
+
+/* ---- The green flood — full-screen, deep gradient, not a flat colour.
+   position:absolute per spec (not fixed) — verify on device that the
+   nearest positioned ancestor gives full-viewport coverage. ---- */
+.leo-moment{position:absolute; inset:0; z-index:10; pointer-events:none;}
+.leo-flood{position:absolute; inset:0; background:linear-gradient(160deg, #2A5C52 0%, #1E4540 60%, #162F2C 100%); opacity:0; transition:opacity .28s ease;}
+.leo-flood.on{opacity:1;}
+.leo-identity{position:absolute; top:50%; left:50%; transform:translate(-50%,-60%); display:flex; flex-direction:column; align-items:center; gap:var(--space-2); opacity:0; transition:opacity .25s ease;}
+.leo-identity.on{opacity:1;}
+.leo-identity.off{opacity:0;}
+/* Confirmed this session: Tier 3 WhiteboardLogo (<48px) fills with
+   var(--leo-green) directly on the SVG shape — a hardcoded presentational
+   attribute, not currentColor. Neither of Design's two proposed fixes
+   (stroke override, or opacity on inherited currentColor) works against
+   the real implementation — there is no stroke and no currentColor here.
+   This filter forces genuine white rendering regardless of the shape's
+   own fill, working around the limitation directly. */
+.leo-identity-mark{filter:brightness(0) invert(1); opacity:.65;}
+.leo-identity-name{font-size:11px; font-weight:700; letter-spacing:.22em; color:rgba(255,255,255,.45);}
+
+/* ---- Lesson recedes behind the flood ---- */
+.lesson-receding{opacity:.10; filter:blur(2px); transition:opacity .3s ease, filter .3s ease;}
+
 .al-overlay{position:fixed; inset:0; background:rgba(26,26,26,.45); z-index:40; animation:alOverlayIn .35s ease-out forwards;}
 @keyframes alOverlayIn{from{opacity:0;} to{opacity:1;}}
-/* animation-delay:100ms — the button, overlay, and panel all mount at the
-   same 100ms JS timeout (see AskLeoButton), but the panel's own visual
-   slide must not start until 200ms per the sequence. The overlay has no
-   delay (its fade starts the instant it mounts, at 100ms); this delay is
-   what stages the panel 100ms behind it without needing separate mount
-   timing for the two. */
-.al-panel{position:fixed; left:0; right:0; bottom:0; max-height:62vh; min-height:320px; background:var(--bg-card); border-radius:24px 24px 0 0; z-index:41; display:flex; flex-direction:column; overflow:hidden; animation:alPanelUp .35s cubic-bezier(.32,.72,0,1) 100ms both;}
-@keyframes alPanelUp{from{transform:translateY(100%);} to{transform:translateY(0);}}
-.al-panel.dismissing{animation:alPanelDown .28s ease-in forwards;}
-@keyframes alPanelDown{from{transform:translateY(0);} to{transform:translateY(100%);}}
-/* Panel top tint — Leo's presence without chrome (§A.3). Contains only
-   .al-handle — no label, no icon, no avatar. Clean edge into .al-scroll:
-   no gradient, no border, no shadow — the warmth is ambient, not announced. */
-.al-panel-top{background:var(--bg-warm); min-height:80px; padding:0 var(--space-4) var(--space-3); flex-shrink:0;}
-.al-handle{width:36px; height:4px; background:var(--divider); border-radius:2px; margin:12px auto 0; flex-shrink:0;}
+/* Mounts at 320ms (see AskLeoButton). 200ms CSS delay before the visual
+   movement starts (520ms elapsed since tap), 420ms duration (completes
+   at 940ms). */
+.al-panel{position:fixed; left:0; right:0; bottom:0; max-height:62vh; min-height:320px; background:var(--bg-card); border-radius:24px 24px 0 0; z-index:41; display:flex; flex-direction:column; overflow:hidden; animation:alPanelOpen .42s cubic-bezier(.22,1,.36,1) 200ms both;}
+@keyframes alPanelOpen{from{transform:translateY(20px) scale(.97); opacity:0;} to{transform:translateY(0) scale(1); opacity:1;}}
+.al-panel.dismissing{animation:alPanelDismiss .28s ease-in forwards;}
+@keyframes alPanelDismiss{from{transform:translateY(0) scale(1); opacity:1;} to{transform:translateY(24px) scale(.97); opacity:0;}}
+
+/* panel-top warm tint — not a system token, local to al-panel-top */
+.al-panel-top{background:#F0FAF8; min-height:80px; padding:0 var(--space-4) var(--space-3); flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:var(--space-1);}
+.al-handle{width:36px; height:4px; background:rgba(42,124,111,.20); border-radius:2px; margin:12px auto 0; flex-shrink:0;}
+.al-who{display:flex; align-items:center; gap:var(--space-1); margin-top:var(--space-1);}
+/* At 16px WhiteboardLogo returns null (confirmed this session) — plain
+   circle fallback, exactly as ruled. */
+.al-who-mark{width:8px; height:8px; border-radius:50%; background:#2A7C6F; flex-shrink:0; display:inline-block;}
+.al-who-name{font-size:10px; font-weight:700; letter-spacing:.07em; color:#2A7C6F;}
 .al-scroll{flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:var(--space-4) var(--space-4) var(--space-5); overscroll-behavior:contain;}
 .al-separator{height:1px; background:var(--divider); margin:var(--space-4) 0 var(--space-3);}
-.al-check-q{font-size:16px; font-weight:500; line-height:1.6; color:var(--text-primary); margin-bottom:var(--space-3);}
+.al-check-q{font-size:16px; font-weight:500; line-height:1.6; color:var(--text-primary); margin-bottom:var(--space-3); animation:scRise .35s ease-out 140ms both;}
 .al-typing{display:flex; gap:4px; align-items:center; padding:var(--space-2) 0;}
 .al-typing-dot{width:6px; height:6px; border-radius:50%; background:var(--text-tertiary); animation:alDotPulse 1.2s ease-in-out infinite;}
 .al-typing-dot:nth-child(2){animation-delay:.2s;}
@@ -14743,14 +14819,27 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 @keyframes alDotPulse{0%,80%,100%{opacity:.3; transform:scale(.85);} 40%{opacity:1; transform:scale(1);}}
 /* Scoped to the explanation specifically — .text-leo is shared across many
    unrelated surfaces throughout the app and must not carry an animation
-   that would replay on every other use of that class. */
+   that would replay on every other use of that class. Used for the
+   hand-raise answer's own entrance (a separate, later moment); the main
+   explanation's initial arrival uses .al-expl instead, see below. */
 .al-explanation-enter{animation:scRise .4s ease-out both;}
 .al-confirm{font-size:16px; font-weight:400; line-height:1.6; color:var(--leo-green); margin-bottom:var(--space-4); animation:scRise .4s ease-out both;}
 .al-back{width:100%; margin-top:var(--space-3); font-size:15px;}
+
+/* ---- Staggered panel content arrival — scRise 0.35s ease-out, six delays ---- */
+.al-expl{animation:scRise .35s ease-out 0ms both;}
+.al-sep-el{animation:scRise .35s ease-out 80ms both;}
+.al-inp-row{animation:scRise .35s ease-out 200ms both;}
+.al-check-btn-el{animation:scRise .35s ease-out 260ms both;}
+.al-raise{animation:scRise .35s ease-out 320ms both;}
+
+/* Typed text renders in Leo green — the student is speaking in Leo's world */
+.al-inp{color:#2A7C6F; caret-color:#2A7C6F; font-weight:500;}
+
 /* Hand-raise — secondary, quieter than everything above it (§B.4) */
 .al-hand-raise{margin-top:var(--space-4); border-top:1px solid var(--divider); padding-top:var(--space-4);}
 .al-hand-raise-label{font-size:13px; font-weight:400; color:var(--text-secondary); margin-bottom:var(--space-2); display:block;}
-.al-hand-raise-input{width:100%; font-family:'Inter',-apple-system,sans-serif; font-size:14px; font-weight:400; color:var(--text-primary); background:var(--bg-warm); border:none; border-radius:8px; padding:10px 12px; resize:none; outline:none; line-height:1.5; min-height:38px; max-height:80px; overflow-y:auto; transition:background .2s ease;}
+.al-hand-raise-input{width:100%; font-family:'Inter',-apple-system,sans-serif; font-size:14px; font-weight:500; color:#2A7C6F; caret-color:#2A7C6F; background:var(--bg-warm); border:none; border-radius:8px; padding:10px 12px; resize:none; outline:none; line-height:1.5; min-height:38px; max-height:80px; overflow-y:auto; transition:background .2s ease;}
 .al-hand-raise-input:focus{background:var(--leo-green-light); outline:none;}
 .al-hand-raise-input::placeholder{color:var(--text-tertiary); font-style:italic;}
 .al-hand-raise-row{display:flex; align-items:center; gap:var(--space-2); margin-top:var(--space-2);}
@@ -14759,18 +14848,22 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 .al-hand-raise-send:disabled{opacity:.4; cursor:default;}
 .al-hand-raise-return{display:block; background:none; border:none; font-family:'Inter',-apple-system,sans-serif; font-size:13px; font-weight:400; color:var(--leo-green); cursor:pointer; padding:0; margin-top:var(--space-3); text-decoration:underline; text-decoration-color:rgba(42,124,111,.35); text-underline-offset:2px;}
 @media (prefers-reduced-motion: reduce){
-  /* The fill still happens under reduced motion — it is not decorative,
-     it tells the student the button heard them. No transition duration,
-     no ring. */
-  .ask-leo-btn.illuminating{animation:none; transition:none; background-color:var(--leo-green); color:#ffffff;}
-  .ask-leo-btn.illuminating::before{display:none;}
-  .ask-leo-btn.illuminating::after{display:none;}
+  .ask-leo-btn.filling{transform:scale(1); box-shadow:none; transition:none;}
+  .ask-leo-btn.settled{transition:none;}
+  .leo-moment{display:none;}
+  .lesson-receding{transition:none;}
   .al-overlay{animation:none;}
-  .al-panel{animation:none; transform:none;}
+  .al-panel{animation:none; transform:none; opacity:1;}
   .al-panel.dismissing{animation:none; display:none;}
   .al-typing-dot{animation:none; opacity:.5;}
   .al-confirm{animation:none;}
   .al-explanation-enter{animation:none;}
+  .al-check-q{animation:none;}
+  .al-expl{animation:none;}
+  .al-sep-el{animation:none;}
+  .al-inp-row{animation:none;}
+  .al-check-btn-el{animation:none;}
+  .al-raise{animation:none;}
 }
 
 /* ---- Settings screen (SETTINGS_SCREEN_SPECIFICATION_v1 §8) ---- */
