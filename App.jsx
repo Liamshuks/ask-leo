@@ -12673,34 +12673,44 @@ function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, acti
   );
 
   return (
-    <div ref={lessonBodyRef}>
-      {/* §1.3 — when the stage renders an authored header (which
-          carries its own eyebrow, title, purpose and dots), the outer
-          title and dot row would duplicate it. */}
-      {!stageHeader && <SectionTitle sub={`${bp.context} · ${stage.label} · ${lesson.stage + 1} of ${LESSON_STAGES.length}`}>Leo's Lesson</SectionTitle>}
-      {!stageHeader && (
-        <div className="step-dots" style={{ marginTop: "var(--space-2)" }}>
-          {LESSON_STAGES.map((s, i) => (
-            <span key={s.id} className={"step-dot" + (i < lesson.stage ? " step-dot-done" : i === lesson.stage ? " step-dot-current" : "")} />
-          ))}
-        </div>
-      )}
-      {STAGE_BRIDGE_TEXT[stage.id] && <p className="leo-accent text-leo" style={{ marginTop: "var(--space-5)", marginBottom: "var(--space-3)" }}>{STAGE_BRIDGE_TEXT[stage.id]}</p>}
+    <div>
+      {/* lessonBodyRef wraps ONLY the actual lesson content. AskLeoButton
+          (and therefore the panel, flood, and identity moment it renders)
+          must NOT be inside this div — CSS opacity on a parent affects
+          every descendant's compositing, including position:fixed
+          children. Nesting the button here was the actual cause of the
+          whole panel washing out to 10% opacity along with the lesson:
+          .lesson-receding was correctly dimming its target, but its
+          target incorrectly included the panel itself. */}
+      <div ref={lessonBodyRef}>
+        {/* §1.3 — when the stage renders an authored header (which
+            carries its own eyebrow, title, purpose and dots), the outer
+            title and dot row would duplicate it. */}
+        {!stageHeader && <SectionTitle sub={`${bp.context} · ${stage.label} · ${lesson.stage + 1} of ${LESSON_STAGES.length}`}>Leo's Lesson</SectionTitle>}
+        {!stageHeader && (
+          <div className="step-dots" style={{ marginTop: "var(--space-2)" }}>
+            {LESSON_STAGES.map((s, i) => (
+              <span key={s.id} className={"step-dot" + (i < lesson.stage ? " step-dot-done" : i === lesson.stage ? " step-dot-current" : "")} />
+            ))}
+          </div>
+        )}
+        {STAGE_BRIDGE_TEXT[stage.id] && <p className="leo-accent text-leo" style={{ marginTop: "var(--space-5)", marginBottom: "var(--space-3)" }}>{STAGE_BRIDGE_TEXT[stage.id]}</p>}
 
-      {needsAI && (!section || sectionLoading || section.skipped) && <LeoLoader label="I'm preparing this part…" level={profile.level} />}
+        {needsAI && (!section || sectionLoading || section.skipped) && <LeoLoader label="I'm preparing this part…" level={profile.level} />}
 
-      {/* The student has finished the intro before the background review landed.
-          This is the only place 2b can make anyone wait, and it is a real wait,
-          so it is shown honestly rather than left as a button that does nothing. */}
-      {reviewWait && <LeoLoader label="Preparing your next task…" level={profile.level} />}
+        {/* The student has finished the intro before the background review landed.
+            This is the only place 2b can make anyone wait, and it is a real wait,
+            so it is shown honestly rather than left as a button that does nothing. */}
+        {reviewWait && <LeoLoader label="Preparing your next task…" level={profile.level} />}
 
-      {!reviewWait && stage.id === "intro" && <IntroductionSection {...stageProps} onDone={(n) => advance({ intro: n })} />}
-      {stage.id === "vocab" && <VocabularySection {...stageProps} leoMemory={leoMemory} onDone={(c, t) => advance({ vocab: `${c}/${t}` })} />}
-      {stage.id === "pron" && <PronunciationSection {...stageProps} onDone={() => advance({ pron: "done" })} />}
-      {stage.id === "speak" && <SpeakingSection {...stageProps} memory={memory} onDone={(n, transcript) => advance({ speak: n, speakingTranscript: transcript })} />}
-      {stage.id === "skill" && section && !section.skipped && <SkillSection {...stageProps} section={section} onDone={(c, t) => advance({ skill: `${c}/${t}` })} />}
-      {stage.id === "grammar" && section && !section.skipped && <GrammarSection {...stageProps} section={section} onDone={(c, t) => advance({ grammar: `${c}/${t}` })} onExerciseChange={setCurrentExerciseContext} />}
-      {stage.id === "summary" && section && <SummarySection bp={bp} section={section} vocab={vocabWords} onVocabTap={handleVocabTap} onFinish={finish} />}
+        {!reviewWait && stage.id === "intro" && <IntroductionSection {...stageProps} onDone={(n) => advance({ intro: n })} />}
+        {stage.id === "vocab" && <VocabularySection {...stageProps} leoMemory={leoMemory} onDone={(c, t) => advance({ vocab: `${c}/${t}` })} />}
+        {stage.id === "pron" && <PronunciationSection {...stageProps} onDone={() => advance({ pron: "done" })} />}
+        {stage.id === "speak" && <SpeakingSection {...stageProps} memory={memory} onDone={(n, transcript) => advance({ speak: n, speakingTranscript: transcript })} />}
+        {stage.id === "skill" && section && !section.skipped && <SkillSection {...stageProps} section={section} onDone={(c, t) => advance({ skill: `${c}/${t}` })} />}
+        {stage.id === "grammar" && section && !section.skipped && <GrammarSection {...stageProps} section={section} onDone={(c, t) => advance({ grammar: `${c}/${t}` })} onExerciseChange={setCurrentExerciseContext} />}
+        {stage.id === "summary" && section && <SummarySection bp={bp} section={section} vocab={vocabWords} onVocabTap={handleVocabTap} onFinish={finish} />}
+      </div>
 
       <AskLeoButton stageId={stage.id} stageLabel={stage.label} bp={bp} profile={profile} currentExerciseContext={currentExerciseContext} lessonBodyRef={lessonBodyRef} />
 
