@@ -5178,7 +5178,7 @@ function ProgressPage({ stats, noticed, lessonLog, onOpenSettings, onGoToPlaceme
 
 /* ---------------- Settings ---------------- */
 
-const REMINDER_TIMES = [["morning", "Morning"], ["afternoon", "Afternoon"], ["evening", "Evening"]];
+const REMINDER_TIMES = [["morning", "Morning"], ["afternoon", "Afternoon"], ["evening", "Evening"], ["no-reminders", "No reminders"]];
 
 function SettingsPage({ profile, onProfileChange, onSignOut, onStartOver }) {
   const p = profile || {};
@@ -5232,28 +5232,33 @@ function SettingsPage({ profile, onProfileChange, onSignOut, onStartOver }) {
         )}
       </div>
 
-      {/* Card 2 — Lesson reminders (§4).
-          reminderTime does not exist as an onboarding step anywhere in the
-          codebase yet — there is nothing to be "pixel-identical" to (§4.4).
-          Built here fresh, following the spec's own described treatment
-          exactly: same .chip/.chip-on classes and hierarchy as every other
-          chip in the system, so that whenever the real onboarding
-          notification step is built, it has this exact treatment to match
-          — not the other way around, since this predates it. */}
+      {/* Card 2 — Lesson reminders. The onboarding notifications step (built
+          this pass) is now the reference; this uses the exact same
+          REMINDER_TIMES chip set and .chip/.chip-on treatment.
+          "undecided" (skipped in onboarding) renders identically to null
+          (never set) — no chip selected, prompt visible (Genesis ruling).
+          Settings saves on direct tap, not onboarding's select-then-confirm
+          flow — a returning student editing a live preference, not making
+          a first-time decision. */}
       <div className="settings-card">
         <label className="settings-label">Lesson reminders</label>
         <hr className="settings-divider" />
+        {reminderTime === null && (
+          <p className="settings-supporting" style={{ marginTop: 0, marginBottom: "var(--space-2)" }}>When would you like your reminder?</p>
+        )}
         <div className="settings-chips">
           {REMINDER_TIMES.map(([value, label]) => (
             <button key={value} type="button"
               className={"chip" + (reminderTime === value ? " chip-on" : "")}
               onClick={() => saveProfile({ reminderTime: value })}>{label}</button>
           ))}
-          <button type="button"
-            className={"chip" + (reminderTime === null ? " chip-on" : "")}
-            onClick={() => saveProfile({ reminderTime: null })}>No reminders</button>
         </div>
       </div>
+
+      {/* NOTIFICATION DELIVERY — NOT YET IMPLEMENTED: requires service
+          worker, push subscription, and backend scheduler. This card only
+          stores the student's stated preference; nothing here requests
+          notification permission, registers for push, or sends anything. */}
 
       {/* Card 3 — Interests (§5). INTEREST_LABELS — the flat 24-option v5
           array, not the retired 12-option constant. No pictograms, no
@@ -13165,7 +13170,7 @@ const SPOKEN_VARIETY = { zh: CHINESE_SPOKEN, "zh-Hant": CHINESE_SPOKEN }; // one
 // the substrate pronunciation teaching needs.
 const SPOKEN_VARIETY_LABEL = "Which of these do you speak at home?";
 
-const OB_STEPS = ["language", "welcome", "about-you", "interests", "level"];
+const OB_STEPS = ["language", "welcome", "about-you", "interests", "notifications", "level"];
 
 // Interests screen v5 (§3, §4.1). Four clusters of six, unlabelled — the
 // grouping is felt via spacing (--space-5 between, --space-2 within), never
@@ -13206,6 +13211,14 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
   const [hardest, setHardest] = useState(ip.hardest || []);
   const [occupation, setOccupation] = useState(ip.occupation || null);
   const [spokenVariety, setSpokenVariety] = useState(ip.spokenVariety || null);
+  // Onboarding chip taps set this directly to one of the four named values
+  // ("morning"/"afternoon"/"evening"/"no-reminders"); the ghost "Skip for
+  // now" sets "undecided" directly. Neither of those two match any chip,
+  // so no chip shows selected in either case — the same state serves as
+  // both the chip-selection UI and the final value finish() reads.
+  const [reminderTime, setReminderTime] = useState(
+    ip.reminderTime && ["morning", "afternoon", "evening", "no-reminders"].includes(ip.reminderTime) ? ip.reminderTime : null
+  );
   const [level, setLevel] = useState(ip.level || null);
   const [showLevelPicker, setShowLevelPicker] = useState(false);
 
@@ -13246,6 +13259,7 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
     name: name.trim(), lang, country,
     level: lvl || level, interests,
     settlement, goals, hardest, occupation, spokenVariety,
+    reminderTime,
   }, wantsPlacement);
 
   /* Leo's greeting, L1 line — SUPPRESSED. §13.4a (Genesis, 22 July 2026);
@@ -13510,6 +13524,38 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
       </div>
     </div>
   );
+
+  // ── PAGE 3c: NOTIFICATIONS ── (Back → interests, Continue → level)
+  if (obStep === "notifications") return (
+    <div className="onboard">
+      <div className="ob-card fade-in" style={{ textAlign: "left" }}>
+        {obDots}
+        <p className="leo-accent">I can remind you when it's time to study — at whatever time works for you.</p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
+          {REMINDER_TIMES.map(([value, label]) => (
+            <button key={value} type="button"
+              className={"chip" + (reminderTime === value ? " chip-on" : "")}
+              onClick={() => setReminderTime(value)}>{label}</button>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
+          <button className="ghost-btn" onClick={back}>Back</button>
+          <button className="primary-btn" disabled={!reminderTime} onClick={next}>Continue</button>
+        </div>
+        <div style={{ textAlign: "center", marginTop: "var(--space-2)" }}>
+          <button type="button" className="ghost-btn" style={{ color: "var(--text-secondary)" }}
+            onClick={() => { setReminderTime("undecided"); next(); }}>Skip for now</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // NOTIFICATION DELIVERY — NOT YET IMPLEMENTED: requires service worker,
+  // push subscription, and backend scheduler. This step only captures the
+  // student's stated preference into profile.reminderTime; nothing in this
+  // file requests notification permission, registers for push, or sends
+  // anything. See NOTIFICATION_DESIGN_SPECIFICATION_v1 §5-§6 for the full
+  // delivery design, once that infrastructure exists.
 
   // ── PAGE 4: LEVEL PICKER sub-view ── (Back → Page 4 main)
   if (obStep === "level" && showLevelPicker) return (
