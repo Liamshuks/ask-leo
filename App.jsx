@@ -14772,7 +14772,17 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 /* ---- The green flood — full-screen, deep gradient, not a flat colour.
    position:absolute per spec (not fixed) — verify on device that the
    nearest positioned ancestor gives full-viewport coverage. ---- */
-.leo-moment{position:absolute; inset:0; z-index:10; pointer-events:none;}
+/* Fixed, not absolute — this was the actual bug (see delivery report).
+   Neither .app nor .app-body establishes a positioned ancestor, so
+   position:absolute resolved against the document's initial containing
+   block: inset:0 placed the flood at the top of the whole PAGE, not the
+   current viewport. Any student scrolled into the lesson content would
+   never see it — it rendered off-screen above their scroll position.
+   The lesson-receding dim (a normal in-flow element, toggled via ref)
+   worked correctly the whole time, which is exactly why only the flood
+   was reported missing. position:fixed is always viewport-relative,
+   regardless of scroll position or DOM ancestry. */
+.leo-moment{position:fixed; inset:0; z-index:10; pointer-events:none;}
 .leo-flood{position:absolute; inset:0; background:linear-gradient(160deg, #2A5C52 0%, #1E4540 60%, #162F2C 100%); opacity:0; transition:opacity .28s ease;}
 .leo-flood.on{opacity:1;}
 .leo-identity{position:absolute; top:50%; left:50%; transform:translate(-50%,-60%); display:flex; flex-direction:column; align-items:center; gap:var(--space-2); opacity:0; transition:opacity .25s ease;}
