@@ -5,7 +5,9 @@ import {
   LayoutDashboard, Check, X, Search, Send, Plus, Trash2, Loader2, ChevronLeft, ChevronRight, ExternalLink, Repeat,
   Home, TrendingUp, PenLine, GraduationCap, RotateCcw,
   AlertTriangle, Waves, Sun, CreditCard, Stethoscope, Briefcase,
-  User, UserCheck, Users, Box, Volume2
+  User, UserCheck, Users, Box, Volume2,
+  ChefHat, ShoppingBag, Navigation, DoorOpen, Wallet, BookCheck, Car, Smartphone,
+  Trophy, Dumbbell, Music, Clapperboard, Palette, Coffee, TreePine, PawPrint, Image, Pencil,
 } from "lucide-react";
 
 /* ============================================================
@@ -13035,6 +13037,28 @@ const SPOKEN_VARIETY_LABEL = "Which of these do you speak at home?";
 
 const OB_STEPS = ["language", "welcome", "about-you", "interests", "level"];
 
+// Interests screen v5 (§3, §4.1). Four clusters of six, unlabelled — the
+// grouping is felt via spacing (--space-5 between, --space-2 within), never
+// announced with a heading. Icon substitutions approved by Genesis where the
+// spec's original choice was unavailable in the installed lucide-react
+// version: Trophy for Sport (not Volleyball), BookCheck for English exams
+// (not ClipboardCheck), ShoppingBag for Shopping (not ShoppingBasket),
+// Navigation for Getting around (not Bus), DoorOpen for Renting a home (not
+// KeyRound), PawPrint for Pets (not Dog), Image for Photos (not Camera),
+// Book for Reading (not BookOpen, already used by Reading's own row in
+// several other places in this file). Fitness (Dumbbell) unchanged.
+const INTEREST_CLUSTERS = [
+  [["Cooking", ChefHat], ["Shopping", ShoppingBag], ["Getting around", Navigation],
+   ["Renting a home", DoorOpen], ["Health", Stethoscope], ["Money", Wallet]],
+  [["Work", Briefcase], ["Study", GraduationCap], ["English exams", BookCheck],
+   ["Driving", Car], ["Technology", Smartphone], ["Reading", Book]],
+  [["Sport", Trophy], ["Fitness", Dumbbell], ["Music", Music],
+   ["Film & TV", Clapperboard], ["Gaming", Gamepad2], ["Drawing & art", Palette]],
+  [["Family", Users], ["Friends", Coffee], ["Beach", Waves],
+   ["Nature", TreePine], ["Pets", PawPrint], ["Photos", Image]],
+];
+const INTEREST_LABELS = INTEREST_CLUSTERS.flat().map(([label]) => label);
+
 function Onboarding({ onDone, initialStep, initialProfile }) {
   const ip = initialProfile || {};
   const [obStep, setObStep] = useState(initialStep || OB_STEPS[0]);
@@ -13055,11 +13079,26 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
   const [level, setLevel] = useState(ip.level || null);
   const [showLevelPicker, setShowLevelPicker] = useState(false);
 
-  const INTEREST_OPTIONS = [
-    "Sport", "Music", "Movies & TV", "Food & cooking",
-    "Travel", "Gaming", "Study", "Work",
-    "Australian life", "Reading", "Art & design", "Other",
-  ];
+  /* Free text is stored as an ordinary member of `interests` — spec §6:
+     "the card is now, in effect, a twenty-fifth selected chip." Any value in
+     `interests` that isn't one of the 24 preset labels IS the free-text
+     entry (there is only ever one, since the UI exposes a single field).
+     This means resume/persistence needs no separate profile field. */
+  const freeTextValue = interests.find((i) => !INTEREST_LABELS.includes(i)) || "";
+  const [freeTextOpen, setFreeTextOpen] = useState(false);
+  const [freeTextDraft, setFreeTextDraft] = useState(freeTextValue);
+  const openFreeText = () => { setFreeTextDraft(freeTextValue); setFreeTextOpen(true); };
+  const closeFreeText = () => {
+    const trimmed = freeTextDraft.trim();
+    setInterests((prev) => {
+      const withoutOldFreeText = prev.filter((i) => INTEREST_LABELS.includes(i));
+      return trimmed ? [...withoutOldFreeText, trimmed] : withoutOldFreeText;
+    });
+    setFreeTextOpen(false);
+    // Same "any kind of tap" firing as toggleInterest below — engaging with
+    // the free-text card is exactly as much an interest signal as a chip tap.
+    if (!hasAcknowledged) setHasAcknowledged(true);
+  };
 
   const toggleInterest = (item) => {
     setInterests((prev) =>
@@ -13272,19 +13311,63 @@ function Onboarding({ onDone, initialStep, initialProfile }) {
     <div className="onboard">
       <div className="ob-card fade-in" style={{ textAlign: "left" }}>
         {obDots}
-        <p className="text-leo" style={{ marginBottom: "var(--space-2)" }}>What are you interested in?</p>
-        <p className="text-supporting" style={{ margin: "0 0 var(--space-4)", opacity: 0.8 }}>Choose as many as you like. This helps me plan lessons around things you enjoy.</p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
-          {INTEREST_OPTIONS.map((item) => (
-            <button key={item}
-              className={"chip" + (interests.includes(item) ? " chip-on" : "")}
-              onClick={() => toggleInterest(item)}>{item}</button>
+        <p className="leo-accent int-intro">Tell me what you like. I'll build your lessons around it.</p>
+        <div className="int-clusters">
+          {INTEREST_CLUSTERS.map((cluster, ci) => (
+            <div className="int-cluster" key={ci}>
+              {cluster.map(([label, Icon]) => {
+                const on = interests.includes(label);
+                return (
+                  <button key={label} type="button" role="button" aria-pressed={on}
+                    className={"int-card" + (on ? " int-card-on" : "")}
+                    onClick={() => toggleInterest(label)}>
+                    <Icon size={44} className="int-icon" aria-hidden="true" />
+                    <span className="int-label">{label}</span>
+                    {on && <Check size={16} className="int-tick" aria-hidden="true" />}
+                  </button>
+                );
+              })}
+            </div>
           ))}
+        </div>
+        {/* Free-text card — full width, sits after the four clusters, not
+            inside their 2-column grid (§6: "full-width card"). One
+            persistent element, not two swapped elements, so the collapsed
+            <-> expanded transition is a genuine animatable height change
+            (§9: instantaneous under reduced motion). */}
+        <div className={"int-card int-freetext" + (freeTextOpen ? " int-freetext-open" : (freeTextValue ? " int-card-on" : ""))}>
+          {!freeTextOpen ? (
+            <button type="button" role="button" aria-pressed={!!freeTextValue}
+              className="int-freetext-collapsed-btn" onClick={openFreeText}>
+              <Pencil size={44} className="int-icon int-freetext-pencil" aria-hidden="true" />
+              <span className="int-label">{freeTextValue || "Something else"}</span>
+              {freeTextValue && <Check size={16} className="int-tick" aria-hidden="true" />}
+            </button>
+          ) : (
+            <div className="int-freetext-expanded-content">
+              <Pencil size={20} className="int-freetext-pencil-sm" aria-hidden="true" />
+              <textarea
+                className="int-freetext-textarea" rows={3} autoFocus maxLength={200}
+                value={freeTextDraft}
+                onChange={(e) => setFreeTextDraft(e.target.value)}
+                onBlur={closeFreeText}
+              />
+              {freeTextDraft.length >= 180 && (
+                <span className={"int-freetext-counter" + (freeTextDraft.length >= 200 ? " int-freetext-counter-cap" : "")}>
+                  {freeTextDraft.length}/200
+                </span>
+              )}
+              {lang && LANGS[lang] && (
+                <p className="int-freetext-endonym">{LANGS[lang].native} · English</p>
+              )}
+            </div>
+          )}
         </div>
         {/* Item 5 — Psychological Design Audit (Genesis, Aug 2026):
             Leo acknowledgement line on first chip selection.
             scRise entrance, leo-accent block, fires once only.
-            PLACEHOLDER WORDING — Lessons to supply final copy. */}
+            PLACEHOLDER WORDING — Lessons to supply final copy.
+            UNCHANGED per Genesis instruction — do not modify this logic. */}
         {hasAcknowledged && (
           <p className="leo-accent" style={{ animation: "scRise .35s ease-out both", marginTop: "var(--space-4)" }}>
             Good — I'll keep that in mind when I plan your lessons.
@@ -14939,6 +15022,39 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
 .welcome-l1s{font-family:'Inter'; font-size:16px; color:var(--leo-green); opacity:0; margin-top:12px; animation:fadeUp .8s ease 3.9s forwards;}
 /* ---- Onboarding wizard ---- */
 .ob-card{max-width:440px; width:100%; background:#fff; border-radius:20px; padding:26px 24px 22px; text-align:center;}
+
+/* ---- Interests screen v5 (§3-§9) ---- */
+.int-intro{font-size:16px; font-weight:500; margin:var(--space-5) 0;}
+.int-clusters{display:flex; flex-direction:column; gap:var(--space-5);}
+.int-cluster{display:grid; grid-template-columns:1fr 1fr; gap:var(--space-2);}
+.int-card{position:relative; height:112px; background:var(--bg-card); border-radius:12px; border:none; box-shadow:none;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:var(--space-2); cursor:pointer;
+  font-family:'Inter',sans-serif; padding:0; transform:scale(1);
+  transition:background-color 200ms ease-out, transform 150ms ease-out;}
+.int-card:active{transform:scale(.97); transition:background-color 200ms ease-out, transform 100ms ease-out;}
+.int-card-on{background:var(--leo-green-light);}
+.int-icon{color:var(--text-secondary); flex-shrink:0; transition:color 200ms ease-out;}
+.int-card-on .int-icon{color:var(--leo-green);}
+.int-label{font-size:16px; font-weight:400; color:var(--text-primary); text-align:center; transition:color 200ms ease-out, font-weight 200ms ease-out;}
+.int-card-on .int-label{color:var(--leo-green); font-weight:500;}
+.int-tick{position:absolute; top:8px; right:8px; color:var(--leo-green);}
+/* Free-text — one persistent element so collapsed <-> expanded is a real
+   animatable height change, not two swapped DOM trees. */
+.int-freetext{width:100%; min-height:112px; margin-top:var(--space-5); transition:min-height 250ms ease-out;}
+.int-freetext-collapsed-btn{width:100%; height:100%; min-height:112px; background:none; border:none;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:var(--space-2); cursor:pointer; padding:0;}
+.int-freetext-pencil{color:var(--leo-green);}
+.int-freetext-open{min-height:200px;}
+.int-freetext-expanded-content{display:flex; flex-direction:column; gap:var(--space-2); padding:var(--space-2) 0; width:100%;}
+.int-freetext-pencil-sm{color:var(--leo-green); flex-shrink:0;}
+.int-freetext-textarea{width:100%; border:none; outline:none; background:var(--bg-warm); border-radius:8px; padding:var(--space-2);
+  font-family:'Inter',sans-serif; font-size:16px; font-weight:400; color:var(--text-primary); resize:none;}
+.int-freetext-counter{font-size:12px; font-weight:500; color:var(--text-tertiary); align-self:flex-end;}
+.int-freetext-counter-cap{color:var(--color-warning);}
+.int-freetext-endonym{font-size:12px; font-weight:500; color:var(--text-tertiary); margin:0;}
+@media (prefers-reduced-motion: reduce){
+  .int-freetext{transition:none;}
+}
 .ob-dots{display:flex; gap:8px; justify-content:center; margin:14px 0 22px;}
 .ob-dot{width:8px; height:8px; border-radius:50%; flex-shrink:0; transition:width .25s ease, height .25s ease, background-color .25s ease, border-color .25s ease;}
 .ob-dot-done{background:var(--leo-green); border:none;}
