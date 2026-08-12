@@ -11473,7 +11473,44 @@ function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext
     setMomentMounted(true);
     setTimeout(() => {
       setFloodOn(true);
-      lessonBodyRef?.current?.classList.add("lesson-receding");
+      const el = lessonBodyRef?.current;
+      if (el) {
+        const reduce = typeof window !== "undefined" && window.matchMedia
+          && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        // FLIP — position/top/left cannot be smoothly transitioned by CSS,
+        // so without this the shrink-to-centre would be an instant snap,
+        // not a smooth move.
+        // First: where the element actually is right now, before anything
+        // changes.
+        const first = el.getBoundingClientRect();
+        el.classList.add("lesson-receding");
+        if (reduce) {
+          // No animation under reduced motion — the class alone already
+          // places it at the final target; nothing further to do.
+        } else {
+          // Last: where the class has just placed it (fixed, centred,
+          // scaled — its real target).
+          const last = el.getBoundingClientRect();
+          // Invert: a transform that makes it visually sit exactly where
+          // it was a moment ago, applied with no transition so the browser
+          // never paints the jump.
+          const scaleX = first.width / last.width;
+          const scaleY = first.height / last.height;
+          const dx = (first.left + first.width / 2) - (last.left + last.width / 2);
+          const dy = (first.top + first.height / 2) - (last.top + last.height / 2);
+          el.style.transition = "none";
+          el.style.transform = `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(${scaleX}, ${scaleY})`;
+          // Force a reflow so the browser commits the inverted transform
+          // before the next line changes it — otherwise both writes
+          // collapse into one and there is nothing left to animate.
+          // eslint-disable-next-line no-unused-expressions
+          el.offsetHeight;
+          // Play: release to the class's own target transform. The
+          // browser now has a genuine start and end state to interpolate.
+          el.style.transition = "transform .5s cubic-bezier(.22,1,.36,1)";
+          el.style.transform = "";
+        }
+      }
     }, 40);
     setTimeout(() => setIdentityOn(true), 100);
     setTimeout(() => {
@@ -11491,7 +11528,39 @@ function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext
   // means simultaneous with dismiss starting, per the spec.
   const handleDismissStart = () => {
     setFloodOn(false);
-    lessonBodyRef?.current?.classList.remove("lesson-receding");
+    const el = lessonBodyRef?.current;
+    if (el) {
+      const reduce = typeof window !== "undefined" && window.matchMedia
+        && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      // Reverse FLIP — same technique, opposite direction. Without this the
+      // shrunk content would instantly snap back to full size the moment
+      // the class is removed, exactly the jump this whole approach exists
+      // to avoid.
+      const first = el.getBoundingClientRect();
+      el.classList.remove("lesson-receding");
+      if (reduce) {
+        // Class removal alone already restores the natural layout; nothing
+        // further to do.
+      } else {
+        const last = el.getBoundingClientRect();
+        const scaleX = first.width / last.width;
+        const scaleY = first.height / last.height;
+        const dx = (first.left + first.width / 2) - (last.left + last.width / 2);
+        const dy = (first.top + first.height / 2) - (last.top + last.height / 2);
+        el.style.transition = "none";
+        el.style.transform = `translate(${dx}px, ${dy}px) scale(${scaleX}, ${scaleY})`;
+        // eslint-disable-next-line no-unused-expressions
+        el.offsetHeight;
+        el.style.transition = "transform .4s ease-out";
+        el.style.transform = "";
+        // Clean up the inline overrides once the transition completes, so
+        // they never linger to interfere with a later Ask Leo tap.
+        setTimeout(() => {
+          el.style.transition = "";
+          el.style.transform = "";
+        }, 420);
+      }
+    }
   };
 
   const handleDismissComplete = () => {
@@ -14809,7 +14878,15 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 .leo-identity-name{font-size:11px; font-weight:700; letter-spacing:.22em; color:rgba(255,255,255,.45);}
 
 /* ---- Lesson recedes behind the flood ---- */
-.lesson-receding{opacity:.10; filter:blur(2px); transition:opacity .3s ease, filter .3s ease;}
+/* Shrinks and centres the current task in the flood, rather than fading
+   it away — the student keeps sight of what they were doing. JS applies
+   the FLIP technique when this class is added/removed (see AskLeoButton's
+   handleTap/handleDismissStart) — position/top/left cannot be smoothly
+   transitioned by CSS alone, so without that JS work this would be an
+   instant snap, not a move. z-index 11 sits above .leo-moment's 10, so
+   the shrunk content renders on top of the green, with green visible
+   around it. */
+.lesson-receding{position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(.55); width:min(340px, calc(100vw - 80px)); max-height:55vh; overflow:hidden; z-index:11; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.35); pointer-events:none; background:var(--bg-warm);}
 
 .al-overlay{position:fixed; inset:0; background:rgba(26,26,26,.45); z-index:40; animation:alOverlayIn .35s ease-out forwards;}
 @keyframes alOverlayIn{from{opacity:0;} to{opacity:1;}}
@@ -14871,7 +14948,10 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
   .ask-leo-btn.filling{transform:scale(1); box-shadow:none; transition:none;}
   .ask-leo-btn.settled{transition:none;}
   .leo-moment{display:none;}
-  .lesson-receding{transition:none;}
+  /* .lesson-receding's own transition is now handled entirely by JS
+     (see handleTap/handleDismissStart) — under reduced motion the FLIP
+     animation is skipped there directly, so there is nothing left for
+     this media query to suppress on the class itself. */
   .al-overlay{animation:none;}
   .al-panel{animation:none; transform:none; opacity:1;}
   .al-panel.dismissing{animation:none; display:none;}
