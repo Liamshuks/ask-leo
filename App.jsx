@@ -4729,18 +4729,18 @@ function LeoLoader({ label, level }) {
    wait: the same "text changes -> DrawnRule redraws" mechanism, given more
    sentences to say over a much longer silence. */
 const PLANNING_WAIT_LINES = [
-  "Let me plan something for you…",
-  "Thinking about what you need most today.",
-  "Choosing words you'll actually use.",
-  "Picking examples from real life.",
-  "Building today around where you're headed.",
-  "Getting the right words ready for you.",
-  "Making sure today follows on from last time.",
-  "Shaping this around your life.",
-  "Good lessons take a moment — nearly there.",
-  "Putting today together, just for you.",
-  "Thinking like your teacher, not a machine.",
-  "Finding the version of this that fits you.",
+  "Thinking about where to start today.",
+  "Pulling together something that fits your English.",
+  "Choosing a situation you'll meet this week.",
+  "Working out how much is enough for one lesson.",
+  "Picking examples that will actually stick.",
+  "Deciding what to leave out.",
+  "Lining up the grammar with today's words.",
+  "Building it around what you're interested in.",
+  "Keeping the English real — Australia, not textbook.",
+  "One point, taught properly. That's my plan.",
+  "Making room for you to speak, not just listen.",
+  "Sketching questions that reward a real answer.",
 ];
 
 function shuffleOnce(arr) {
@@ -4772,7 +4772,7 @@ function PlanningWaitCycle() {
   return (
     <div className="wait-block" role="status" aria-live="polite">
       <DrawnRule key={idx} />
-      <p className="wait-label text-leo" key={"pw" + idx}>{order[idx]}</p>
+      <p className="wait-label text-leo plan-wait-label" key={"pw" + idx}>{order[idx]}</p>
     </div>
   );
 }
@@ -14461,6 +14461,13 @@ button:active{transform:scale(.97); transition:transform 100ms ease-out;}
   animation:drawTick 350ms ease-out forwards;}
 @keyframes drawTick{to{stroke-dashoffset:0;}}
 .wait-label{font-size:16px; font-weight:500; color:var(--text-primary); opacity:.75; max-width:28ch; line-height:1.6; margin:0; animation:scRise 400ms 200ms both ease-out;}
+/* Genesis fix: .wait-label is shared with WaitIndicator's escalation ladder
+   (section retries, chat typing, vocab lookups), which must keep its
+   existing look. Both usages combine wait-label with text-leo identically,
+   so a plain .wait-label.text-leo compound rule would restyle both — not
+   an isolated fix. This third class scopes the new typography to only
+   PlanningWaitCycle's own line. */
+.plan-wait-label{font-size:15px; font-weight:400; color:var(--leo-green);}
 .wait-inline .wait-label{font-size:14px; opacity:1; color:var(--leo-green);}
 /* §5 — reduced motion shows the finished artefact, never the absence of one.
    The escalation ladder still changes on schedule: that is information. */
