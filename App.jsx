@@ -11460,6 +11460,11 @@ function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext
   const [momentMounted, setMomentMounted] = useState(false);
   const [floodOn, setFloodOn] = useState(false);
   const [identityOn, setIdentityOn] = useState(false);
+  /* Illumination enhancement (Genesis, 23 Aug 2026) — edge rays and single
+     pulse. Built to the ruling's literal values, not the synced spec doc's
+     (Genesis confirmed: build to the ruling as written). */
+  const [raysOn, setRaysOn] = useState(false);
+  const [pulseFire, setPulseFire] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [usedThisLesson, setUsedThisLesson] = useState(false);
   const [gated, setGated] = useState(false);
@@ -11473,21 +11478,58 @@ function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext
     setMomentMounted(true);
     setTimeout(() => {
       setFloodOn(true);
-      // Option B (final ruling) — the lesson content does not dim or shrink,
-      // it disappears entirely the moment the flood arrives. No FLIP
-      // technique needed here: opacity:0 with no transition is a plain,
-      // instant class toggle, not a position/size change.
-      lessonBodyRef?.current?.classList.add("lesson-receding");
+      setRaysOn(true); // Illumination enhancement — rays appear with the flood, per ruling
+      const el = lessonBodyRef?.current;
+      if (el) {
+        const reduce = typeof window !== "undefined" && window.matchMedia
+          && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        // FLIP — position/top/left cannot be smoothly transitioned by CSS,
+        // so without this the shrink-to-centre would be an instant snap,
+        // not a smooth move.
+        // First: where the element actually is right now, before anything
+        // changes.
+        const first = el.getBoundingClientRect();
+        el.classList.add("lesson-receding");
+        if (reduce) {
+          // No animation under reduced motion — the class alone already
+          // places it at the final target; nothing further to do.
+        } else {
+          // Last: where the class has just placed it (fixed, centred,
+          // scaled — its real target).
+          const last = el.getBoundingClientRect();
+          // Invert: a transform that makes it visually sit exactly where
+          // it was a moment ago, applied with no transition so the browser
+          // never paints the jump.
+          const scaleX = first.width / last.width;
+          const scaleY = first.height / last.height;
+          const dx = (first.left + first.width / 2) - (last.left + last.width / 2);
+          const dy = (first.top + first.height / 2) - (last.top + last.height / 2);
+          el.style.transition = "none";
+          el.style.transform = `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(${scaleX}, ${scaleY})`;
+          // Force a reflow so the browser commits the inverted transform
+          // before the next line changes it — otherwise both writes
+          // collapse into one and there is nothing left to animate.
+          // eslint-disable-next-line no-unused-expressions
+          el.offsetHeight;
+          // Play: release to the class's own target transform. The
+          // browser now has a genuine start and end state to interpolate.
+          el.style.transition = "transform .5s cubic-bezier(.22,1,.36,1)";
+          el.style.transform = "";
+        }
+      }
     }, 40);
     setTimeout(() => setIdentityOn(true), 100);
     setTimeout(() => {
       setButtonState("settled");
       setIdentityOn(false);
       setPanelOpen(true);
+      setPulseFire(true); // Illumination enhancement — fires at the exact moment the panel rises and identity fades
     }, 320);
     setTimeout(() => {
       if (!profile.isPaid) setUsedThisLesson(true);
+      setRaysOn(false); // Illumination enhancement — removed alongside the button's spent transition
     }, 800);
+    setTimeout(() => setPulseFire(false), 1000); // Illumination enhancement — cleanup only, animation already complete
   };
 
   // Called the instant the panel's own dismiss animation begins (not when it
@@ -11495,9 +11537,40 @@ function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext
   // means simultaneous with dismiss starting, per the spec.
   const handleDismissStart = () => {
     setFloodOn(false);
-    // Restores the lesson content: opacity back to 1, pointer-events
-    // restored. Plain class removal — nothing to invert or animate.
-    lessonBodyRef?.current?.classList.remove("lesson-receding");
+    setRaysOn(false); // Illumination enhancement — tied to flood's on-state; cleared together on early dismiss
+    const el = lessonBodyRef?.current;
+    if (el) {
+      const reduce = typeof window !== "undefined" && window.matchMedia
+        && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      // Reverse FLIP — same technique, opposite direction. Without this the
+      // shrunk content would instantly snap back to full size the moment
+      // the class is removed, exactly the jump this whole approach exists
+      // to avoid.
+      const first = el.getBoundingClientRect();
+      el.classList.remove("lesson-receding");
+      if (reduce) {
+        // Class removal alone already restores the natural layout; nothing
+        // further to do.
+      } else {
+        const last = el.getBoundingClientRect();
+        const scaleX = first.width / last.width;
+        const scaleY = first.height / last.height;
+        const dx = (first.left + first.width / 2) - (last.left + last.width / 2);
+        const dy = (first.top + first.height / 2) - (last.top + last.height / 2);
+        el.style.transition = "none";
+        el.style.transform = `translate(${dx}px, ${dy}px) scale(${scaleX}, ${scaleY})`;
+        // eslint-disable-next-line no-unused-expressions
+        el.offsetHeight;
+        el.style.transition = "transform .4s ease-out";
+        el.style.transform = "";
+        // Clean up the inline overrides once the transition completes, so
+        // they never linger to interfere with a later Ask Leo tap.
+        setTimeout(() => {
+          el.style.transition = "";
+          el.style.transform = "";
+        }, 420);
+      }
+    }
   };
 
   const handleDismissComplete = () => {
@@ -11521,6 +11594,8 @@ function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext
       {momentMounted && (
         <div className="leo-moment">
           <div className={"leo-flood" + (floodOn ? " on" : "")} />
+          <div className={"leo-rays" + (raysOn ? " on" : "")} />
+          <div className={"leo-pulse" + (pulseFire ? " fire" : "")} />
           <div className={"leo-identity" + (identityOn ? " on" : " off")}>
             {/* Confirmed this session: WhiteboardLogo's Tier 3 (<48px) render
                 uses fill="var(--leo-green)" directly on the SVG shape — a
@@ -11554,11 +11629,6 @@ function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, currentExerciseC
   const panelRef = React.useRef(null);
   const handRaiseRef = React.useRef(null);
   const [dismissing, setDismissing] = useState(false);
-  // Mounts false (paints at the closed transform/opacity), then flips true
-  // one frame later — .al-panel's entrance is a CSS transition now, not a
-  // keyframe animation, and a transition only fires on a genuine class
-  // change to an already-painted element, not on mounting already "open".
-  const [panelOpenClass, setPanelOpenClass] = useState(false);
   const [loading, setLoading] = useState(!gated);
   const [explanation, setExplanation] = useState(null);
   const [checkQuestion, setCheckQuestion] = useState(null);
@@ -11582,9 +11652,7 @@ function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, currentExerciseC
     document.addEventListener("keydown", onKey);
     // Focus trap: move focus into the panel on mount.
     if (panelRef.current) panelRef.current.focus();
-    // Next frame, not this one — see panelOpenClass's declaration above.
-    const raf = requestAnimationFrame(() => setPanelOpenClass(true));
-    return () => { document.removeEventListener("keydown", onKey); cancelAnimationFrame(raf); };
+    return () => document.removeEventListener("keydown", onKey);
   }, []);
 
   // Swipe-down-to-dismiss, built fresh (no existing pattern in this file to
@@ -11695,7 +11763,7 @@ function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, currentExerciseC
   return (
     <>
       <div className={"al-overlay" + (dismissing ? " dismissing" : "")} onClick={dismiss} />
-      <div ref={panelRef} className={"al-panel" + (panelOpenClass ? " open" : "") + (dismissing ? " dismissing" : "")}
+      <div ref={panelRef} className={"al-panel" + (dismissing ? " dismissing" : "")}
         role="dialog" aria-modal="true" aria-label="Ask Leo" tabIndex={-1}
         onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         <div className="al-panel-top">
@@ -14788,7 +14856,7 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 .ask-leo-mark{width:16px; height:16px; border-radius:50%; background:currentColor; flex-shrink:0; display:inline-block;}
 .ask-leo-btn.spent{border-color:var(--divider); color:var(--text-tertiary);}
 /* 0ms — fills instantly, scales up, double shadow bloom announces the moment */
-.ask-leo-btn.filling{background-color:var(--leo-green); color:#ffffff; border-color:var(--leo-green); transform:scale(1.08); box-shadow:0 0 0 10px rgba(42,124,111,.12), 0 0 0 20px rgba(42,124,111,.04);}
+.ask-leo-btn.filling{background-color:var(--leo-green); color:#ffffff; border-color:var(--leo-green); transform:scale(1.08); box-shadow:0 0 0 6px rgba(42,124,111,.18), 0 0 24px 10px rgba(42,124,111,.22);}
 /* 320ms — settles: fill stays, scale and shadow release */
 .ask-leo-btn.settled{background-color:var(--leo-green); color:#ffffff; border-color:var(--leo-green); transform:scale(1); box-shadow:none;}
 
@@ -14808,9 +14876,30 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 .leo-moment{position:fixed; inset:0; z-index:10; pointer-events:none;}
 .leo-flood{position:absolute; inset:0; background:linear-gradient(160deg, #2A5C52 0%, #1E4540 60%, #162F2C 100%); opacity:0; transition:opacity .28s ease;}
 .leo-flood.on{opacity:1;}
-.leo-identity{position:absolute; top:50%; left:50%; transform:translate(-50%,-60%); display:flex; flex-direction:column; align-items:center; gap:var(--space-2); opacity:0; transition:opacity .25s ease .06s, transform .25s ease .06s;}
-.leo-identity.on{opacity:1; transform:translate(-50%,-60%);}
-.leo-identity.off{opacity:0; transform:translate(-50%,-70%); transition:opacity .2s ease, transform .2s ease;}
+/* Illumination enhancement (Genesis, 23 Aug 2026) — edge rays. One div, four
+   static conic-gradient wedges, one per corner, ~35deg of arc each, centred
+   on that corner's diagonal so each wedge falls inside the visible box
+   rather than being clipped outside it. No animation — only opacity fades
+   with .on, matching .leo-flood's own transition timing. */
+.leo-rays{position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity .28s ease;
+  background:
+    conic-gradient(from 117.5deg at 0% 0%, transparent 0deg, rgba(255,255,255,.10) 17.5deg, transparent 35deg),
+    conic-gradient(from 207.5deg at 100% 0%, transparent 0deg, rgba(255,255,255,.07) 17.5deg, transparent 35deg),
+    conic-gradient(from 297.5deg at 100% 100%, transparent 0deg, rgba(255,255,255,.10) 17.5deg, transparent 35deg),
+    conic-gradient(from 27.5deg at 0% 100%, transparent 0deg, rgba(255,255,255,.07) 17.5deg, transparent 35deg);
+}
+.leo-rays.on{opacity:1;}
+/* Illumination enhancement — single pulse. Fires once at 320ms, the exact
+   moment the panel begins to rise and Leo's identity fades. */
+.leo-pulse{background:radial-gradient(circle, rgba(68,164,148,0.35) 0%, transparent 70%); position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:0; height:0; border-radius:50%; pointer-events:none;}
+@keyframes leoPulse{
+  0%   { width:0; height:0; opacity:1; }
+  100% { width:120vw; height:120vw; opacity:0; }
+}
+.leo-pulse.fire{animation:leoPulse 0.6s ease-out forwards;}
+.leo-identity{position:absolute; top:50%; left:50%; transform:translate(-50%,-60%); display:flex; flex-direction:column; align-items:center; gap:var(--space-2); opacity:0; transition:opacity .25s ease;}
+.leo-identity.on{opacity:1;}
+.leo-identity.off{opacity:0;}
 /* Confirmed this session: Tier 3 WhiteboardLogo (<48px) fills with
    var(--leo-green) directly on the SVG shape — a hardcoded presentational
    attribute, not currentColor. Neither of Design's two proposed fixes
@@ -14822,36 +14911,29 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 .leo-identity-name{font-size:11px; font-weight:700; letter-spacing:.22em; color:rgba(255,255,255,.45);}
 
 /* ---- Lesson recedes behind the flood ---- */
-/* Reverts Option B (opacity:0, fully invisible) back to the dim+blur
-   treatment, per explicit instruction to follow this spec exactly. This
-   is safe against the earlier "white card on top of the flood" problem:
-   unlike the shrink-and-centre version that caused that, this treatment
-   never repositions the lesson content or gives it an opaque background
-   — it just dims in place, in normal document flow. */
-.lesson-receding{opacity:.10; filter:blur(2px); transition:opacity .3s ease, filter .3s ease;}
+/* Shrinks and centres the current task in the flood, rather than fading
+   it away — the student keeps sight of what they were doing. JS applies
+   the FLIP technique when this class is added/removed (see AskLeoButton's
+   handleTap/handleDismissStart) — position/top/left cannot be smoothly
+   transitioned by CSS alone, so without that JS work this would be an
+   instant snap, not a move. z-index 11 sits above .leo-moment's 10, so
+   the shrunk content renders on top of the green, with green visible
+   around it. */
+.lesson-receding{position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(.55); width:min(340px, calc(100vw - 80px)); max-height:55vh; overflow:hidden; z-index:11; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.35); pointer-events:none; background:var(--bg-warm);}
 
-/* Kept for its click-catching role (tap-outside-dismiss, a v1 behaviour
-   this spec explicitly carries forward) but made visually transparent —
-   this spec's own JS never references a separate overlay at all; the
-   green flood itself is the backdrop. A dark tint here would muddy the
-   pure green the spec describes. */
-.al-overlay{position:fixed; inset:0; z-index:11; background:transparent;}
+.al-overlay{position:fixed; inset:0; background:rgba(26,26,26,.45); z-index:40; animation:alOverlayIn .35s ease-out forwards;}
+@keyframes alOverlayIn{from{opacity:0;} to{opacity:1;}}
 /* Mounts at 320ms (see AskLeoButton). 200ms CSS delay before the visual
    movement starts (520ms elapsed since tap), 420ms duration (completes
    at 940ms). */
-/* position:fixed, not absolute as specified — deliberate exception, same
-   reasoning as .leo-moment above: this app has no positioned ancestor for
-   .al-panel to anchor to, and position:absolute here risks the exact same
-   confirmed bug (content resolving against the document's scroll position
-   rather than the viewport, potentially rendering off-screen). Everything
-   else — inset layout, sizing, shadow, timing — matches the spec exactly. */
-.al-panel{position:fixed; left:var(--space-3); right:var(--space-3); bottom:58px; background:var(--bg-card); border-radius:18px; z-index:12; box-shadow:0 8px 32px rgba(0,0,0,.22), 0 2px 8px rgba(0,0,0,.10); transform:translateY(20px) scale(.97); opacity:0; transition:transform .42s cubic-bezier(.22,1,.36,1) .2s, opacity .30s ease .2s; overflow:hidden; max-height:62vh; display:flex; flex-direction:column;}
-.al-panel.open{transform:translateY(0) scale(1); opacity:1;}
-.al-panel.dismissing{transition:transform .28s ease-in, opacity .20s ease-in; transform:translateY(24px) scale(.97); opacity:0;}
+.al-panel{position:fixed; left:0; right:0; bottom:0; max-height:62vh; min-height:320px; background:var(--bg-card); border-radius:24px 24px 0 0; z-index:41; display:flex; flex-direction:column; overflow:hidden; animation:alPanelOpen .42s cubic-bezier(.22,1,.36,1) 200ms both;}
+@keyframes alPanelOpen{from{transform:translateY(20px) scale(.97); opacity:0;} to{transform:translateY(0) scale(1); opacity:1;}}
+.al-panel.dismissing{animation:alPanelDismiss .28s ease-in forwards;}
+@keyframes alPanelDismiss{from{transform:translateY(0) scale(1); opacity:1;} to{transform:translateY(24px) scale(.97); opacity:0;}}
 
 /* panel-top warm tint — not a system token, local to al-panel-top */
-.al-panel-top{background:#F0FAF8; padding:10px 14px 9px; border-bottom:1px solid rgba(42,124,111,.12); flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:var(--space-1);}
-.al-handle{width:28px; height:3px; background:rgba(42,124,111,.20); border-radius:2px; margin:0 auto var(--space-2); flex-shrink:0;}
+.al-panel-top{background:#F0FAF8; min-height:80px; padding:0 var(--space-4) var(--space-3); flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:var(--space-1);}
+.al-handle{width:36px; height:4px; background:rgba(42,124,111,.20); border-radius:2px; margin:12px auto 0; flex-shrink:0;}
 .al-who{display:flex; align-items:center; gap:var(--space-1); margin-top:var(--space-1);}
 /* At 16px WhiteboardLogo returns null (confirmed this session) — plain
    circle fallback, exactly as ruled. */
@@ -14882,14 +14964,12 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 .al-raise{animation:scRise .35s ease-out 320ms both;}
 
 /* Typed text renders in Leo green — the student is speaking in Leo's world */
-.al-inp{width:100%; font-family:'Inter',-apple-system,sans-serif; font-size:16px; font-weight:500; color:#2A7C6F; caret-color:#2A7C6F; background:var(--bg-card); border:1.5px solid var(--divider); border-radius:8px; padding:10px 12px; outline:none; transition:border-color .15s ease;}
-.al-inp:focus{border-color:#2A7C6F;}
-.al-inp::placeholder{color:var(--text-tertiary); font-style:italic; font-weight:400;}
+.al-inp{color:#2A7C6F; caret-color:#2A7C6F; font-weight:500;}
 
 /* Hand-raise — secondary, quieter than everything above it (§B.4) */
 .al-hand-raise{margin-top:var(--space-4); border-top:1px solid var(--divider); padding-top:var(--space-4);}
 .al-hand-raise-label{font-size:13px; font-weight:400; color:var(--text-secondary); margin-bottom:var(--space-2); display:block;}
-.al-hand-raise-input{width:100%; font-family:'Inter',-apple-system,sans-serif; font-size:14px; font-weight:400; color:#2A7C6F; caret-color:#2A7C6F; background:var(--bg-warm); border:none; border-radius:8px; padding:10px 12px; resize:none; outline:none; line-height:1.5; min-height:38px; max-height:80px; overflow-y:auto; transition:background .2s ease;}
+.al-hand-raise-input{width:100%; font-family:'Inter',-apple-system,sans-serif; font-size:14px; font-weight:500; color:#2A7C6F; caret-color:#2A7C6F; background:var(--bg-warm); border:none; border-radius:8px; padding:10px 12px; resize:none; outline:none; line-height:1.5; min-height:38px; max-height:80px; overflow-y:auto; transition:background .2s ease;}
 .al-hand-raise-input:focus{background:var(--leo-green-light); outline:none;}
 .al-hand-raise-input::placeholder{color:var(--text-tertiary); font-style:italic;}
 .al-hand-raise-row{display:flex; align-items:center; gap:var(--space-2); margin-top:var(--space-2);}
@@ -14901,12 +14981,18 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
   .ask-leo-btn.filling{transform:scale(1); box-shadow:none; transition:none;}
   .ask-leo-btn.settled{transition:none;}
   .leo-moment{display:none;}
-  /* Spec §5: "No green flood — the lesson does not change" under reduced
-     motion. Without this override the lesson would still dim to 10% and
-     blur, even though the flood causing that dim is itself hidden above. */
-  .lesson-receding{opacity:1; filter:none;}
-  .al-panel{transition:none; transform:none; opacity:1;}
-  .al-panel.dismissing{transition:none; display:none;}
+  /* Illumination enhancement — explicit per ruling, though .leo-moment's own
+     display:none above already removes these from view; stated directly
+     anyway since the ruling names both rules specifically. */
+  .leo-rays{display:none;}
+  .leo-pulse.fire{animation:none;}
+  /* .lesson-receding's own transition is now handled entirely by JS
+     (see handleTap/handleDismissStart) — under reduced motion the FLIP
+     animation is skipped there directly, so there is nothing left for
+     this media query to suppress on the class itself. */
+  .al-overlay{animation:none;}
+  .al-panel{animation:none; transform:none; opacity:1;}
+  .al-panel.dismissing{animation:none; display:none;}
   .al-typing-dot{animation:none; opacity:.5;}
   .al-confirm{animation:none;}
   .al-explanation-enter{animation:none;}
