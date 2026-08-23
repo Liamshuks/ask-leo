@@ -11554,6 +11554,11 @@ function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, currentExerciseC
   const panelRef = React.useRef(null);
   const handRaiseRef = React.useRef(null);
   const [dismissing, setDismissing] = useState(false);
+  // Mounts false (paints at the closed transform/opacity), then flips true
+  // one frame later — .al-panel's entrance is a CSS transition now, not a
+  // keyframe animation, and a transition only fires on a genuine class
+  // change to an already-painted element, not on mounting already "open".
+  const [panelOpenClass, setPanelOpenClass] = useState(false);
   const [loading, setLoading] = useState(!gated);
   const [explanation, setExplanation] = useState(null);
   const [checkQuestion, setCheckQuestion] = useState(null);
@@ -11577,7 +11582,9 @@ function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, currentExerciseC
     document.addEventListener("keydown", onKey);
     // Focus trap: move focus into the panel on mount.
     if (panelRef.current) panelRef.current.focus();
-    return () => document.removeEventListener("keydown", onKey);
+    // Next frame, not this one — see panelOpenClass's declaration above.
+    const raf = requestAnimationFrame(() => setPanelOpenClass(true));
+    return () => { document.removeEventListener("keydown", onKey); cancelAnimationFrame(raf); };
   }, []);
 
   // Swipe-down-to-dismiss, built fresh (no existing pattern in this file to
@@ -11688,7 +11695,7 @@ function AskLeoPanel({ stageId, stageLabel, bp, profile, gated, currentExerciseC
   return (
     <>
       <div className={"al-overlay" + (dismissing ? " dismissing" : "")} onClick={dismiss} />
-      <div ref={panelRef} className={"al-panel" + (dismissing ? " dismissing" : "")}
+      <div ref={panelRef} className={"al-panel" + (panelOpenClass ? " open" : "") + (dismissing ? " dismissing" : "")}
         role="dialog" aria-modal="true" aria-label="Ask Leo" tabIndex={-1}
         onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         <div className="al-panel-top">
@@ -14781,7 +14788,7 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 .ask-leo-mark{width:16px; height:16px; border-radius:50%; background:currentColor; flex-shrink:0; display:inline-block;}
 .ask-leo-btn.spent{border-color:var(--divider); color:var(--text-tertiary);}
 /* 0ms — fills instantly, scales up, double shadow bloom announces the moment */
-.ask-leo-btn.filling{background-color:var(--leo-green); color:#ffffff; border-color:var(--leo-green); transform:scale(1.08); box-shadow:0 0 0 6px rgba(42,124,111,.18), 0 0 24px 10px rgba(42,124,111,.22);}
+.ask-leo-btn.filling{background-color:var(--leo-green); color:#ffffff; border-color:var(--leo-green); transform:scale(1.08); box-shadow:0 0 0 10px rgba(42,124,111,.12), 0 0 0 20px rgba(42,124,111,.04);}
 /* 320ms — settles: fill stays, scale and shadow release */
 .ask-leo-btn.settled{background-color:var(--leo-green); color:#ffffff; border-color:var(--leo-green); transform:scale(1); box-shadow:none;}
 
@@ -14801,9 +14808,9 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 .leo-moment{position:fixed; inset:0; z-index:10; pointer-events:none;}
 .leo-flood{position:absolute; inset:0; background:linear-gradient(160deg, #2A5C52 0%, #1E4540 60%, #162F2C 100%); opacity:0; transition:opacity .28s ease;}
 .leo-flood.on{opacity:1;}
-.leo-identity{position:absolute; top:50%; left:50%; transform:translate(-50%,-60%); display:flex; flex-direction:column; align-items:center; gap:var(--space-2); opacity:0; transition:opacity .25s ease;}
-.leo-identity.on{opacity:1;}
-.leo-identity.off{opacity:0;}
+.leo-identity{position:absolute; top:50%; left:50%; transform:translate(-50%,-60%); display:flex; flex-direction:column; align-items:center; gap:var(--space-2); opacity:0; transition:opacity .25s ease .06s, transform .25s ease .06s;}
+.leo-identity.on{opacity:1; transform:translate(-50%,-60%);}
+.leo-identity.off{opacity:0; transform:translate(-50%,-70%); transition:opacity .2s ease, transform .2s ease;}
 /* Confirmed this session: Tier 3 WhiteboardLogo (<48px) fills with
    var(--leo-green) directly on the SVG shape — a hardcoded presentational
    attribute, not currentColor. Neither of Design's two proposed fixes
@@ -14815,27 +14822,36 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 .leo-identity-name{font-size:11px; font-weight:700; letter-spacing:.22em; color:rgba(255,255,255,.45);}
 
 /* ---- Lesson recedes behind the flood ---- */
-/* Option B (final ruling, supersedes the shrink-and-centre approach above).
-   The earlier version put an opaque white card at z-index 11, on top of
-   the flood at z-index 10 — the card was large enough to visually read as
-   "no flood", even though the flood was rendering correctly underneath.
-   The lesson does not dim, does not shrink. It disappears entirely, so
-   nothing sits in front of the flood or Leo's identity mark. */
-.lesson-receding{opacity:0; pointer-events:none;}
+/* Reverts Option B (opacity:0, fully invisible) back to the dim+blur
+   treatment, per explicit instruction to follow this spec exactly. This
+   is safe against the earlier "white card on top of the flood" problem:
+   unlike the shrink-and-centre version that caused that, this treatment
+   never repositions the lesson content or gives it an opaque background
+   — it just dims in place, in normal document flow. */
+.lesson-receding{opacity:.10; filter:blur(2px); transition:opacity .3s ease, filter .3s ease;}
 
-.al-overlay{position:fixed; inset:0; background:rgba(26,26,26,.45); z-index:40; animation:alOverlayIn .35s ease-out forwards;}
-@keyframes alOverlayIn{from{opacity:0;} to{opacity:1;}}
+/* Kept for its click-catching role (tap-outside-dismiss, a v1 behaviour
+   this spec explicitly carries forward) but made visually transparent —
+   this spec's own JS never references a separate overlay at all; the
+   green flood itself is the backdrop. A dark tint here would muddy the
+   pure green the spec describes. */
+.al-overlay{position:fixed; inset:0; z-index:11; background:transparent;}
 /* Mounts at 320ms (see AskLeoButton). 200ms CSS delay before the visual
    movement starts (520ms elapsed since tap), 420ms duration (completes
    at 940ms). */
-.al-panel{position:fixed; left:0; right:0; bottom:0; max-height:62vh; min-height:320px; background:var(--bg-card); border-radius:24px 24px 0 0; z-index:41; display:flex; flex-direction:column; overflow:hidden; animation:alPanelOpen .42s cubic-bezier(.22,1,.36,1) 200ms both;}
-@keyframes alPanelOpen{from{transform:translateY(20px) scale(.97); opacity:0;} to{transform:translateY(0) scale(1); opacity:1;}}
-.al-panel.dismissing{animation:alPanelDismiss .28s ease-in forwards;}
-@keyframes alPanelDismiss{from{transform:translateY(0) scale(1); opacity:1;} to{transform:translateY(24px) scale(.97); opacity:0;}}
+/* position:fixed, not absolute as specified — deliberate exception, same
+   reasoning as .leo-moment above: this app has no positioned ancestor for
+   .al-panel to anchor to, and position:absolute here risks the exact same
+   confirmed bug (content resolving against the document's scroll position
+   rather than the viewport, potentially rendering off-screen). Everything
+   else — inset layout, sizing, shadow, timing — matches the spec exactly. */
+.al-panel{position:fixed; left:var(--space-3); right:var(--space-3); bottom:58px; background:var(--bg-card); border-radius:18px; z-index:12; box-shadow:0 8px 32px rgba(0,0,0,.22), 0 2px 8px rgba(0,0,0,.10); transform:translateY(20px) scale(.97); opacity:0; transition:transform .42s cubic-bezier(.22,1,.36,1) .2s, opacity .30s ease .2s; overflow:hidden; max-height:62vh; display:flex; flex-direction:column;}
+.al-panel.open{transform:translateY(0) scale(1); opacity:1;}
+.al-panel.dismissing{transition:transform .28s ease-in, opacity .20s ease-in; transform:translateY(24px) scale(.97); opacity:0;}
 
 /* panel-top warm tint — not a system token, local to al-panel-top */
-.al-panel-top{background:#F0FAF8; min-height:80px; padding:0 var(--space-4) var(--space-3); flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:var(--space-1);}
-.al-handle{width:36px; height:4px; background:rgba(42,124,111,.20); border-radius:2px; margin:12px auto 0; flex-shrink:0;}
+.al-panel-top{background:#F0FAF8; padding:10px 14px 9px; border-bottom:1px solid rgba(42,124,111,.12); flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:var(--space-1);}
+.al-handle{width:28px; height:3px; background:rgba(42,124,111,.20); border-radius:2px; margin:0 auto var(--space-2); flex-shrink:0;}
 .al-who{display:flex; align-items:center; gap:var(--space-1); margin-top:var(--space-1);}
 /* At 16px WhiteboardLogo returns null (confirmed this session) — plain
    circle fallback, exactly as ruled. */
@@ -14866,12 +14882,14 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 .al-raise{animation:scRise .35s ease-out 320ms both;}
 
 /* Typed text renders in Leo green — the student is speaking in Leo's world */
-.al-inp{color:#2A7C6F; caret-color:#2A7C6F; font-weight:500;}
+.al-inp{width:100%; font-family:'Inter',-apple-system,sans-serif; font-size:16px; font-weight:500; color:#2A7C6F; caret-color:#2A7C6F; background:var(--bg-card); border:1.5px solid var(--divider); border-radius:8px; padding:10px 12px; outline:none; transition:border-color .15s ease;}
+.al-inp:focus{border-color:#2A7C6F;}
+.al-inp::placeholder{color:var(--text-tertiary); font-style:italic; font-weight:400;}
 
 /* Hand-raise — secondary, quieter than everything above it (§B.4) */
 .al-hand-raise{margin-top:var(--space-4); border-top:1px solid var(--divider); padding-top:var(--space-4);}
 .al-hand-raise-label{font-size:13px; font-weight:400; color:var(--text-secondary); margin-bottom:var(--space-2); display:block;}
-.al-hand-raise-input{width:100%; font-family:'Inter',-apple-system,sans-serif; font-size:14px; font-weight:500; color:#2A7C6F; caret-color:#2A7C6F; background:var(--bg-warm); border:none; border-radius:8px; padding:10px 12px; resize:none; outline:none; line-height:1.5; min-height:38px; max-height:80px; overflow-y:auto; transition:background .2s ease;}
+.al-hand-raise-input{width:100%; font-family:'Inter',-apple-system,sans-serif; font-size:14px; font-weight:400; color:#2A7C6F; caret-color:#2A7C6F; background:var(--bg-warm); border:none; border-radius:8px; padding:10px 12px; resize:none; outline:none; line-height:1.5; min-height:38px; max-height:80px; overflow-y:auto; transition:background .2s ease;}
 .al-hand-raise-input:focus{background:var(--leo-green-light); outline:none;}
 .al-hand-raise-input::placeholder{color:var(--text-tertiary); font-style:italic;}
 .al-hand-raise-row{display:flex; align-items:center; gap:var(--space-2); margin-top:var(--space-2);}
@@ -14883,14 +14901,12 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
   .ask-leo-btn.filling{transform:scale(1); box-shadow:none; transition:none;}
   .ask-leo-btn.settled{transition:none;}
   .leo-moment{display:none;}
-  /* Since the flood itself is hidden above, the lesson content must stay
-     visible here too — without this override, a reduced-motion user would
-     see both the flood AND the lesson disappear at once: a blank screen
-     for the 40-320ms window before the panel opens. */
-  .lesson-receding{opacity:1;}
-  .al-overlay{animation:none;}
-  .al-panel{animation:none; transform:none; opacity:1;}
-  .al-panel.dismissing{animation:none; display:none;}
+  /* Spec §5: "No green flood — the lesson does not change" under reduced
+     motion. Without this override the lesson would still dim to 10% and
+     blur, even though the flood causing that dim is itself hidden above. */
+  .lesson-receding{opacity:1; filter:none;}
+  .al-panel{transition:none; transform:none; opacity:1;}
+  .al-panel.dismissing{transition:none; display:none;}
   .al-typing-dot{animation:none; opacity:.5;}
   .al-confirm{animation:none;}
   .al-explanation-enter{animation:none;}
