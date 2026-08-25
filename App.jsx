@@ -11452,7 +11452,7 @@ function buildTeacherContext({ profile, memoryStore, words, heard, diaryPages, a
 /* ---------------- Ask Leo panel (ASK_LEO_HELP_PANEL_PEDAGOGY_v1, Phase 1) ---------------- */
 
 function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext, lessonBodyRef }) {
-  const [buttonState, setButtonState] = useState("idle"); // "idle" | "filling" | "settled"
+  const [buttonState, setButtonState] = useState("idle"); // "idle" | "lit" | "settled"
   // Mounted (DOM present, unstyled) and "on" (class applied, triggers the CSS
   // transition) are deliberately separate — a CSS transition only fires on a
   // genuine class change on an already-painted element, not on an element
@@ -11460,11 +11460,13 @@ function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext
   const [momentMounted, setMomentMounted] = useState(false);
   const [floodOn, setFloodOn] = useState(false);
   const [identityOn, setIdentityOn] = useState(false);
-  /* Illumination enhancement (Genesis, 23 Aug 2026) — edge rays and single
-     pulse. Built to the ruling's literal values, not the synced spec doc's
-     (Genesis confirmed: build to the ruling as written). */
-  const [raysOn, setRaysOn] = useState(false);
-  const [pulseFire, setPulseFire] = useState(false);
+  /* Depth portal (Genesis, 23 Aug 2026) — supersedes the edge-rays/pulse
+     enhancement and the green flood's role as PRIMARY illumination. flood +
+     identity remain in the code, unmodified, as the frame-rate fallback
+     only ("the existing approved fallback") — triggered dynamically if the
+     canvas can't sustain a real frame rate on the student's device. */
+  const canvasRef = React.useRef(null);
+  const portalRafRef = React.useRef(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [usedThisLesson, setUsedThisLesson] = useState(false);
   const [gated, setGated] = useState(false);
@@ -11472,105 +11474,244 @@ function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext
   // const isSpent = !profile.isPaid && usedThisLesson;
   const isSpent = false;
 
-  const handleTap = () => {
-    setButtonState("filling");
-    setGated(isSpent);
-    setMomentMounted(true);
-    setTimeout(() => {
+  // Canvas sizing — window.innerWidth × window.innerHeight, DPR-aware, on
+  // mount (inside runPortalAnimation, below) and on any resize while open.
+  const sizePortalCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    const ctx = canvas.getContext("2d");
+    if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+
+  useEffect(() => {
+    if (!momentMounted) return;
+    window.addEventListener("resize", sizePortalCanvas);
+    return () => window.removeEventListener("resize", sizePortalCanvas);
+  }, [momentMounted]);
+
+  // Depth portal — 5 phases over 750ms, canvas + rAF. Reduced motion: no
+  // canvas animation starts at all (handleTap's other timers still run;
+  // only this is skipped). Frame-rate fallback: if the first 3 real rAF
+  // intervals average over 22ms, cancel and hand off to the existing
+  // approved flood+identity fallback instead.
+  const runPortalAnimation = () => {
+    const reduce = typeof window !== "undefined" && window.matchMedia
+      && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    sizePortalCanvas();
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const cx = w / 2;
+    const cy = h / 2;
+
+    // 80 star-points, generated once per run so drift is coherent frame to
+    // frame rather than re-randomised. rgba(180,230,220) and
+    // rgba(42,124,111) mixed per-star via a random blend factor.
+    const stars = Array.from({ length: 80 }, () => ({
+      angle: Math.random() * Math.PI * 2,
+      dist: 6 + Math.random() * 30,
+      size: 0.4 + Math.random() * 1.4,
+      mix: Math.random(),
+    }));
+
+    let frameCount = 0;
+    let lastTs = null;
+    let startTs = null;
+    const intervals = [];
+    let fellBack = false;
+
+    const fallbackToFlood = () => {
+      fellBack = true;
+      if (portalRafRef.current) cancelAnimationFrame(portalRafRef.current);
+      portalRafRef.current = null;
+      ctx.clearRect(0, 0, w, h);
+      // The ruling names WHAT to fall back to ("the existing approved
+      // fallback"), not a sub-timing — fallback is only ever reached
+      // dynamically, after real frame timing is already known, so it can't
+      // be pre-scheduled against the 0/60/420/800 primary-path clock.
+      // Mirrors the original flood->identity gap (60ms) and identity's own
+      // on-screen duration (220ms) from the pre-portal sequence.
       setFloodOn(true);
-      setRaysOn(true); // Illumination enhancement — rays appear with the flood, per ruling
-      const el = lessonBodyRef?.current;
-      if (el) {
-        const reduce = typeof window !== "undefined" && window.matchMedia
-          && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        // FLIP — position/top/left cannot be smoothly transitioned by CSS,
-        // so without this the shrink-to-centre would be an instant snap,
-        // not a smooth move.
-        // First: where the element actually is right now, before anything
-        // changes.
-        const first = el.getBoundingClientRect();
-        el.classList.add("lesson-receding");
-        if (reduce) {
-          // No animation under reduced motion — the class alone already
-          // places it at the final target; nothing further to do.
-        } else {
-          // Last: where the class has just placed it (fixed, centred,
-          // scaled — its real target).
-          const last = el.getBoundingClientRect();
-          // Invert: a transform that makes it visually sit exactly where
-          // it was a moment ago, applied with no transition so the browser
-          // never paints the jump.
-          const scaleX = first.width / last.width;
-          const scaleY = first.height / last.height;
-          const dx = (first.left + first.width / 2) - (last.left + last.width / 2);
-          const dy = (first.top + first.height / 2) - (last.top + last.height / 2);
-          el.style.transition = "none";
-          el.style.transform = `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(${scaleX}, ${scaleY})`;
-          // Force a reflow so the browser commits the inverted transform
-          // before the next line changes it — otherwise both writes
-          // collapse into one and there is nothing left to animate.
-          // eslint-disable-next-line no-unused-expressions
-          el.offsetHeight;
-          // Play: release to the class's own target transform. The
-          // browser now has a genuine start and end state to interpolate.
-          el.style.transition = "transform .5s cubic-bezier(.22,1,.36,1)";
-          el.style.transform = "";
+      setTimeout(() => setIdentityOn(true), 60);
+      setTimeout(() => setIdentityOn(false), 280);
+    };
+
+    const draw = (ts) => {
+      if (fellBack) return;
+      if (startTs === null) startTs = ts;
+      const elapsed = ts - startTs;
+
+      if (lastTs !== null && frameCount < 3) {
+        intervals.push(ts - lastTs);
+        frameCount++;
+        if (frameCount === 3) {
+          const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+          if (avg > 22) { fallbackToFlood(); return; }
         }
       }
-    }, 40);
-    setTimeout(() => setIdentityOn(true), 100);
+      lastTs = ts;
+
+      if (elapsed > 750) { ctx.clearRect(0, 0, w, h); return; }
+
+      ctx.clearRect(0, 0, w, h);
+      const closeFade = elapsed > 500 ? Math.max(0, 1 - (elapsed - 500) / 200) : 1; // Phase 5: 500-700ms
+
+      // Phase 1 (0-200ms): deep space background fades in.
+      const p1 = Math.min(1, elapsed / 200);
+      if (p1 > 0) {
+        const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.75);
+        bg.addColorStop(0, "#0D2420");
+        bg.addColorStop(1, "#2A5C52");
+        ctx.globalAlpha = p1 * closeFade;
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, w, h);
+        ctx.globalAlpha = 1;
+      }
+
+      // Phase 2 (100-500ms): 80 star-points drifting outward from centre.
+      if (elapsed >= 100) {
+        const p2 = Math.min(1, Math.max(0, (elapsed - 100) / 400));
+        stars.forEach((s) => {
+          const d = p2 * s.dist;
+          const x = cx + Math.cos(s.angle) * d;
+          const y = cy + Math.sin(s.angle) * d;
+          const r = Math.round(180 * s.mix + 42 * (1 - s.mix));
+          const g = Math.round(230 * s.mix + 124 * (1 - s.mix));
+          const b = Math.round(220 * s.mix + 111 * (1 - s.mix));
+          ctx.fillStyle = `rgba(${r},${g},${b},${p2 * closeFade})`;
+          ctx.beginPath();
+          ctx.arc(x, y, s.size, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+
+      // Phase 3 (100-500ms): portal ring, radius growing to 115px. Peak
+      // colour rgba(126,205,196,0.9) at the gradient's r=94% stop.
+      if (elapsed >= 100) {
+        const p3 = Math.min(1, Math.max(0, (elapsed - 100) / 400));
+        const radius = 115 * p3;
+        if (radius > 0) {
+          const ring = ctx.createRadialGradient(cx, cy, radius * 0.7, cx, cy, radius);
+          ring.addColorStop(0, "rgba(126,205,196,0)");
+          ring.addColorStop(0.94, `rgba(126,205,196,${0.9 * closeFade})`);
+          ring.addColorStop(1, "rgba(126,205,196,0)");
+          ctx.fillStyle = ring;
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Chromatic aberration — intentional physics effect, not palette colours. Do not reuse elsewhere.
+          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = `rgba(255,80,60,${0.18 * closeFade})`;
+          ctx.beginPath();
+          ctx.arc(cx + 1.5, cy, radius, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.strokeStyle = `rgba(60,160,255,${0.18 * closeFade})`;
+          ctx.beginPath();
+          ctx.arc(cx - 1.5, cy, radius, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+
+      // Phase 4 (300-600ms): Leo's mark grows from depth.
+      if (elapsed >= 300) {
+        const p4 = Math.min(1, Math.max(0, (elapsed - 300) / 300));
+        const scale = 0.7 + 0.3 * p4;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(scale, scale);
+        ctx.globalAlpha = 0.75 * p4 * closeFade;
+        ctx.strokeStyle = "rgba(180,230,220,0.85)";
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        if (ctx.roundRect) { ctx.roundRect(-22, -15, 44, 30, 3); } else { ctx.rect(-22, -15, 44, 30); }
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-6, 15);
+        ctx.lineTo(-12, 20);
+        ctx.stroke();
+        // letterSpacing isn't a canvas API — drawn character-by-character
+        // with manual spacing instead, since ctx.letterSpacing support is
+        // inconsistent across the browsers this app targets.
+        ctx.fillStyle = "rgba(180,230,220,0.45)";
+        ctx.font = "700 11px Inter, -apple-system, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const word = "LEO";
+        const spacing = 4;
+        const widths = word.split("").map((ch) => ctx.measureText(ch).width);
+        const totalWidth = widths.reduce((a, b2) => a + b2, 0) + spacing * (word.length - 1);
+        let markX = -totalWidth / 2;
+        word.split("").forEach((ch, i) => {
+          ctx.fillText(ch, markX + widths[i] / 2, 30);
+          markX += widths[i] + spacing;
+        });
+        ctx.restore();
+      }
+
+      portalRafRef.current = requestAnimationFrame(draw);
+    };
+
+    portalRafRef.current = requestAnimationFrame(draw);
+  };
+
+  const handleTap = () => {
+    // 0ms: button lit, canvas portal begins. floodOn/identityOn stay false
+    // here — they only ever get set true by the frame-rate fallback below,
+    // if the canvas can't keep up.
+    setButtonState("lit");
+    setGated(isSpent);
+    setMomentMounted(true);
+    runPortalAnimation();
+
+    // 60ms: lesson recedes. .lesson-receding is now a plain CSS class with
+    // its own real transition (scale/opacity/filter) — no FLIP needed. FLIP
+    // existed only because the old effect combined position:fixed centring
+    // with scaling; this effect scales the element in place.
+    setTimeout(() => {
+      const el = lessonBodyRef?.current;
+      if (el) el.classList.add("lesson-receding");
+    }, 60);
+
+    // 420ms: panel opens, button settles. Unchanged in spirit from before —
+    // button-state and panel-open timing are independent of which
+    // illumination path (canvas or fallback) is actually showing.
     setTimeout(() => {
       setButtonState("settled");
-      setIdentityOn(false);
       setPanelOpen(true);
-      setPulseFire(true); // Illumination enhancement — fires at the exact moment the panel rises and identity fades
-    }, 320);
+    }, 420);
+
+    // 800ms: existing spent-transition timing — untouched by this rework.
     setTimeout(() => {
       if (!profile.isPaid) setUsedThisLesson(true);
-      setRaysOn(false); // Illumination enhancement — removed alongside the button's spent transition
     }, 800);
-    setTimeout(() => setPulseFire(false), 1000); // Illumination enhancement — cleanup only, animation already complete
   };
 
   // Called the instant the panel's own dismiss animation begins (not when it
-  // finishes 280ms later) — "flood and lesson-receding removed simultaneously"
-  // means simultaneous with dismiss starting, per the spec.
+  // finishes later) — dismiss must clear the lesson, the canvas, and (if the
+  // fallback was active) the flood/identity, all simultaneously.
   const handleDismissStart = () => {
     setFloodOn(false);
-    setRaysOn(false); // Illumination enhancement — tied to flood's on-state; cleared together on early dismiss
-    const el = lessonBodyRef?.current;
-    if (el) {
-      const reduce = typeof window !== "undefined" && window.matchMedia
-        && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      // Reverse FLIP — same technique, opposite direction. Without this the
-      // shrunk content would instantly snap back to full size the moment
-      // the class is removed, exactly the jump this whole approach exists
-      // to avoid.
-      const first = el.getBoundingClientRect();
-      el.classList.remove("lesson-receding");
-      if (reduce) {
-        // Class removal alone already restores the natural layout; nothing
-        // further to do.
-      } else {
-        const last = el.getBoundingClientRect();
-        const scaleX = first.width / last.width;
-        const scaleY = first.height / last.height;
-        const dx = (first.left + first.width / 2) - (last.left + last.width / 2);
-        const dy = (first.top + first.height / 2) - (last.top + last.height / 2);
-        el.style.transition = "none";
-        el.style.transform = `translate(${dx}px, ${dy}px) scale(${scaleX}, ${scaleY})`;
-        // eslint-disable-next-line no-unused-expressions
-        el.offsetHeight;
-        el.style.transition = "transform .4s ease-out";
-        el.style.transform = "";
-        // Clean up the inline overrides once the transition completes, so
-        // they never linger to interfere with a later Ask Leo tap.
-        setTimeout(() => {
-          el.style.transition = "";
-          el.style.transform = "";
-        }, 420);
-      }
+    setIdentityOn(false);
+    if (portalRafRef.current) {
+      cancelAnimationFrame(portalRafRef.current);
+      portalRafRef.current = null;
     }
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext("2d");
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    const el = lessonBodyRef?.current;
+    if (el) el.classList.remove("lesson-receding");
   };
 
   const handleDismissComplete = () => {
@@ -11583,7 +11724,7 @@ function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext
     <>
       <div className="ask-leo-btn-wrap">
         <button type="button"
-          className={"ask-leo-btn" + (buttonState === "filling" ? " filling" : "") + (buttonState === "settled" ? " settled" : "") + (isSpent ? " spent" : "")}
+          className={"ask-leo-btn" + (buttonState === "lit" ? " lit" : "") + (buttonState === "settled" ? " settled" : "") + (isSpent ? " spent" : "")}
           onClick={handleTap}>
           {/* WhiteboardLogo returns null below 24px (verified this session) —
               Genesis's authorised fallback: a plain Leo Green circle. */}
@@ -11591,11 +11732,10 @@ function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext
           Ask Leo
         </button>
       </div>
+      {momentMounted && <canvas ref={canvasRef} className="leo-portal-canvas" aria-hidden="true" />}
       {momentMounted && (
         <div className="leo-moment">
           <div className={"leo-flood" + (floodOn ? " on" : "")} />
-          <div className={"leo-rays" + (raysOn ? " on" : "")} />
-          <div className={"leo-pulse" + (pulseFire ? " fire" : "")} />
           <div className={"leo-identity" + (identityOn ? " on" : " off")}>
             {/* Confirmed this session: WhiteboardLogo's Tier 3 (<48px) render
                 uses fill="var(--leo-green)" directly on the SVG shape — a
@@ -14856,7 +14996,7 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 .ask-leo-mark{width:16px; height:16px; border-radius:50%; background:currentColor; flex-shrink:0; display:inline-block;}
 .ask-leo-btn.spent{border-color:var(--divider); color:var(--text-tertiary);}
 /* 0ms — fills instantly, scales up, double shadow bloom announces the moment */
-.ask-leo-btn.filling{background-color:var(--leo-green); color:#ffffff; border-color:var(--leo-green); transform:scale(1.08); box-shadow:0 0 0 6px rgba(42,124,111,.18), 0 0 24px 10px rgba(42,124,111,.22);}
+.ask-leo-btn.lit{background:#2A7C6F; color:white; border-color:#2A7C6F; box-shadow:0 0 0 10px rgba(42,124,111,.12), 0 0 0 20px rgba(42,124,111,.04);}
 /* 320ms — settles: fill stays, scale and shadow release */
 .ask-leo-btn.settled{background-color:var(--leo-green); color:#ffffff; border-color:var(--leo-green); transform:scale(1); box-shadow:none;}
 
@@ -14874,29 +15014,12 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
    was reported missing. position:fixed is always viewport-relative,
    regardless of scroll position or DOM ancestry. */
 .leo-moment{position:fixed; inset:0; z-index:10; pointer-events:none;}
+/* Depth portal canvas (Genesis, 23 Aug 2026) — supersedes the edge-rays/
+   pulse enhancement entirely. All rendering happens here via rAF; see
+   runPortalAnimation in AskLeoButton. */
+.leo-portal-canvas{position:fixed; inset:0; z-index:10; pointer-events:none;}
 .leo-flood{position:absolute; inset:0; background:linear-gradient(160deg, #2A5C52 0%, #1E4540 60%, #162F2C 100%); opacity:0; transition:opacity .28s ease;}
 .leo-flood.on{opacity:1;}
-/* Illumination enhancement (Genesis, 23 Aug 2026) — edge rays. One div, four
-   static conic-gradient wedges, one per corner, ~35deg of arc each, centred
-   on that corner's diagonal so each wedge falls inside the visible box
-   rather than being clipped outside it. No animation — only opacity fades
-   with .on, matching .leo-flood's own transition timing. */
-.leo-rays{position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity .28s ease;
-  background:
-    conic-gradient(from 117.5deg at 0% 0%, transparent 0deg, rgba(255,255,255,.10) 17.5deg, transparent 35deg),
-    conic-gradient(from 207.5deg at 100% 0%, transparent 0deg, rgba(255,255,255,.07) 17.5deg, transparent 35deg),
-    conic-gradient(from 297.5deg at 100% 100%, transparent 0deg, rgba(255,255,255,.10) 17.5deg, transparent 35deg),
-    conic-gradient(from 27.5deg at 0% 100%, transparent 0deg, rgba(255,255,255,.07) 17.5deg, transparent 35deg);
-}
-.leo-rays.on{opacity:1;}
-/* Illumination enhancement — single pulse. Fires once at 320ms, the exact
-   moment the panel begins to rise and Leo's identity fades. */
-.leo-pulse{background:radial-gradient(circle, rgba(68,164,148,0.35) 0%, transparent 70%); position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:0; height:0; border-radius:50%; pointer-events:none;}
-@keyframes leoPulse{
-  0%   { width:0; height:0; opacity:1; }
-  100% { width:120vw; height:120vw; opacity:0; }
-}
-.leo-pulse.fire{animation:leoPulse 0.6s ease-out forwards;}
 .leo-identity{position:absolute; top:50%; left:50%; transform:translate(-50%,-60%); display:flex; flex-direction:column; align-items:center; gap:var(--space-2); opacity:0; transition:opacity .25s ease;}
 .leo-identity.on{opacity:1;}
 .leo-identity.off{opacity:0;}
@@ -14919,7 +15042,7 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
    instant snap, not a move. z-index 11 sits above .leo-moment's 10, so
    the shrunk content renders on top of the green, with green visible
    around it. */
-.lesson-receding{position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(.55); width:min(340px, calc(100vw - 80px)); max-height:55vh; overflow:hidden; z-index:11; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.35); pointer-events:none; background:var(--bg-warm);}
+.lesson-receding{transform:scale(.82); opacity:.12; filter:blur(2px) brightness(.5); transition:transform .6s cubic-bezier(.4,0,.2,1), opacity .5s ease, filter .5s ease;}
 
 .al-overlay{position:fixed; inset:0; background:rgba(26,26,26,.45); z-index:40; animation:alOverlayIn .35s ease-out forwards;}
 @keyframes alOverlayIn{from{opacity:0;} to{opacity:1;}}
@@ -14978,18 +15101,16 @@ h2{font-size:22px;} h3{font-size:17px; margin-bottom:6px;}
 .al-hand-raise-send:disabled{opacity:.4; cursor:default;}
 .al-hand-raise-return{display:block; background:none; border:none; font-family:'Inter',-apple-system,sans-serif; font-size:13px; font-weight:400; color:var(--leo-green); cursor:pointer; padding:0; margin-top:var(--space-3); text-decoration:underline; text-decoration-color:rgba(42,124,111,.35); text-underline-offset:2px;}
 @media (prefers-reduced-motion: reduce){
-  .ask-leo-btn.filling{transform:scale(1); box-shadow:none; transition:none;}
+  .ask-leo-btn.lit{transition:none;}
   .ask-leo-btn.settled{transition:none;}
   .leo-moment{display:none;}
-  /* Illumination enhancement — explicit per ruling, though .leo-moment's own
-     display:none above already removes these from view; stated directly
-     anyway since the ruling names both rules specifically. */
-  .leo-rays{display:none;}
-  .leo-pulse.fire{animation:none;}
-  /* .lesson-receding's own transition is now handled entirely by JS
-     (see handleTap/handleDismissStart) — under reduced motion the FLIP
-     animation is skipped there directly, so there is nothing left for
-     this media query to suppress on the class itself. */
+  /* Depth portal (Genesis, 23 Aug 2026) — no canvas animation starts at all
+     under reduced motion (see runPortalAnimation's own early return); the
+     .leo-portal-canvas element still mounts but never draws. .leo-moment's
+     display:none above already covers the flood/identity fallback too, in
+     the unlikely event fallback logic were ever reached here (it isn't,
+     since the frame-rate measurement itself never runs). */
+  .lesson-receding{transform:none; transition:none;}
   .al-overlay{animation:none;}
   .al-panel{animation:none; transform:none; opacity:1;}
   .al-panel.dismissing{animation:none; display:none;}
