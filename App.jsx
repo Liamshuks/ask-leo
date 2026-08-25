@@ -11504,6 +11504,7 @@ function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext
       && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce) return;
     const canvas = canvasRef.current;
+    console.log('[AskLeo] Canvas element:', canvas);
     if (!canvas) return;
     sizePortalCanvas();
     const ctx = canvas.getContext("2d");
@@ -11548,7 +11549,10 @@ function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext
 
     const draw = (ts) => {
       if (fellBack) return;
-      if (startTs === null) startTs = ts;
+      if (startTs === null) {
+        console.log('[AskLeo] rAF started, t=0');
+        startTs = ts;
+      }
       const elapsed = ts - startTs;
 
       if (lastTs !== null) {
@@ -11680,6 +11684,7 @@ function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext
   };
 
   const handleTap = () => {
+    console.log('[AskLeo] Panel open triggered');
     // 0ms: button lit, canvas portal begins. floodOn/identityOn stay false
     // here — they only ever get set true by the frame-rate fallback below,
     // if the canvas can't keep up.
