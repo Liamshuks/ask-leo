@@ -11495,8 +11495,10 @@ function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext
   // Depth portal — 5 phases over 750ms, canvas + rAF. Reduced motion: no
   // canvas animation starts at all (handleTap's other timers still run;
   // only this is skipped). Frame-rate fallback: if the first 3 real rAF
-  // intervals average over 22ms, cancel and hand off to the existing
-  // approved flood+identity fallback instead.
+  // intervals average over 50ms (Genesis, raised from 22ms — that was
+  // triggering falsely on desktop browsers, where rAF timing is more
+  // variable than the original threshold assumed), cancel and hand off to
+  // the existing approved flood+identity fallback instead.
   const runPortalAnimation = () => {
     const reduce = typeof window !== "undefined" && window.matchMedia
       && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -11524,6 +11526,7 @@ function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext
     let frameCount = 0;
     let lastTs = null;
     let startTs = null;
+    let skippedFirstGap = false;
     const intervals = [];
     let fellBack = false;
 
@@ -11548,12 +11551,25 @@ function AskLeoButton({ stageId, stageLabel, bp, profile, currentExerciseContext
       if (startTs === null) startTs = ts;
       const elapsed = ts - startTs;
 
-      if (lastTs !== null && frameCount < 3) {
-        intervals.push(ts - lastTs);
-        frameCount++;
-        if (frameCount === 3) {
-          const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-          if (avg > 22) { fallbackToFlood(); return; }
+      if (lastTs !== null) {
+        if (!skippedFirstGap) {
+          // Skip the very first inter-frame gap entirely. The gap ending at
+          // the second real callback can be inflated by one-off setup cost
+          // around the canvas's first paint (layout, compositing) — not
+          // representative of steady-state frame rate. Measurement begins
+          // from the gap after this one.
+          skippedFirstGap = true;
+        } else if (frameCount < 3) {
+          intervals.push(ts - lastTs);
+          frameCount++;
+          if (frameCount === 3) {
+            const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+            if (avg > 50) {
+              console.log('[AskLeo] Canvas fallback triggered — avg rAF:', avg, 'ms');
+              fallbackToFlood();
+              return;
+            }
+          }
         }
       }
       lastTs = ts;
