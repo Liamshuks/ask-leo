@@ -1,0 +1,1000 @@
+﻿                            requestAnimationFrame(() => {
+                              handRaiseRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                            });
+                          }}>
+                          Back to the question
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {phase === "correct" && (
+                <>
+                  <p className="al-confirm">{confirmLine}</p>
+                  <button className="ghost-btn wide al-back" onClick={dismiss}>Back to the lesson</button>
+                </>
+              )}
+
+              {phase === "pivot" && (
+                <button className="ghost-btn wide al-back" onClick={dismiss}>Back to the lesson</button>
+              )}
+            </>
+          )}
+
+        </div>
+      </div>
+    </>
+  );
+}
+
+function LessonPage({ profile, memory, leoMemory, words, heard, diaryPages, activity, errorLog, stats, markActivity, bumpTasks, onExit }) {
+  const level = levelFor(profile);
+
+  const [phase, setPhase] = useState("loading");   // loading | chooser | planning | lesson | done
+  /* Â§1.5 â€” true only when a lesson already under way was restored from
+     storage. Cleared by the student's tap; never set between stages. */
+  const [resuming, setResuming] = useState(false);
+  const [planFailCount, setPlanFailCount] = useState(0);
+  // What Leo actually observed when planning stopped. Observed and Forward:
+  // the closing surface may name only this, and must point somewhere next.
+  const [planFail, setPlanFail] = useState(null);
+  const [currentUnitRecord, setCurrentUnitRecord] = useState(null);  // Task 3: unit preview during loading
+  const [lesson, setLesson] = useState(null);      // { blueprint, sections:{}, stage, perf:{}, status }
+  // Phase 2 lift 1 of 7 â€” populated by ChooseFormExercise only, via
+  // GrammarSection -> AuthoredGrammarPractice -> renderAuthoredExercise.
+  // null for every other renderer and every other stage; the Ask Leo
+  // panel prompt falls back to stage-level context only when null.
+  const [currentExerciseContext, setCurrentExerciseContext] = useState(null);
+  // Final illumination build â€” direct DOM ref, not React state. The
+  // lesson-receding effect is a rapid, purely-visual, transient toggle;
+  // lifting it into state would re-render the entire lesson body on every
+  // Ask Leo tap for no benefit.
+  const lessonBodyRef = React.useRef(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [req, setReq] = useState({ context: "", grammar: "", vocabulary: "", skill: "", pronunciation: "" });
+  const [sectionLoading, setSectionLoading] = useState(false);
+  const [vocabCard, setVocabCard] = useState(null);
+  const vocabCache = React.useRef({});
+
+  const bp = lesson && lesson.blueprint;
+  const vocabWords = bp ? (bp.vocabulary || []).map((v) => v.word) : [];
+
+  /* -- Sub-pass 2b (progressive render) + sub-pass 3 (section prefetch).
+        Background work now writes into the lesson while the student is using
+        it, so `lesson` from a closure is not a safe base for a write. Four
+        pieces make that safe:
+          lessonRef   â€” the single source of truth for background writers.
+                        persist() updates it SYNCHRONOUSLY, before the React
+                        state update, which is what makes concurrent merges
+                        safe: read-ref â†’ build â†’ persist happens with no await
+                        in between, so a later writer always sees the earlier
+                        writer's result instead of clobbering it.
+          reviewRef   â€” holds the in-flight review promise so advance() can
+                        await the same run rather than starting a second one.
+          inFlightRef â€” one generation per section, ever. The prefetch and the
+                        lazy path share it, so a student who outruns the
+                        prefetch waits for the call already running instead of
+                        triggering a duplicate that could swap the passage
+                        underneath them mid-stage.
+          reviewWait  â€” true only while a student is genuinely waiting at the
+                        intro boundary, so we can show a loader instead of a
+                        silent dead button. -- */
+  const lessonRef = React.useRef(lesson);
+  const persist = async (next) => { lessonRef.current = next; setLesson(next); await saveKey("esl-task:" + todayStr(), next); };
+  useEffect(() => { lessonRef.current = lesson; }, [lesson]);
+
+  /* Every background write into sections goes through here. It reads the ref
+     and hands the result straight to persist with no await between the two, so
+     two sections resolving milliseconds apart cannot lose each other. */
+  const mergeSection = async (stageId, data) => {
+    const base = lessonRef.current;
+    if (!base) return;
+    await persist({ ...base, sections: { ...base.sections, [stageId]: data } });
+  };
+
+  const inFlightRef = React.useRef({});
+  const reviewRef = React.useRef(null);
+  const [reviewWait, setReviewWait] = useState(false);
+  /* A lesson counts as reviewed when this session's background review has landed
+     (reviewed:true), OR when the blueprint already carries a review. The second
+     clause covers two real cases: a reload after the review finished, and any
+     lesson planned before 2b existed, whose review ran in front of first render.
+     Without it a returning student would sit through a second review of a lesson
+     that has already had one. */
+  const isReviewed = !!(lesson && lesson.reviewed) || !!(bp && bp._review);
+
+  useEffect(() => {
+    (async () => {
+      const saved = await loadKey("esl-task:" + todayStr(), null);
+      if (saved && saved.blueprint) {
+        setLesson(saved);
+        const done = !!(saved.status && saved.status.done);
+        setPhase(done ? "done" : "lesson");
+        /* Â§1.5 â€” the interstitial appears only when RETURNING to a
+           lesson already under way from outside it. Moving between
+           stages inside a session never shows it. */
+        if (!done && saved.stage > 0) setResuming(true);
+      }
+      else if (saved && saved.status && saved.status.done) { setLesson(null); setPhase("done"); } // legacy finished lesson
+      else setPhase("chooser");
+    })();
+  }, []);
+
+  /* -- Planner: one AI call builds the blueprint; everything else consumes it -- */
+  /* -- Leo's Teaching Brain: think about the student first, then plan -- */
+  /* -- Leo's Teaching Brain: TWO-STAGE pipeline.
+       Call 1: Leo THINKS about the student (freeform teaching notes).
+       Call 2: Leo PLANS the lesson from those notes (structured blueprint).
+       Separating thinking from structuring lets the model reflect deeply
+       without simultaneously formatting JSON. -- */
+  /* ================================================================
+     AUTHORED LESSON BYPASS
+     When a student selects a teacher-authored lesson, we skip the
+     entire AI planning pipeline. prepareAuthoredBlueprint() transforms
+     the authored format into the flat runtime blueprint + pre-filled
+     sections. The lesson engine treats the result identically to an
+     AI-planned lesson â€” same state shape, same stage progression,
+     same component rendering. Zero AI calls for content generation.
+     ================================================================ */
+  const startAuthored = async (authoredLesson) => {
+    // Cost-logging fix (11 Aug 2026): plan() sets _currentLessonId for the
+    // legacy live-generation path, but startAuthored() â€” the entry point
+    // every current lesson actually uses under the hybrid architecture â€”
+    // never did. That left the module-level default ("no-lesson-id") in
+    // place for the whole session, so every speaking_reply/lesson_summary/
+    // own_word_reply log during an authored lesson was unattributable.
+    // Mirrors plan()'s assignment exactly.
+    _currentLessonId = "lesson-" + Date.now();
+    const { blueprint, sections } = prepareAuthoredBlueprint(authoredLesson);
+    const problems = validateBlueprint(blueprint);
+    if (problems.length) {
+      console.error("[startAuthored] blueprint validation failed:", problems);
+      alert("This lesson has a problem â€” please let Leo know.");
+      return;
+    }
+    // reviewed:true â€” an authored lesson was written and checked by a teacher.
+    // It must never be sent to the AI reviewer, and must never make a student
+    // wait at the intro boundary for a review that will not happen.
+    await persist({ blueprint, sections, stage: 0, perf: {}, status: { done: false }, reviewed: true });
+    setPhase("lesson");
+  };
+
+  /* ================================================================
+     LEO'S TEACHING BRAIN â€” MULTI-STAGE PLANNING PIPELINE
+     Each stage produces genuine reasoning that the next stage consumes.
+     This is not prompt engineering â€” it is how an experienced teacher
+     actually thinks: student first, then needs, then design, then review.
+     ================================================================ */
+  /* ================================================================
+     EDUCATIONAL REVIEW â€” runs behind the intro, never in front of it.
+     Leo reviews his own lesson as a senior ELICOS teacher would, and
+     revises it if the review finds fault. The student is reading the
+     introduction while this happens. Two guarantees hold:
+       1. No student reaches a TAUGHT stage un-reviewed â€” advance() off
+          the intro awaits this (see advance below).
+       2. Nothing already on the student's screen changes underneath
+          them â€” the fields the intro has rendered are carried through
+          the revision unchanged. Revisions land on stages 1+ only.
+     Failure is survivable and never silent: the validated blueprint is
+     already a good lesson, so a failed review logs and steps aside.
+     ================================================================ */
+  const runReview = async (planned) => {
+    try {
+      const notes = planned._teacherNotes || "";
+      const bpRationale = planned.lessonRationale || "not stated";
+      const bpScaffold = planned.scaffoldingStrategy || "not stated";
+      const bpWarmUps = (planned.warmUpActivities || [])
+        .map(a => `${a.type} â€” ${a.prompt || a.instruction || "(no prompt)"}`).join("\n") || "none given";
+
+      const review = await askClaude(
+        `${AUSTRALIAN_SPELLING}You are a senior ELICOS teacher reviewing a colleague's lesson plan. Be critically constructive.\n\nSTUDENT: ${notes.slice(0, 300)}\n\nLESSON PLAN:\nContext: ${planned.context}\nObjective: ${planned.communicativeObjective}\nRationale: ${bpRationale}\n\nVocabulary:\n${planned.vocabulary.map(v => `${v.word} â€” ${v.meaning}`).join("\n")}\n\nGrammar point: ${planned.grammar.point}\nGrammar form: ${planned.grammar.form}\nGrammar examples: ${planned.grammar.examples.join(" / ")}\n\nWarm-up activities:\n${bpWarmUps}\n\nFinal task: ${planned.finalTask}\nMemorable moment: ${planned.memorableMoment}\nScaffolding: ${bpScaffold}\n\nAnswer YES or NO to each, then explain briefly:\n1. Would I enjoy teaching this lesson?\n2. Does every vocabulary item genuinely support the objective? Check each definition â€” is it clear and helpful at this level, or vague and circular?\n3. Does the grammar arise naturally from the situation?\n4. Is the authentic material believable?\n5. Does everything build toward the final task â€” does vocabulary prepare for reading, does reading model the grammar, does grammar support speaking?\n6. Is it memorable?\n7. Would the student leave more confident?\n8. Do the grammar examples practise the target structure and ONLY the target structure? Could a student answer any grammar example correctly without knowing the grammar rule? If so, the examples are testing something else.\n9. Do the warm-up activities feel specific to today's context, or could they appear in any lesson?\n\nDEFINITIONS â€” check every vocabulary meaning against all five of these, and name any that fail so they can be rewritten: (1) ONE sentence, using only words at or below the student's level; (2) does NOT use the target word or a form of it; (3) does NOT name the student and does NOT refer to today's lesson or situation â€” "the country the student is in now" fails on both counts, it is a caption for one student on one day; (4) DISTINGUISHES the word from its near neighbours â€” "a kind of food" fails for "tomato" because it is equally true of everything on the shelf; (5) would still be TRUE TOMORROW, in a different lesson, for a different student. The fifth is the strongest. A meaning that fails these is usually telling you the word should not have had a slot â€” say so if that is what you find.\n10. Is there anything I would change?\n\nBe honest. If anything needs improving, say exactly what and why.`,
+        { intent: "educational_review" }
+      );
+
+      let reviewed = planned;
+      // Carried into the failure log so the console says not just that the
+      // review failed but how far it got â€” a review that never fetched and a
+      // review whose revision was rejected are different defects.
+      let revisionOutcome = "not_needed";
+      // Revise only when the reviewer explicitly answered NO to a checklist
+      // question. The prompt demands uppercase YES/NO answers, so a
+      // case-sensitive match is deliberate: a lowercase "no" in prose
+      // ("no worries") or the echoed question text ("anything I would
+      // change?") must not trigger an unnecessary revision pass.
+      if (/\bNO\b/.test(review)) {
+        revisionOutcome = "attempted";
+        // Revision failure must never kill a lesson that already passed
+        // validation â€” the reviewed blueprint is a good lesson; the revision
+        // is an improvement pass, not a requirement.
+        try {
+          const revised = await askClaude(
+            `${AUSTRALIAN_SPELLING}You are Leo. Revise your lesson plan. A senior colleague reviewed it and gave this feedback:\n\n${review}\n\nYour current plan is:\n${JSON.stringify(planned)}\n\nRevise the plan to address their concerns while keeping everything that already works.\n\nRespond ONLY with JSON, no fences:\n${BLUEPRINT_JSON_SHAPE}`,
+            { intent: "blueprint" }
+          );
+          const revisedBp = parseJSON(revised);
+          if (revisedBp && revisedBp.communicativeObjective) {
+            // Merge revised fields, keeping anything the revision missed â€”
+            // then re-validate. A revision must never corrupt a valid plan.
+            const merged = { ...planned };
+            Object.keys(revisedBp).forEach((k) => { if (revisedBp[k]) merged[k] = revisedBp[k]; });
+            merged.vocabulary = (merged.vocabulary || []).slice(0, 8);
+            if (validateBlueprint(merged).length === 0) { reviewed = merged; revisionOutcome = "succeeded"; }
+            else revisionOutcome = "rejected_by_validation";
+          } else revisionOutcome = "unusable_response";
+        } catch (e) {
+          revisionOutcome = "failed";
+          console.warn("[Review] revision failed â€” keeping the validated plan", {
+            stage: "background_revision_failed", type: (e && e.aiErrorType) || "unknown",
+            name: (e && e.name) || typeof e, message: (e && e.message) || String(e), error: e,
+          });
+        }
+      }
+
+      // The student is on the intro RIGHT NOW. These are the fields the intro
+      // has already put on their screen, so the revision does not get them â€”
+      // text must never rewrite itself under a reader. Every later stage takes
+      // the revision in full.
+      reviewed = {
+        ...reviewed,
+        explanation: planned.explanation,
+        context: planned.context,
+        communicativeObjective: planned.communicativeObjective,
+        warmUpActivities: planned.warmUpActivities,
+        _teacherNotes: planned._teacherNotes,
+        _review: review,
+      };
+
+      // Remember which warm-up formats today used, so tomorrow avoids them.
+      const usedFormats = validateWarmUp(reviewed.warmUpActivities).map((a) => a.type);
+      await saveKey("esl-lastwarmup", usedFormats);
+
+      await persist({ ...lessonRef.current, blueprint: reviewed, reviewed: true });
+      return reviewed;
+    } catch (e) {
+      // Never silent â€” silent to the STUDENT, loud to the console. The lesson
+      // survives: the blueprint already passed validation, so the student gets
+      // a good lesson without the polish pass and is told nothing, because
+      // nothing about their lesson has changed. But this is where a review
+      // FETCH failure lands, which is a different defect from a revision
+      // failure, and it has been indistinguishable from it until now.
+      const _d = (e && e.detail) || {};
+      console.warn("[Review] background educational review failed", {
+        stage: "background_review_failed",
+        type: (e && e.aiErrorType) || "unknown",
+        name: (e && e.name) || typeof e,
+        message: (e && e.message) || String(e),
+        revisionOutcome,
+        status: _d.status != null ? _d.status : null,
+        bodyTail: _d.bodyTail || _d.textTail || null,
+        intent: _d.intent || null,
+        error: e,
+      });
+      await persist({ ...lessonRef.current, reviewed: true });
+      return planned;
+    }
+  };
+
+  const plan = async (requests) => {
+    _currentLessonId = "lesson-" + Date.now();
+    setPhase("planning");
+    // â•â•â• STEP 0: Determine unit (sequencer runs first, Â§B.5) â•â•â•
+    const { unitRecord, lessonInUnit, isFirstLesson, isConsolidating } = getUnitAssignment(leoMemory.store);
+    console.log(`[Sequencer] Unit ${unitRecord.unit}: ${unitRecord.theme}, lesson ${lessonInUnit}, first=${isFirstLesson}, consolidating=${isConsolidating}`);
+    setCurrentUnitRecord(unitRecord);  // Task 3: available for loading preview immediately
+
+    // â•â•â• STEP 1: Build teacher context â•â•â•
+    const teacherCtx = buildTeacherContext({
+      profile, memoryStore: leoMemory.store, words, heard: heard || [],
+      diaryPages, activity: activity || [], errorLog: errorLog || {}, stats: stats || {
+        streak: 0, entries: 0, words: words.length, tasks: 0,
+        errorTally: [], skillTally: [],
+      },
+    });
+
+    // â•â•â• STEP 2: Build unit context (Â§A.2) â•â•â•
+    const unitContext = buildUnitContext(unitRecord, lessonInUnit, leoMemory.store);
+
+    // â•â•â• STEP 3: Build unit blocks for the blueprint prompt â•â•â•
+    const recycleItems = buildRecycleList(unitRecord, leoMemory.store);
+    const unitVocabBlock = `\nUNIT VOCABULARY â€” this lesson draws from a unit pool, not from scratch.\nCORE (teach to every student): ${unitRecord.coreVocab.join(", ")}\nEXTENSION (teach only when the personalisation test passes for this student): ${unitRecord.extensionVocab.join(", ")}\nChoose 4â€“8 items from the core pool for today's lesson. Extension items enter only when the six-step personalisation test (below) passes. The vocab selection standard still governs every item â€” definition test, composition rules, proper-noun rules all apply.\n`;
+    const personalisationTestBlock = `\nPERSONALISATION TEST â€” run on every vocabulary item before teaching it.\nFor each item in the unit's vocabulary set, silently run these six steps:\n1. Do I hold specific information about this student that could replace this item? (Check the STUDENT PROFILE above.) If not â†’ standard item.\n2. Is the replacement a REAL thing in their life â€” something THEY named, not something I inferred? If inferred â†’ standard.\n3. Would the replacement sit at or below A1? If above level â†’ standard item, move the personalisation into the example sentence.\n4. Is it frequent enough in their life to deserve a slot? Something met weekly earns a slot. Something met once does not.\n5. Does the set still teach this unit's grammar after the substitution?\n6. Does the set still hold the right number of items with a sensible spread of parts of speech? If not, restore standard items.\nWhen a substitution succeeds, teach the specific with the category attached: Priceline â€” it's a chemist.\nEvery fallback is silent. The student is never told that something could not be personalised.\n`;
+    const recyclingBlock = recycleItems.length ? `\nRECYCLING â€” language from earlier units that appears in today's lesson.\nThese words and structures were taught in earlier units. The student has seen them before. They are NOT new vocabulary â€” do not give them cards, do not define them, do not highlight them, do not teach them. They appear in your reading text, your dialogue, your examples, your practice stems, and your mission BECAUSE THE SITUATION CALLS FOR THEM.\n${recycleItems.map(r => `From Unit ${r.unit} (${r.theme}): ${r.items.join(", ")} [${r.type}]`).join("\n")}\nHOW TO RECYCLE WELL:\n- Use recycled words in the reading passage and dialogue naturally.\n- Use recycled grammar in example sentences.\n- The mission should create a situation where recycled language is useful alongside today's new language.\nHOW NOT TO RECYCLE:\n- Do not define recycled words again.\n- Do not put recycled words on vocabulary cards.\n- Do not draw attention to recycled words. Leo weaves; he does not annotate.\n- Do not force recycled words into sentences where they do not fit.\n` : "";
+    const reqLines = [
+      requests.context ? `The student has asked to work on: "${requests.context}"` : "",
+      requests.grammar ? `They want to practise: "${requests.grammar}"` : "",
+      requests.vocabulary ? `They want to work on: "${requests.vocabulary}"` : "",
+      requests.skill ? `They asked to focus on: ${requests.skill}` : "",
+      requests.pronunciation ? `Pronunciation focus: "${requests.pronunciation}"` : "",
+    ].filter(Boolean).join("\n");
+    const avoidCtx = (teacherCtx.match(/Situations already practised: ([^.]+)/) || ["","none yet"])[1];
+    // Stage 2 previously saw only stage 1's prose summary. These pass the same
+    // underlying facts directly, so vocabulary and error selection no longer
+    // depend on what stage 1 happened to mention. Each degrades to readable
+    // text for a brand-new student â€” never an empty heading.
+    const l1 = (LANGS[profile.lang] && LANGS[profile.lang].english) || "not recorded";
+    const country = countryDisplay(profile.country) || "not recorded";
+    const _mastery = Object.entries((leoMemory.store && leoMemory.store.wordMastery) || {});
+    const fragileWords = _mastery.filter(([, e]) => e.stage === "new" || e.stage === "seen")
+      .slice(0, 8).map(([w]) => w).join(", ") || "none yet";
+    const recycleWords = _mastery.filter(([, e]) => e.stage === "practised")
+      .slice(0, 5).map(([w]) => w).join(", ") || "none yet";
+    const errorTally = ((stats && stats.errorTally) || [])
+      .map(([t, c]) => `${t} (${c}x)`).join(", ") || "none yet";
+    // Warm-up variety: the formats used last lesson are explicitly ruled out, so
+    // a student rarely meets the same activity format twice in a row.
+    const lastFormats = await loadKey("esl-lastwarmup", []);
+    const avoidFormats = Array.isArray(lastFormats) ? lastFormats.join(", ") : "";
+
+    let currentStage = "init";
+    // [Perf] load-speed instrumentation (sub-pass 1) â€” per-stage ms + cumulative, console only, zero control-flow effect.
+    const _perf0 = performance.now(); let _perfL = _perf0;
+    const perfMark = (label) => { const n = performance.now(); console.log("[Perf] " + label + ": " + Math.round(n - _perfL) + "ms (total " + Math.round(n - _perf0) + "ms)"); _perfL = n; };
+    try {
+      const levelConstraint = CEFR_CONSTRAINTS[level] || null;
+      if (!levelConstraint) console.warn(`[CEFR] No constraints defined for ${level} â€” planner running unconstrained`);
+      // ---- STAGE 1+2: STUDENT ANALYSIS AND NEEDS ASSESSMENT (merged, sub-pass 4) ----
+      // One call, two pieces of thinking, written in order. Leo thinks about the
+      // person first and only then decides what they need â€” the ordering is the
+      // pedagogy, not a formatting preference. The response is split straight
+      // back into the two strings the rest of the planner has always received.
+      currentStage = "student_and_needs";
+      const mergedPrompt = (reminder) =>
+        `You are Leo, one of Australia's most experienced ELICOS teachers. Twenty years of teaching international students.\n\nYou are going to do TWO separate pieces of thinking, in order, in one sitting. This is how you plan every lesson: first you think about the person, then â€” and only then â€” you decide what they need. THE ORDER IS A RULE, NOT A SUGGESTION. A needs decision made before the picture of the student is complete is a decision about a lesson, not about a learner.\n\nFIRST write PART ONE, in full. THEN, and only once Part One is finished on the page, write PART TWO. Do not begin Part Two while Part One is still forming.\n\nâ•â•â• WHAT YOU KNOW ABOUT YOUR STUDENT â•â•â•\n\n${teacherCtx}\n\n${unitContext}\n\nâ”€â”€â”€ PART ONE â€” STUDENT ANALYSIS â”€â”€â”€\n\nUse ONLY the student record above. Do not plan a lesson. Do not think about content. Do not look ahead to the vocabulary lists and error tallies further down this page â€” if something there suggests a lesson to you, that thought belongs in Part Two and nowhere else. Just think about this person:\n\n- Who are they? What kind of learner?\n- How long have I been teaching them? How are they progressing?\n- What has improved recently? What am I proud of?\n- What is still fragile? What keeps causing problems?\n- How confident are they? Has their confidence changed?\n- Did they have a mission? Did they try it?\n- What is their emotional state likely to be today?\n\nWrite 5-8 sentences. Be specific. Use their name. This is your private thinking.\n\nâ”€â”€â”€ PART TWO â€” NEEDS ASSESSMENT â”€â”€â”€\n\nBegin only once Part One is written. Read your own Part One back as though a colleague wrote it, and be willing to disagree with it. Part One DESCRIBES; Part Two DECIDES. If Part Two only restates Part One in different words, you have not done Part Two.\n\nPart Two must build FROM Part One. Name at least two specific things you wrote there â€” the student by name, and at least one named fragility, confidence observation, or mission outcome from your own analysis â€” and let today's decision follow from them. Do not introduce a need that Part One gives no evidence for. If you find yourself wanting to teach something Part One never observed, either the analysis was incomplete or the need is not real.\n\nHere is the rest of what you need. None of it was available to you in Part One, and none of it may be used to rewrite Part One.\n\n${reqLines ? "They have asked to work on:\n" + reqLines + "\n\n" : ""}STUDENT'S FIRST LANGUAGE: ${l1}\nCOUNTRY OF ORIGIN: ${country}\n\nVOCABULARY â€” STILL FRAGILE (not yet mastered): ${fragileWords}\nVOCABULARY â€” TO RECYCLE (taught but needs revisiting): ${recycleWords}\nRECURRING ERRORS: ${errorTally}\n\nIf several fragile words share a theme â€” for example, medical vocabulary, financial terms, or housing language â€” consider whether that theme is itself the right lesson today. A cluster of words that have been fragile for many lessons may be fragile precisely because no lesson has created a natural home for them. Teaching the situation they belong to is better than scattering them one by one across unrelated lessons where they will never stick.\n\nDo NOT repeat these recently-used contexts (choose something completely different): ${avoidCtx}.\n\nNow decide what this student genuinely needs today. Do not plan the lesson.\n\nIMPORTANT: You can only teach one thing well today. Choose ONE communicative objective. If this student has multiple needs â€” different grammar gaps, different skill weaknesses â€” pick the one that matters most right now and name what you are deliberately leaving for another day and why.\n\nConsider how this student's specific L1 variety affects their English â€” not just "Spanish" or "Chinese" but the regional variety. A Colombian Spanish speaker and a Peninsular Spanish speaker make different errors. A Cantonese speaker and a Mandarin speaker have different phonological challenges. Teach accordingly.\n\nAnswer briefly â€” PRIVATE REASONING only. Do NOT plan the lesson, list a vocabulary set, or write any material (SMS, menu, sign, memorable moment, emotional goal, final task); the blueprint does all of that. Answer:\n\n- The ONE communicative situation that helps them most right now, and why today.\n- What you are deliberately NOT teaching today, and why â€” name it plainly; this defer decision is firm and the blueprint will respect it.\n- The specific mistakes you predict, given their L1 variety.\n- The grammar point that naturally arises from this situation.${cefrBlock(level, levelConstraint)}${singlePointBlock(level)}\n\nWrite 4-6 sentences of private reasoning. The ONE objective and the defer decision you make here are FINAL â€” the blueprint will build exactly this, not re-decide it.\n\nâ”€â”€â”€ HOW TO LAY OUT YOUR ANSWER â”€â”€â”€\n\nRespond with exactly two sections, in this order. Each opens with its heading alone on its own line, in capital letters, spelled exactly as shown. Nothing before the first heading. Nothing after the second section. No other headings, no preamble, no sign-off, no markdown formatting on the headings.\n\nSTUDENT ANALYSIS\n(your Part One)\n\nNEEDS ASSESSMENT\n(your Part Two)${reminder || ""}`;
+      const SPLIT_REMINDER = "\n\nIMPORTANT: your previous answer could not be read. You MUST include BOTH headings, each alone on its own line, in capitals, spelled exactly: STUDENT ANALYSIS and NEEDS ASSESSMENT. Write both sections in full.";
+
+      let mergedThinking = await askClaude(mergedPrompt(""), { intent: "student_and_needs" });
+      let split = splitStudentAndNeeds(mergedThinking);
+      if (!split) {
+        // One retry, with the layout requirement restated. askClaude is
+        // stateless, so the whole prompt goes again with the reminder appended.
+        console.warn("[Planner] student_and_needs could not be split â€” retrying once", {
+          stage: currentStage, chars: (mergedThinking || "").length, tail: (mergedThinking || "").slice(-300),
+        });
+        currentStage = "student_and_needs_retry";
+        mergedThinking = await askClaude(mergedPrompt(SPLIT_REMINDER), { intent: "student_and_needs" });
+        split = splitStudentAndNeeds(mergedThinking);
+      }
+      if (!split) {
+        // Never fall through. Assigning the whole blob to studentAnalysis and
+        // leaving needsAssessment empty would hand Stage 3 half a plan â€” no
+        // objective, no defer decision, no predicted errors â€” and Stage 3 would
+        // invent all three, invisibly, inside a finished lesson.
+        console.error("[Planner] student_and_needs failed after retry", {
+          stage: currentStage, chars: (mergedThinking || "").length, tail: (mergedThinking || "").slice(-300),
+        });
+        throw new Error("student_and_needs: response did not contain both sections");
+      }
+      const studentAnalysis = split.studentAnalysis;
+      const needsAssessment = split.needsAssessment;
+      perfMark("student_and_needs");
+
+      // ---- STAGE 3: LESSON BLUEPRINT ----
+      // Now Leo converts his student analysis + needs assessment into a structured plan.
+      // Every field must come from the thinking above â€” not invented fresh.
+      currentStage = "blueprint";
+      const raw = await askClaude(
+        `${AUSTRALIAN_SPELLING}You are Leo. You have analysed your student and assessed their needs. Here is your thinking:\n\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nNow convert this thinking into a structured lesson plan. Everything must come from your analysis above â€” do not invent new content that contradicts your reasoning. The needs assessment above has ALREADY decided the ONE communicative objective, what to defer, and the L1-variety mistakes to address: build EXACTLY that objective (do not re-pick, broaden, or swap it), do not teach anything it set aside to defer, and target the predicted L1-variety mistakes. The student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)}${narrationGuidance(level, "framing")}${singlePointBlock(level)}${GRAMMAR_ENFORCEMENT}${volumeBlock(level)}${imageRuleBlock(level)}${pronunciationBlock(level)}${vocabSelectionBlock(level)}${unitVocabBlock}${personalisationTestBlock}${recyclingBlock}${
+  // L1-transfer state for the note preference order (v2 Â§3.5).
+  // Three signals: is a transfer error known, is the student's L1 known,
+  // what is the corrective form. The model receives these and selects
+  // the note case: Case 1 (L1 matched), Case 2 (generic), Case 3 (correction only).
+  "\n\nNOTE PREFERENCE: when writing a board note, prefer in this order: (1) an L1-transfer warning matched to this student's specific language â€” if their L1 is known (it is: ${l1}) and a transfer error exists for this grammar point in ${l1}, name the language and the error ('${l1} speakers say X. It's Y.'); (2) a pronunciation trap; (3) a memory aid; (4) a real-world anchor; (5) a link to something previously taught. If no L1-specific error is known for this structure, use the best note from any category rather than forcing a generic warning."
+}\n\nRespond ONLY with JSON, no fences:\n${BLUEPRINT_JSON_SHAPE}\n\nFour to eight vocabulary items from your needs assessment. Every word must justify its place.\n\nWARM-UP: give 3 activities of DIFFERENT types. Each activity must activate language the student will use later in THIS lesson â€” it must connect to the communicative objective, the target grammar, or the vocabulary set. At least one of the three must be present in each activity. A warm-up that tests language outside today's objective, grammar, and vocabulary wastes the student's limited processing budget on material that goes nowhere. Never generic, never tangential. Choice types (mcq, best_response, true_false, is_this_correct, spot_mistake, complete_dialogue) need options + answer + note. Sequence types (unscramble, order_conversation) need tokens in the CORRECT order + note. Free types (context_discussion, prediction, finish_sentence, mini_task) need only a prompt. ${avoidFormats ? `Do NOT use these formats â€” the student had them last lesson: ${avoidFormats}.` : ""}`,
+        { intent: "blueprint" }
+      );
+      let lastRaw = raw;
+      let blueprint;
+      try { blueprint = parseJSON(raw); }
+      catch (pe) { console.error("[Planner] parseJSON failed", { stage: currentStage, error: pe, rawTail: (raw || "").slice(-500) }); throw pe; }
+      blueprint._teacherNotes = studentAnalysis + "\n\n" + needsAssessment;
+      let problems = validateBlueprint(blueprint);
+      if (problems.length) {
+        // askClaude is stateless: the retry must restate everything â€” the plan
+        // that failed, what was wrong with it, the thinking, and the full shape.
+        currentStage = "blueprint_retry";
+        const raw2 = await askClaude(
+          `${AUSTRALIAN_SPELLING}You are Leo. Fix your lesson plan. Your previous plan was:\n${JSON.stringify(blueprint)}\n\nIt had these problems: ${problems.join(", ")}.\n\nYour thinking was:\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nNEEDS ASSESSMENT:\n${needsAssessment}\n\nThe student's CEFR level is ${level}.${cefrBlock(level, levelConstraint)}${narrationGuidance(level, "framing")}${singlePointBlock(level)}${GRAMMAR_ENFORCEMENT}${volumeBlock(level)}${imageRuleBlock(level)}${pronunciationBlock(level)}${vocabSelectionBlock(level)}${unitVocabBlock}${personalisationTestBlock}${recyclingBlock} Produce a corrected, complete plan.\n\nRespond ONLY with JSON, no fences:\n${BLUEPRINT_JSON_SHAPE}`,
+          { intent: "blueprint" }
+        );
+        lastRaw = raw2;
+        try { blueprint = parseJSON(raw2); }
+        catch (pe) { console.error("[Planner] parseJSON failed (retry)", { stage: currentStage, error: pe, rawTail: (raw2 || "").slice(-500) }); throw pe; }
+        blueprint._teacherNotes = studentAnalysis + "\n\n" + needsAssessment;
+        problems = validateBlueprint(blueprint);
+      }
+      if (problems.length) {
+        console.error("[Planner] validateBlueprint failed", { stage: currentStage, problems, rawTail: (lastRaw || "").slice(-500) });
+        throw new Error("blueprint invalid: " + problems.join(", "));
+      }
+      // AI-generated lessons are capped at 8 vocabulary items (the matching UI's
+      // mobile limit). Authored lessons bypass this function entirely and may
+      // include more items â€” matchVocab controls which subset appears in matching.
+      blueprint.vocabulary = blueprint.vocabulary.slice(0, 8);
+
+      // ---- FIRST RENDER (sub-pass 2b) ----
+      // The blueprint has passed validation: it is already a complete, teachable
+      // lesson. So the student gets it NOW. The educational review that used to
+      // sit here is an improvement pass, not a gate on first render, and holding
+      // a finished lesson behind it bought nothing the student could see.
+      // The guarantee is not "reviewed before anything is SHOWN" â€” it is
+      // "reviewed before anything is TAUGHT". advance() off the intro enforces it.
+      perfMark("blueprint");
+      await persist({ blueprint, sections: {}, stage: 0, perf: {}, status: { done: false }, reviewed: false });
+      setPhase("lesson");
+      perfMark("first-render");
+
+      // ---- SECTION PREFETCH (performance: review removed, parallel) ----
+      // The educational review and revision pass are removed. The prompt
+      // amendments (warm-up alignment, single-point enforcement, grammar
+      // sequencing, exercise disclaimers, stem-answer consistency) and the
+      // unit-context system now prevent every issue the review was catching.
+      // Removing it saves ~164s per lesson (81s review + 83s revision).
+      //
+      // Skill and grammar now run IN PARALLEL instead of sequentially.
+      // Grammar still receives the reading passage via priorCtx (prefetchSection
+      // reads from the persisted lesson state), but both calls start at the
+      // same time. Saves ~15s (the shorter call overlaps the longer).
+      //
+      // reviewRef is kept as the resolved blueprint so advance() still works
+      // â€” any code that awaits reviewRef.current gets the blueprint immediately.
+      currentStage = "handover_to_background";
+      reviewRef.current = Promise.resolve(blueprint);
+
+      // Warm-up format tracking (was inside runReview, moved here)
+      const usedFormats = validateWarmUp(blueprint.warmUpActivities).map((a) => a.type);
+      saveKey("esl-lastwarmup", usedFormats);
+
+      Promise.all([
+        prefetchSection("skill").then(() => perfMark("skill-prefetch")),
+        prefetchSection("grammar").then(() => perfMark("grammar-prefetch")),
+      ]).catch((e) => { console.error("[Prefetch] parallel prefetch failed", { error: e }); });
+    } catch (e) {
+      // Everything the next person needs, in one structured object. Not a
+      // concatenated string: the raw error must stay inspectable in the console.
+      const type = (e && e.aiErrorType) || "unknown";
+      const detail = (e && e.detail) || {};
+      console.error("[Planner] stage failed", {
+        stage: currentStage,
+        type,
+        name: (e && e.name) || typeof e,
+        message: (e && e.message) || String(e),
+        bodyTail: detail.bodyTail || detail.textTail || null,
+        status: detail.status != null ? detail.status : null,
+        intent: detail.intent || null,
+        elapsedMs: detail.ms != null ? detail.ms : null,
+        error: e,
+      });
+      setPlanFail({ stage: currentStage, type, message: (e && e.message) || String(e), status: detail.status != null ? detail.status : null, apiType: detail.apiType || null });
+      setPlanFailCount((c) => c + 1);
+      setPhase("error");
+    }
+  };
+
+  /* -- Lazy per-section generation: each stage consumes the blueprint; a failed
+        section regenerates alone without touching the rest of the lesson. -- */
+  /* ================================================================
+     SECTION GENERATION â€” one shared path (sub-pass 3).
+     Both the background prefetch and the student's own arrival call this.
+     inFlightRef guarantees a section is only ever generated once at a
+     time: whoever asks second waits for the call already running.
+       writeFallback = true   the student is standing here now, so a failure
+                              must still leave something teachable on screen.
+       writeFallback = false  a prefetch failed with the student nowhere near
+                              this stage. It writes NOTHING and rethrows, so
+                              the slot stays empty and the lazy path gets a
+                              real second attempt when they arrive. Writing a
+                              fallback here would silently cancel a section
+                              minutes before anyone reached it.
+     Everything reads the blueprint from lessonRef, never from the `bp`
+     closure, so a section generated after the 2b review is built from the
+     REVISED lesson plan rather than the pre-review draft.
+     ================================================================ */
+  const generateSection = (stageId, writeFallback) => {
+    if (inFlightRef.current[stageId]) return inFlightRef.current[stageId];
+    const run = (async () => {
+    const base = lessonRef.current;
+    const bp = base && base.blueprint;
+    if (!bp) throw new Error("no blueprint");
+    // Build context from earlier sections so builders reference what came before
+    const prior = base.sections || {};
+    const priorCtx = [
+      prior.skill && prior.skill.passage ? `The reading/listening passage used today was: "${prior.skill.passage.slice(0, 250)}"` : "",
+    ].filter(Boolean).join("\n");
+    const perf = base.perf || {};
+    const perfLine = `Performance: vocab ${perf.vocab || "not attempted"}, comprehension ${perf.skill || "not attempted"}, grammar ${perf.grammar || "not attempted"}, speaking turns ${perf.speak || 0}`;
+    // Grounding data for the summary: the actual speaking conversation and the vocabulary set.
+    // Without these, the model invents exchanges and characters that never happened.
+    const speakingTranscript = Array.isArray(perf.speakingTranscript) && perf.speakingTranscript.length > 0
+      ? "\nSpeaking transcript (what actually happened â€” refer ONLY to this):\n" + perf.speakingTranscript.map(t => (t.role === "leo" ? "Leo: " : "Student: ") + t.text).join("\n")
+      : "";
+    const vocabList = Array.isArray(bp.vocabulary) && bp.vocabulary.length > 0
+      ? "\nToday's vocabulary set: " + bp.vocabulary.map(v => v.word).join(", ")
+      : "";
+    try {
+      let raw, data;
+      if (stageId === "skill") {
+        const notes = bp._teacherNotes ? `Leo's teaching notes: ${bp._teacherNotes.slice(0, 300)}` : "";
+        raw = await askClaude(`${AUSTRALIAN_SPELLING}You are Leo, an experienced ELICOS teacher. ${notes}\nToday's lesson: "${bp.context}" (CEFR ${bp.cefr})${volumeBlock(bp.cefr)}.\nCommunicative objective: ${bp.communicativeObjective}\nToday's key vocabulary: ${(bp.vocabulary || []).slice(0,4).map(v=>v.word).join(", ")}\nGrammar focus: ${bp.grammar.point}\n${bp.authenticMaterial ? "Authentic material to base this on: " + bp.authenticMaterial : ""}\nFinal task students are preparing for: ${bp.finalTask || bp.communicativeObjective}\n\nWrite a short ${bp.mainSkill === "listening" ? "listening transcript â€” a natural conversation between real Australians with hesitations, natural responses. Do NOT label speakers (no 'Tourist:', 'Barista:' etc.) â€” just present the lines naturally as they would sound" : "reading text â€” something the student would genuinely encounter in Australia (a message, notice, menu, email, form)"} of 80-150 words. It MUST use at least 3 of today's vocabulary items and model the grammar point naturally. It should prepare students for the final communicative task.\nThen write five comprehension questions moving from gist to detail, each with four options.\n${EXERCISE_DISCLAIMER}Respond ONLY with JSON, no fences: {"passage":"the text","questions":[{"stem":"","options":["four options"],"answer":"exact text of correct option","note":"one warm teaching line"}]}`,
+          { intent: "skill_section" });
+        data = parseJSON(raw);
+        data.questions = validateQuestions(data.questions);
+        if (!data.passage || data.questions.length < 3) throw new Error("skill section invalid");
+      } else if (stageId === "grammar") {
+        raw = await askClaude(`${AUSTRALIAN_SPELLING}You are Leo, an experienced ELICOS teacher.\n\nTHE ONE GRAMMAR POINT FOR TODAY â€” everything must test exactly this and nothing else:\nPoint: "${bp.grammar.point}"\nMeaning: ${bp.grammar.meaning}\nForm: ${bp.grammar.form}\nExamples the student has just been shown: ${(bp.grammar.examples || []).join(" | ")}\n\nContext: ${bp.context} (CEFR ${bp.cefr})${cefrBlock(bp.cefr, CEFR_CONSTRAINTS[bp.cefr])}${volumeBlock(bp.cefr)}\nToday's vocabulary: ${(bp.vocabulary || []).slice(0,5).map(v=>v.word).join(", ")}\nPredicted student difficulties: ${(bp.predictedDifficulties || []).join("; ")}\n${priorCtx}\n\n${GRAMMAR_PARADIGM_FALLBACK}Write five practice questions that ALL drill the SAME structure shown in "Form" above. The student has just read the explanation and the examples; these questions must practise precisely that, so the explanation, the examples, the questions, the answers and the feedback are one coherent lesson.\n\nHARD RULES:\n- Every question must test the FORM above (word order, verb form, auxiliary, agreement, preposition, comparative marker â€” whatever that form uses).\n- Do NOT test a different grammar point. Do NOT test politeness or which sentence "sounds nicer" â€” that is function, not grammar.\n- Every note must NAME the rule, using the words of the point or the form, so the feedback teaches.\n- Use question types: complete the sentence, find the mistake, choose the correct word order, choose the correct verb form.\n- Set today's situation in the stems, using today's vocabulary where it fits naturally.\n- Randomise where the correct answer sits.\n\n${EXERCISE_DISCLAIMER}${STEM_ANSWER_CONSISTENCY}Respond ONLY with JSON, no fences: {"grammarPoint":"copy today's grammar point EXACTLY","questions":[{"stem":"","options":["four options"],"answer":"exact text of correct option","note":"one warm teaching line that names the rule"}]}`,
+          { intent: "grammar_section" });
+        data = parseJSON(raw);
+        data.questions = validateQuestions(data.questions);
+        if (data.questions.length < 3) throw new Error("grammar section invalid");
+      } else {
+        raw = await askClaude(`${AUSTRALIAN_SPELLING}You are Leo, an experienced ELICOS teacher, writing the closing reflection for today's lesson.\nContext: ${bp.context}\nObjective: ${bp.communicativeObjective}\nEmotional objective: ${bp.emotionalObjective || "build confidence"}\nToday's objective â€” what the lesson aimed at, NOT an achievement to certify: ${bp.learningOutcome}\nMemorable moment: ${bp.memorableMoment || ""}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\nTomorrow: ${bp.tomorrowConnection || ""}\nStudent: ${memory}\n${perfLine}${vocabList}${speakingTranscript}\n${priorCtx}\n\nWrite a closing summary as a teacher who genuinely cares.\n\n${SUMMARY_HONESTY_RULES}${summaryLengthBlock(bp.cefr)}\n\nThey should close feeling: "${bp.emotionalObjective || "more confident"}".\nRespond ONLY with JSON, no fences: {"praise":"","summary":"","strength":"","improvement":"","connection":"","tomorrowPreview":""}${narrationGuidance(bp.cefr, "framing")}`,
+          { intent: "lesson_summary" });
+        data = parseJSON(raw);
+        if (!data.praise) throw new Error("summary invalid");
+      }
+      // QA: Leo tests the exercise before the student sees it
+      const qaProblems = validateSection(stageId, data, bp);
+      if (qaProblems.length) {
+        console.warn(`[Leo QA] ${stageId} failed self-test:`, qaProblems.join("; "), "â€” regenerating");
+        // One retry with explicit feedback. askClaude is stateless, so the
+        // retry restates the failed exercise, the problems, today's
+        // vocabulary and the exact JSON shape it must return.
+        const retryShape = stageId === "summary"
+          ? `{"praise":"","summary":"","strength":"","improvement":"","connection":"","tomorrowPreview":""}`
+          : stageId === "skill"
+            ? `{"passage":"the text","questions":[{"stem":"","options":["four options"],"answer":"exact text of correct option","note":"one warm teaching line"}]}`
+            : `{"grammarPoint":"${bp.grammar && bp.grammar.point}","questions":[{"stem":"","options":["four options"],"answer":"exact text of correct option","note":"one warm teaching line that names the rule"}]}`;
+        const retryGuidance = stageId === "summary"
+          ? `\nMemorable moment: ${bp.memorableMoment || ""}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\n${perfLine}${vocabList}${speakingTranscript}\n${priorCtx}\n\n${SUMMARY_HONESTY_RULES}${summaryLengthBlock(bp.cefr)}`
+          : `\nToday's lesson: "${bp.context}" (CEFR ${bp.cefr}). Objective: "${bp.communicativeObjective}". Today's vocabulary: ${(bp.vocabulary || []).map((v) => v.word).join(", ")}.\nTHE ONE GRAMMAR POINT: "${bp.grammar && bp.grammar.point}" â€” form: ${bp.grammar && bp.grammar.form}. Every question must drill THAT form, and every note must name the rule.`;
+        try {
+          const retryRaw = await askClaude(`${AUSTRALIAN_SPELLING}You are Leo, regenerating a lesson exercise. Your ${stageId} exercise was:\n${JSON.stringify(data)}\n\nIt had these problems: ${qaProblems.join("; ")}.\n\nRegenerate this exercise, fixing ALL the problems.${retryGuidance}\n\nRespond ONLY with JSON, no fences:\n${retryShape}`,
+        { intent: "section_retry" });
+          const retryData = parseJSON(retryRaw);
+          if (retryData) {
+            if (retryData.questions) retryData.questions = validateQuestions(retryData.questions);
+            const retryQa = validateSection(stageId, retryData, bp);
+            if (retryQa.length === 0) data = retryData; // use the fixed version
+          }
+        } catch { /* keep the original if retry fails */ }
+      }
+      await mergeSection(stageId, data);
+      return data;
+    } catch (e) {
+      // Never silent, and the stage is always named.
+      console.error(`[Section] ${stageId} generation failed`, { stage: stageId, prefetch: !writeFallback, error: e });
+      // A failed PREFETCH writes nothing and rethrows: the student is not here
+      // yet, so they get a genuine second attempt on arrival rather than a
+      // section that was quietly cancelled on their behalf.
+      if (!writeFallback) throw e;
+      // Graceful fallback per section â€” the lesson never breaks.
+      // Grammar: the explanation lives on the blueprint and is ALWAYS available.
+      // Losing the practice questions must never lose the teaching itself â€”
+      // that's the difference between a jammed photocopier and a cancelled class.
+      const fallback = stageId === "grammar"
+        ? { grammarPoint: bp.grammar && bp.grammar.point, questions: [], explanationOnly: true }
+        : stageId === "summary"
+          ? { praise: "You showed up and did the work today â€” that's what progress is made of.", summary: `Today you practised ${bp.context.toLowerCase()}.`, strength: "Your persistence.", improvement: "Keep using today's phrases out loud.", connection: "Today's language belongs outside this app â€” use one line of it the next time you're in that situation.", tomorrowPreview: "Tomorrow we'll build on this again." }
+          : null;
+      await mergeSection(stageId, fallback || { skipped: true });
+      return fallback || { skipped: true };
+    }
+    })();
+    inFlightRef.current[stageId] = run;
+    const clear = () => { if (inFlightRef.current[stageId] === run) delete inFlightRef.current[stageId]; };
+    run.then(clear, clear);
+    return run;
+  };
+
+  /* The student has arrived at this stage. Unchanged in effect from before
+     sub-pass 3 â€” except that if a prefetch is already generating this section,
+     we wait for that call instead of starting a second one. */
+  const ensureSection = async (stageId) => {
+    const base = lessonRef.current;
+    if (!base || !base.blueprint || base.sections[stageId] || sectionLoading) return;
+    const needsAI = stageId === "skill" || stageId === "grammar" || stageId === "summary";
+    if (!needsAI) return; // intro/vocab/pron/speak consume the blueprint directly
+    setSectionLoading(true);
+    try {
+      const inFlight = inFlightRef.current[stageId];
+      if (inFlight) { try { await inFlight; } catch { /* prefetch failed â€” fall through and generate properly */ } }
+      // Still empty? Either nothing was prefetched, or the prefetch failed and
+      // deliberately left the slot open. Generate it now, with the fallback
+      // enabled, because this time the student is actually waiting.
+      if (!(lessonRef.current && lessonRef.current.sections[stageId])) await generateSection(stageId, true);
+    } finally { setSectionLoading(false); }
+  };
+
+  /* Background head start. Never gates first render and never gates advance():
+     if the student gets there first, ensureSection takes over. A failure here
+     is logged and dropped â€” the lazy path is the safety net. */
+  const prefetchSection = (stageId) =>
+    generateSection(stageId, false).catch((e) => {
+      console.error(`[Prefetch] ${stageId} prefetch failed â€” the lazy path will regenerate it when the student arrives`, { stage: stageId, error: e });
+      return null;
+    });
+
+  useEffect(() => {
+    if (phase !== "lesson" || !lesson) return;
+    const stageId = LESSON_STAGES[lesson.stage].id;
+    ensureSection(stageId);
+  }, [phase, lesson && lesson.stage]);
+
+  // If a section could not be generated even after retry, it is marked
+  // { skipped: true } â€” quietly move past it. This is an effect, never a
+  // render-time side effect: advancing persists state, and persisting
+  // during render causes duplicate writes and React update-in-render errors.
+  useEffect(() => {
+    if (phase !== "lesson" || !lesson) return;
+    const s = lesson.sections[LESSON_STAGES[lesson.stage].id];
+    if (s && s.skipped) skip();
+  }, [phase, lesson]);
+
+  const advance = async (perfPatch) => {
+    // HARD REQUIREMENT (sub-pass 2b): no student may ever reach an un-reviewed
+    // stage. Leaving the intro is the boundary â€” everything past it is taught
+    // content, so the background review must have landed before we cross it.
+    if (lessonRef.current && lessonRef.current.stage === 0 && !isReviewed) {
+      // Review removed for performance â€” reviewRef resolves immediately.
+      // Mark as reviewed so the gate doesn't fire again.
+      await persist({ ...lessonRef.current, reviewed: true });
+    }
+    // lessonRef, not lesson: the background review may have written a revised
+    // blueprint while this closure was waiting, and a stale spread would quietly
+    // undo it.
+    const base = lessonRef.current || lesson;
+    const nextStage = Math.min(base.stage + 1, LESSON_STAGES.length - 1);
+    await persist({ ...base, stage: nextStage, perf: { ...base.perf, ...(perfPatch || {}) } });
+  };
+  const skip = () => advance();
+
+  const finish = async () => {
+    const perf = lesson.perf || {};
+    const parse = (s) => { const m = /(\d+)\/(\d+)/.exec(s || ""); return m ? [+m[1], +m[2]] : [0, 0]; };
+    const [c1, t1] = parse(perf.vocab); const [c2, t2] = parse(perf.skill); const [c3, t3] = parse(perf.grammar);
+    await persist({ ...lesson, status: { done: true } });
+    await saveKey("esl-lastscenario", bp.context);
+    await markActivity(); await bumpTasks();
+    // Every word Leo taught enters the Word Bank, so the review can reach it.
+    // All of bp.vocabulary, not just the matched subset: stage 2 chose these
+    // eight deliberately, and the student met every one.
+    if (leoMemory.saveWords) await leoMemory.saveWords((bp.vocabulary || []).map((v) => v.word));
+    leoMemory.recordLesson({
+      scenario: bp.context, skill: bp.mainSkill, score: c1 + c2 + c3, total: (t1 + t2 + t3) || 1,
+      word: bp.vocabulary[0] && bp.vocabulary[0].word, mission: bp.mission || "", template: "BP",
+      tomorrowConnection: bp.tomorrowConnection,
+      memorableMoment: bp.memorableMoment, finalTask: bp.finalTask,
+    });
+
+    // â•â•â• SEQUENCER ADVANCEMENT (Phase 3, Part A) â•â•â•
+    // Update unit tracking fields and advance the sequencer.
+    leoMemory.updateMemory && leoMemory.updateMemory((prev) => {
+      const unitNum = prev.currentUnit || 1;
+      // 1. Update canDosAddressed from blueprint
+      const prevCanDos = (prev.unitCanDosAddressed && prev.unitCanDosAddressed[unitNum]) || [];
+      const newCanDos = Array.isArray(bp.canDosAddressed) ? bp.canDosAddressed : [];
+      const mergedCanDos = [...new Set([...prevCanDos, ...newCanDos])];
+      // 2. Update vocabPresented with taught vocabulary
+      const prevVocab = (prev.unitVocabPresented && prev.unitVocabPresented[unitNum]) || [];
+      const taughtVocab = (bp.vocabulary || []).map(v => v.word);
+      const mergedVocab = [...new Set([...prevVocab, ...taughtVocab])];
+      // 3. Update grammarTaught
+      const grammarDone = (prev.unitGrammarTaught && prev.unitGrammarTaught[unitNum]) || !!(perf.grammar && perf.grammar !== "not attempted");
+
+      const updated = {
+        ...prev,
+        unitCanDosAddressed: { ...prev.unitCanDosAddressed, [unitNum]: mergedCanDos },
+        unitVocabPresented: { ...prev.unitVocabPresented, [unitNum]: mergedVocab },
+        unitGrammarTaught: { ...prev.unitGrammarTaught, [unitNum]: grammarDone },
+        unitStatus: prev.unitStatus === "not_started" ? "in_progress" : prev.unitStatus,
+      };
+
+      // 4. Advance the sequencer
+      const advancement = advanceSequencer(updated);
+      console.log("[Sequencer] advancement:", advancement);
+      return { ...updated, ...advancement };
+    });
+
+    setPhase("done");
+  };
+
+  /* -- Vocabulary card: blueprint words answer instantly from the blueprint itself;
+        anything else falls back to a lightweight AI lookup. -- */
+  const handleVocabTap = (word) => {
+    const item = bp && (bp.vocabulary || []).find((v) => v.word.toLowerCase() === word.toLowerCase());
+    if (item) {
+      setVocabCard({ word: item.word, data: { ipa: item.ipa, pos: item.pos, cefr: bp.cefr, definition: item.meaning, lessonExample: item.example, examples: item.examples || [], related: item.related || [] }, loading: false });
+      return;
+    }
+    if (vocabCache.current[word]) { setVocabCard({ word, data: vocabCache.current[word], loading: false }); return; }
+    setVocabCard({ word, data: null, loading: true });
+    askClaude(`${AUSTRALIAN_SPELLING}You are Leo, a warm Australian English teacher. A student in a lesson about "${bp ? bp.context : "English"}" tapped on the word "${word}". Give them a quick, friendly vocabulary card. Respond ONLY with JSON, no fences: {"ipa":"","pos":"","cefr":"","definition":"simple English, one sentence","lessonExample":"","examples":["",""],"related":["","",""]}${narrationGuidance(bp.cefr, "vocab")}`,
+      { intent: "vocab_card" })
+      .then((raw) => { const data = parseJSON(raw); vocabCache.current[word] = data; setVocabCard({ word, data, loading: false }); })
+      .catch(() => setVocabCard({ word, data: { ipa: "", pos: "", cefr: level, definition: `Ask Leo in the chat to learn more about "${word}".`, examples: [], related: [] }, loading: false }));
+  };
+  const isSaved = (word) => (words || []).some((w) => w.word.toLowerCase() === word.toLowerCase());
+
+  /* ---------------- render ---------------- */
+  if (phase === "error") return (
+    <div>
+      <SectionTitle>Leo's Lesson</SectionTitle>
+      <div className="leo-accent text-leo" style={{ padding: "var(--space-4)", marginTop: "var(--space-5)" }}>
+        {/* Observed and Forward. Leo names the step he got to â€” which the code
+            genuinely holds â€” and never guesses at a cause. "Something went
+            wrong" is backward-looking and tells the student nothing; "the AI
+            failed" invents a cause the code has not established. Every branch
+            ends with something to do next. */}
+        <p>{PLAN_FAIL_LINE(planFail)}</p>
+        {planFailCount < 2
+          ? <>
+              <p>Nothing you have done is lost.</p>
+              <button className="primary-btn" style={{ marginTop: "var(--space-3)" }} onClick={() => { setPlanFail(null); setPhase("chooser"); }}>Try again</button>
+            </>
+          : <>
+              <p>Your progress is saved. You can try again in a moment, or start one of the lessons I have already written for you.</p>
+              <button className="primary-btn" style={{ marginTop: "var(--space-3)" }} onClick={() => { setPlanFail(null); setPhase("chooser"); }}>Choose a lesson</button>
+            </>}
+      </div>
+    </div>
+  );
+  if (phase === "loading") return <LeoLoader label="I'm opening today's lessonâ€¦" level={profile.level} />;
+  if (phase === "planning") return (<div><SectionTitle>Leo's Lesson</SectionTitle>
+    {currentUnitRecord ? (
+      <div className="plan-reveal">
+        <p className="plan-line plan-d1" style={{ fontSize: 17, fontWeight: 500, color: "var(--text-primary)" }}>Today: {currentUnitRecord.theme.toLowerCase()}</p>
+        <p className="plan-line plan-d2">Reading and listening practice</p>
+        <p className="plan-line plan-d3">Grammar: {currentUnitRecord.grammar.point}</p>
+        <p className="plan-line plan-d4">{(currentUnitRecord.coreVocab || []).length} new words to learn</p>
+        <p className="plan-line plan-d5">Pronunciation focus</p>
+        <div className="plan-line plan-d6" style={{ marginTop: "var(--space-5)" }}><PlanningWaitCycle /></div>
+      </div>
+    ) : <PlanningWaitPathB label="I'm putting together today's lesson." level={profile.level} />}
+  </div>);
+
+  if (phase === "chooser") {
+    // Authored lessons available to this student (future: filter by cefr, completion)
+    const availableAuthored = AUTHORED_LESSONS.filter((l) => l.metadata && l.metadata.id);
+    return (
+    <div>
+      <SectionTitle>Leo's Lesson</SectionTitle>
+      <Card>
+        <div className="lesson-head leo-accent"><p className="lesson-greeting text-leo">How would you like to study today?</p></div>
+        <button className="primary-btn wide" style={{ marginBottom: 10 }} onClick={() => plan({})}>ðŸ“š Leo chooses today's lesson</button>
+        <button className="ghost-btn wide" onClick={() => setReviewOpen(!reviewOpen)}>ðŸŽ“ I want to review something from today's class</button>
+        {reviewOpen && (
+          <div className="review-form">
+            <p className="muted small">Tell me as much or as little as you like â€” I'll plan the rest.</p>
+            <label className="input-label" htmlFor="req-context">Topic or situation (e.g. food, at the doctor)</label>
+            <input id="req-context" className="text-input" value={req.context} onChange={(e) => setReq({ ...req, context: e.target.value })} />
+            <label className="input-label" htmlFor="req-grammar">Grammar (e.g. present perfect)</label>
+            <input id="req-grammar" className="text-input" value={req.grammar} onChange={(e) => setReq({ ...req, grammar: e.target.value })} />
+            <label className="input-label" htmlFor="req-vocab">Vocabulary (e.g. words from today's class)</label>
+            <input id="req-vocab" className="text-input" value={req.vocabulary} onChange={(e) => setReq({ ...req, vocabulary: e.target.value })} />
+            <label className="input-label">Main skill</label>
+            <div className="btn-row">
+              {["reading", "listening"].map((s) => (
+                <button key={s} className={req.skill === s ? "primary-btn" : "ghost-btn"} onClick={() => setReq({ ...req, skill: req.skill === s ? "" : s })}>{s}</button>
+              ))}
+            </div>
+            <label className="input-label" htmlFor="req-pron">Pronunciation focus (optional)</label>
+            <input id="req-pron" className="text-input" value={req.pronunciation} onChange={(e) => setReq({ ...req, pronunciation: e.target.value })} />
+            <button className="primary-btn wide" style={{ marginTop: 10 }} onClick={() => plan(req)}>Plan my lesson</button>
+          </div>
+        )}
+      </Card>
+      {availableAuthored.length > 0 && (
+        <Card>
+          <h3>Teacher lessons</h3>
+          <p className="muted small">Lessons written by Leo â€” ready to go, no waiting.</p>
+          {availableAuthored.map((al) => (
+            <button key={al.metadata.id} className="ghost-btn wide" style={{ marginTop: 8, textAlign: "left" }}
+              onClick={() => startAuthored(al)}>
+              ðŸ–ï¸ {al.metadata.title}
+              <span className="muted small" style={{ display: "block", marginTop: 2 }}>{al.metadata.cefr} Â· {al.metadata.topic}</span>
+            </button>
+          ))}
+        </Card>
+      )}
+    </div>
+    );
+  }
+
+  if (phase === "done") {
+    const resetLesson = async () => { setLesson(null); await saveKey("esl-task:" + todayStr(), null); setPhase("chooser"); };
+    const goHome = () => { setLesson(null); onExit(); };
+    /* Bug fix (Leo's live walkthrough): tapping through to this screen
+       sometimes produced a blank white page with no way forward â€” the
+       single worst failure mode, since the student's only path back was
+       to close and reopen the app. Root cause could not be reproduced
+       without a stack trace, but a blank page after "Finish lesson" is
+       consistent with an uncaught throw during this block's unit-progress
+       computation (a render-time exception here unmounts the whole tree).
+       Guarded so a computation failure degrades to the simple completion
+       card below, which never depends on unit/sequencer data â€” it ALWAYS
+       renders, and the two navigation buttons ALWAYS work. */
+    let unitRec = null, store = null, unitNum = null, lessonNum = null, justCompleted = false, completedUnit = null, nextUnit = null, lastHistory = null;
+    try {
+      unitRec = currentUnitRecord;
+      store = leoMemory && leoMemory.store;
+      unitNum = store && store.currentUnit;
+      lessonNum = store && store.lessonInUnit;
+      lastHistory = store && store.unitHistory && store.unitHistory[store.unitHistory.length - 1];
+      justCompleted = lastHistory && lastHistory.unit === (unitNum ? unitNum - 1 : 0) && (lastHistory.status === "complete" || lastHistory.status === "force_complete");
+      completedUnit = justCompleted && UNIT_RECORDS.find(r => r.unit === lastHistory.unit);
+      nextUnit = unitNum && UNIT_RECORDS.find(r => r.unit === unitNum);
+    } catch (e) {
+      console.error("[LessonPage] unit-progress computation failed on the done screen â€” falling back to the simple card", e);
+      unitRec = null; store = null; justCompleted = false; completedUnit = null;
+    }
+    return (
+      <div>
+        <SectionTitle>Leoâ€™s Lesson</SectionTitle>
+        <div className="summary-flow">
+          <div className="sc-tick-wrap" style={{ animation: "scRise .4s ease-out both" }}>
+            <svg className="sc-tick" viewBox="0 0 52 52"><circle className="sc-tick-ring" cx="26" cy="26" r="22" fill="none" strokeWidth="2.5" /><path className="sc-tick-mark" fill="none" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" d="M15 27l7 7 15-15" /></svg>
+          </div>
+          <h3 className="summary-heading" style={{ animation: "scRise .4s ease-out both", animationDelay: "0.5s", opacity: 0 }}>Lesson complete</h3>
+          {unitRec && store ? (
+            <div className="card" style={{ textAlign: "left", margin: "var(--space-4) 0", animation: "scRise .4s ease-out both", animationDelay: "0.8s", opacity: 0 }}>
+              {justCompleted && completedUnit ? (
+                <>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <p style={{ fontSize: 17, fontWeight: 600, margin: 0, color: "var(--text-primary)" }}>Unit {completedUnit.unit}: {completedUnit.theme}</p>
+                    <span className="gram-section-label" style={{ margin: 0 }}>Complete âœ“</span>
+                  </div>
+                  <div className="step-dots" style={{ justifyContent: "flex-start", margin: "var(--space-2) 0" }}>
+                    {Array.from({ length: lastHistory.lessonsSpent || 1 }, (_, i) => (<span key={i} className="step-dot step-dot-done" />))}
+                  </div>
+                  {nextUnit && nextUnit.unit <= 22 && <p className="muted small" style={{ margin: "var(--space-2) 0 0" }}>Next unit: {nextUnit.theme}</p>}
+                  {unitNum > 22 && <p className="muted small" style={{ margin: "var(--space-2) 0 0" }}>Youâ€™ve completed the A1 programme.</p>}
+                </>
+              ) : (
+                <>
+                  <p style={{ fontSize: 17, fontWeight: 600, margin: 0, color: "var(--text-primary)" }}>Unit {unitRec.unit}: {unitRec.theme}</p>
+                  {lessonNum && <p className="muted small" style={{ margin: "var(--space-1) 0 0" }}>Lesson {lessonNum} of this unit</p>}
+                  <div className="step-dots" style={{ justifyContent: "flex-start", margin: "var(--space-2) 0" }}>
+                    {Array.from({ length: Math.min(5, lessonNum || 1) }, (_, i) => (<span key={i} className={"step-dot" + (i < (lessonNum || 1) ? " step-dot-done" : "")} />))}
+                  </div>
+                  {unitRec.grammar && <p className="muted small" style={{ margin: "var(--space-1) 0 0" }}>Coming up: {unitRec.grammar.point}</p>}
+                </>
+              )}
+            </div>
+          ) : (
+            <p className="muted" style={{ animation: "scRise .4s ease-out both", animationDelay: "0.8s", opacity: 0 }}>Great work today{bp ? ` on "${bp.context}"` : ""}. Small steps every day add up.</p>
+          )}
+          <div style={{ animation: "scRise .4s ease-out both", animationDelay: "1.1s", opacity: 0, display: "flex", flexDirection: "column", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
+            <button className="primary-btn wide" onClick={resetLesson}>Do another lesson</button>
+            <button className="ghost-btn wide" onClick={goHome}>Back to home</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // phase === "lesson"
+  const stage = LESSON_STAGES[lesson.stage];
+  const section = lesson.sections[stage.id];
+  const needsAI = stage.id === "skill" || stage.id === "grammar" || stage.id === "summary";
+  /* Â§1.3 â€” resolve this stage's header once and hand it to every
+     stage component, so the eyebrow/title/purpose treatment is
+     identical across all seven and cannot drift. */
+  const stageHeader = bp.stageHeaders
+    ? { ...stageHeaderFor(bp, stage.id, stage.label), stageIndex: lesson.stage, totalStages: LESSON_STAGES.length }
+    : null;
+  const stageProps = { bp, vocab: vocabWords, onVocabTap: handleVocabTap, onSkip: skip, header: stageHeader, stageIndex: lesson.stage, totalStages: LESSON_STAGES.length,
+    /* Personalisation seat generalised (structural mismatch fix 4):
+       the original seat passed only studentCountry, hardcoded to
+       profile.country. The three new lessons also need studentJob
+       and L1-substitution awareness for their pronunciation stages.
+       `personalisationFacts` is a plain map of every fact the seat
+       contract says may be used â€” each lesson's personalisation.reads
+       array names which fields matter for that lesson. Adding a new
+       fact here is one line, not a code change. Components read
+       personalisationFacts[factName]; the old studentCountry prop
+       is kept as a shorthand alias so nothing breaks. */
+    personalisationFacts: {
+      studentCountry: countryDisplay(profile.country) || null,
+      studentJob: profile.job || null,
+      studentL1: profile.l1 || null,
+    },
+    studentCountry: countryDisplay(profile.country) || null };
+
+  /* Â§1.5 â€” one line, one button, claiming only state the code holds. */
+  if (resuming) return (
+    <div>
+      <SectionTitle>Leo's Lesson</SectionTitle>
+      <ResumeInterstitial
+        stageLabel={stage.label}
+        stageIndex={lesson.stage}
+        totalStages={LESSON_STAGES.length}
+        onContinue={() => setResuming(false)}
+      />
+    </div>
+  );
+
+  return (
+    <div>
+      {/* lessonBodyRef wraps ONLY the actual lesson content. AskLeoButton
+          (and therefore the panel, flood, and identity moment it renders)
+          must NOT be inside this div â€” CSS opacity on a parent affects
+          every descendant's compositing, including position:fixed
+          children. Nesting the button here was the actual cause of the
+          whole panel washing out to 10% opacity along with the lesson:
+          .lesson-receding was correctly dimming its target, but its
+          target incorrectly included the panel itself. */}
+      <div ref={lessonBodyRef}>
+        {/* Â§1.3 â€” when the stage renders an authored header (which
+            carries its own eyebrow, title, purpose and dots), the outer
+            title and dot row would duplicate it. */}
+        {!stageHeader && <SectionTitle sub={`${bp.context} Â· ${stage.label} Â· ${lesson.stage + 1} of ${LESSON_STAGES.length}`}>Leo's Lesson</SectionTitle>}
+        {!stageHeader && (
+          <div className="step-dots" style={{ marginTop: "var(--space-2)" }}>
+            {LESSON_STAGES.map((s, i) => (
+              <span key={s.id} className={"step-dot" + (i < lesson.stage ? " step-dot-done" : i === lesson.stage ? " step-dot-current" : "")} />
+            ))}
+          </div>
+        )}
+        {STAGE_BRIDGE_TEXT[stage.id] && <p className="leo-accent text-leo" style={{ marginTop: "var(--space-5)", marginBottom: "var(--space-3)" }}>{STAGE_BRIDGE_TEXT[stage.id]}</p>}
+
+        {needsAI && (!section || sectionLoading || section.skipped) && <LeoLoader label="I'm preparing this partâ€¦" level={profile.level} />}
+
+        {/* The student has finished the intro before the background review landed.
+            This is the only place 2b can make anyone wait, and it is a real wait,
+            so it is shown honestly rather than left as a button that does nothing. */}
+        {reviewWait && <LeoLoader label="Preparing your next taskâ€¦" level={profile.level} />}
+
+        {!reviewWait && stage.id === "intro" && <IntroductionSection {...stageProps} onDone={(n) => advance({ intro: n })} />}
+        {stage.id === "vocab" && <VocabularySection {...stageProps} leoMemory={leoMemory} onDone={(c, t) => advance({ vocab: `${c}/${t}` })} />}
+        {stage.id === "pron" && <PronunciationSection {...stageProps} onDone={() => advance({ pron: "done" })} />}
+        {stage.id === "speak" && <SpeakingSection {...stageProps} memory={memory} onDone={(n, transcript) => advance({ speak: n, speakingTranscript: transcript })} />}
+        {stage.id === "skill" && section && !section.skipped && <SkillSection {...stageProps} section={section} onDone={(c, t) => advance({ skill: `${c}/${t}` })} />}
+        {stage.id === "grammar" && section && !section.skipped && <GrammarSection {...stageProps} section={section} onDone={(c, t) => advance({ grammar: `${c}/${t}` })} onExerciseChange={setCurrentExerciseContext} />}
+        {stage.id === "summary" && section && <SummarySection bp={bp} section={section} vocab={vocabWords} onVocabTap={handleVocabTap} onFinish={finish} />}
+      </div>
+
+      <AskLeoButton stageId={stage.id} stageLabel={stage.label} bp={bp} profile={profile} currentExerciseContext={currentExerciseContext} lessonBodyRef={lessonBodyRef} />
+
+      <VocabCardSheet card={vocabCard} lesson={null} onClose={() => setVocabCard(null)}
+        onSave={() => vocabCard && leoMemory.saveWord && leoMemory.saveWord(vocabCard.word)}
+        isSaved={vocabCard ? isSaved(vocabCard.word) : false} />
+    </div>
+  );
+}
+
+/* ---------------- Questions (English only) ---------------- */
+
+/* Sentinel the model emits when it refuses an off-topic question, stripped
+   before display â€” same convention as the report's [SECTION_6_OMITTED].
+   The refusal RULE is unchanged: this only lets the app know a refusal
+   happened, so the wall can be presented as a doorway (spec A6). */
+const OFF_TOPIC_MARK = "[OFF_TOPIC]";
+const readReply = (raw) => {
+  const t = (raw || "").trimStart();
+  return t.startsWith(OFF_TOPIC_MARK)
+    ? { offTopic: true, content: t.slice(OFF_TOPIC_MARK.length).trimStart() }
+    : { offTopic: false, content: raw };
+};
+
+// Multi-turn chat call: sends the whole history so the tutor remembers context
+// Runs the English tutor through the same proven API call the rest of the app uses,
+// by serialising the conversation into a single prompt.
+async function askTutor(system, history, question, level) {
+  const convo = history
+    .map((m) => (m.role === "user" ? "" : "Tutor: ") + m.content)
+    .join("\n\n");
+  const prompt = `${AUSTRALIAN_SPELLING}${system}${narrationGuidance(level, "chat")}\n\n${convo ? "Conversation so far:\n" + convo + "\n\n" : ""}The student now says: "${question}"\n\nReply as the tutor, in plain text only (no JSON, no labels).`;
+  return askClaude(prompt, { intent: "chat_reply" });
+}
+
+/* Â§7 â€” Minimal markdown rendering for Leo's chat responses */
+function renderMarkdown(text) {
+  if (!text) return text;
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/gs, '<ul style="margin:8px 0;padding-left:20px;list-style:disc">$1</ul>')
+    .replace(/\n/g, '<br />');
+}
+

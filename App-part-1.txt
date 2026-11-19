@@ -1,0 +1,1000 @@
+﻿import React, { useState, useEffect, useCallback } from "react";
+import { createClient } from "@supabase/supabase-js";
+import {
+  BookOpen, Book, MessageCircle, Sparkles, Ear, MapPin, Mic, Gamepad2,
+  LayoutDashboard, Check, X, Search, Send, Plus, Trash2, Loader2, ChevronLeft, ChevronRight, ExternalLink, Repeat,
+  Home, TrendingUp, PenLine, GraduationCap, RotateCcw,
+  AlertTriangle, Waves, Sun, CreditCard, Stethoscope, Briefcase,
+  User, UserCheck, Users, Box, Volume2,
+  ChefHat, ShoppingBag, Navigation, DoorOpen, Wallet, BookCheck, Car, Smartphone,
+  Trophy, Dumbbell, Music, Clapperboard, Palette, Coffee, TreePine, PawPrint, Image, Pencil,
+} from "lucide-react";
+
+/* ============================================================
+   MY ENGLISH DIARY â€” a personal companion for ESL students
+   L1 support: Chinese (Simplified), Spanish, Portuguese
+   ============================================================ */
+
+const LANGS = {
+  // Â§13.3 (26 July 2026): the zh-Hans / zh-Hant split has landed. Script is the
+  // routing axis for Chinese per the ratified L1 Variety directive â€” the two are
+  // ORDINARY picker rows (no grouping, no "variants" heading): a script choice
+  // presented as an equal, not a sub-option. Existing "zh" records stay the
+  // Simplified base (key unchanged), so no record migrates or breaks.
+  zh: { native: "ç®€ä½“ä¸­æ–‡", english: "Chinese (Simplified)", hello: "ä½ å¥½" },
+  "zh-Hant": { native: "ç¹é«”ä¸­æ–‡", english: "Chinese (Traditional)", hello: "ä½ å¥½" },
+  es: { native: "EspaÃ±ol", english: "Spanish", hello: "Â¡Hola" },
+  pt: { native: "PortuguÃªs", english: "Portuguese", hello: "OlÃ¡" },
+  fr: { native: "FranÃ§ais", english: "French", hello: "Bonjour" },
+  de: { native: "Deutsch", english: "German", hello: "Hallo" },
+  sv: { native: "Svenska", english: "Swedish", hello: "Hej" },
+  ja: { native: "æ—¥æœ¬èªž", english: "Japanese", hello: "ã“ã‚“ã«ã¡ã¯" },
+  ko: { native: "í•œêµ­ì–´", english: "Korean", hello: "ì•ˆë…•í•˜ì„¸ìš”" },
+};
+
+const LEVELS = [
+  ["A1", "Beginner"], ["A2", "Elementary"], ["B1", "Intermediate"],
+  ["B2", "Upper-Intermediate"], ["C1", "Advanced"],
+];
+// English level for AI prompts; falls back gently if the student skipped it
+const levelFor = (p) => (p && p.level ? p.level : "B1");
+
+const PHRASES = {
+  zh: [
+    { en: "Every mistake is a step forward.", l1: "æ¯ä¸€ä¸ªé”™è¯¯éƒ½æ˜¯å‰è¿›çš„ä¸€æ­¥ã€‚" },
+    { en: "Little by little, a little becomes a lot.", l1: "ç§¯å°‘æˆå¤šã€‚" },
+    { en: "Courage speaks louder than perfect grammar.", l1: "å‹‡æ°”æ¯”å®Œç¾Žçš„è¯­æ³•æ›´å“äº®ã€‚" },
+    { en: "You are not behind â€” you are on your way.", l1: "ä½ æ²¡æœ‰è½åŽï¼Œä½ æ­£åœ¨è·¯ä¸Šã€‚" },
+    { en: "A new language is a new life.", l1: "å­¦ä¸€é—¨æ–°è¯­è¨€ï¼Œå¼€å¯ä¸€æ®µæ–°ç”Ÿæ´»ã€‚" },
+    { en: "Practice makes progress, not perfection.", l1: "ç»ƒä¹ å¸¦æ¥è¿›æ­¥ï¼Œè€Œéžå®Œç¾Žã€‚" },
+    { en: "Dripping water pierces the stone.", l1: "æ»´æ°´ç©¿çŸ³ï¼Œè´µåœ¨åšæŒã€‚" },
+    { en: "The best time to speak English is now.", l1: "è¯´è‹±è¯­çš„æœ€ä½³æ—¶æœºå°±æ˜¯çŽ°åœ¨ã€‚" },
+  ],
+  es: [
+    { en: "Every mistake is a step forward.", l1: "Cada error es un paso adelante." },
+    { en: "Little by little, one travels far.", l1: "Poco a poco se anda lejos." },
+    { en: "Courage speaks louder than perfect grammar.", l1: "El valor habla mÃ¡s fuerte que la gramÃ¡tica perfecta." },
+    { en: "You are not behind â€” you are on your way.", l1: "No estÃ¡s atrasado, estÃ¡s en camino." },
+    { en: "A new language is a new life.", l1: "Un idioma nuevo, una vida nueva." },
+    { en: "Practice makes progress, not perfection.", l1: "La prÃ¡ctica trae progreso, no perfecciÃ³n." },
+    { en: "Nothing ventured, nothing gained.", l1: "Quien no arriesga, no gana." },
+    { en: "The best time to speak English is now.", l1: "El mejor momento para hablar inglÃ©s es ahora." },
+  ],
+  pt: [
+    { en: "Every mistake is a step forward.", l1: "Cada erro Ã© um passo em frente." },
+    { en: "Grain by grain, the hen fills her belly.", l1: "De grÃ£o em grÃ£o, a galinha enche o papo." },
+    { en: "Courage speaks louder than perfect grammar.", l1: "A coragem fala mais alto do que a gramÃ¡tica perfeita." },
+    { en: "You are not behind â€” you are on your way.", l1: "VocÃª nÃ£o estÃ¡ atrasado, estÃ¡ a caminho." },
+    { en: "A new language is a new life.", l1: "Uma nova lÃ­ngua, uma nova vida." },
+    { en: "Practice makes progress, not perfection.", l1: "A prÃ¡tica traz progresso, nÃ£o perfeiÃ§Ã£o." },
+    { en: "Slowly, one goes far.", l1: "Devagar se vai ao longe." },
+    { en: "The best time to speak English is now.", l1: "O melhor momento para falar inglÃªs Ã© agora." },
+  ],
+  fr: [
+    { en: "Every mistake is a step forward.", l1: "Chaque erreur est un pas en avant." },
+    { en: "Little by little, the bird builds its nest.", l1: "Petit Ã  petit, l'oiseau fait son nid." },
+    { en: "Courage speaks louder than perfect grammar.", l1: "Le courage parle plus fort qu'une grammaire parfaite." },
+    { en: "You are not behind â€” you are on your way.", l1: "Tu n'es pas en retard â€” tu es en chemin." },
+    { en: "A new language is a new life.", l1: "Une nouvelle langue, c'est une nouvelle vie." },
+    { en: "Practice makes progress, not perfection.", l1: "La pratique apporte le progrÃ¨s, pas la perfection." },
+    { en: "Drop by drop, the water shapes the stone.", l1: "Goutte Ã  goutte, l'eau creuse la pierre." },
+    { en: "The best time to speak English is now.", l1: "Le meilleur moment pour parler anglais, c'est maintenant." },
+  ],
+  de: [
+    { en: "Every mistake is a step forward.", l1: "Jeder Fehler ist ein Schritt nach vorne." },
+    { en: "Step by step, you reach the goal.", l1: "Schritt fÃ¼r Schritt erreicht man das Ziel." },
+    { en: "Courage speaks louder than perfect grammar.", l1: "Mut spricht lauter als perfekte Grammatik." },
+    { en: "You are not behind â€” you are on your way.", l1: "Du bist nicht hinterher â€” du bist auf dem Weg." },
+    { en: "A new language is a new life.", l1: "Eine neue Sprache ist ein neues Leben." },
+    { en: "Practice makes progress, not perfection.", l1: "Ãœbung bringt Fortschritt, nicht Perfektion." },
+    { en: "All beginnings are hard.", l1: "Aller Anfang ist schwer." },
+    { en: "The best time to speak English is now.", l1: "Die beste Zeit, Englisch zu sprechen, ist jetzt." },
+  ],
+  sv: [
+    { en: "Every mistake is a step forward.", l1: "Varje misstag Ã¤r ett steg framÃ¥t." },
+    { en: "Little by little, you travel far.", l1: "Steg fÃ¶r steg kommer man lÃ¥ngt." },
+    { en: "Courage speaks louder than perfect grammar.", l1: "Mod talar hÃ¶gre Ã¤n perfekt grammatik." },
+    { en: "You are not behind â€” you are on your way.", l1: "Du ligger inte efter â€” du Ã¤r pÃ¥ vÃ¤g." },
+    { en: "A new language is a new life.", l1: "Ett nytt sprÃ¥k Ã¤r ett nytt liv." },
+    { en: "Practice makes progress, not perfection.", l1: "Ã–vning ger framsteg, inte perfektion." },
+    { en: "No one becomes a master without practice.", l1: "Ã–vning ger fÃ¤rdighet." },
+    { en: "The best time to speak English is now.", l1: "BÃ¤sta tiden att tala engelska Ã¤r nu." },
+  ],
+  ja: [
+    { en: "Every mistake is a step forward.", l1: "ã™ã¹ã¦ã®é–“é•ã„ã¯å‰é€²ã®ä¸€æ­©ã§ã™ã€‚" },
+    { en: "Dust piled up becomes a mountain.", l1: "å¡µã‚‚ç©ã‚‚ã‚Œã°å±±ã¨ãªã‚‹ã€‚" },
+    { en: "Courage speaks louder than perfect grammar.", l1: "å‹‡æ°—ã¯å®Œç’§ãªæ–‡æ³•ã‚ˆã‚Šå¤§ããªå£°ã§èªžã‚Šã¾ã™ã€‚" },
+    { en: "You are not behind â€” you are on your way.", l1: "é…ã‚Œã¦ã„ã‚‹ã®ã§ã¯ãªãã€é€²ã‚“ã§ã„ã‚‹ã®ã§ã™ã€‚" },
+    { en: "A new language is a new life.", l1: "æ–°ã—ã„è¨€èªžã¯æ–°ã—ã„äººç”Ÿã§ã™ã€‚" },
+    { en: "Practice makes progress, not perfection.", l1: "ç·´ç¿’ã¯å®Œç’§ã§ã¯ãªãã€ä¸Šé”ã‚’ã‚‚ãŸã‚‰ã—ã¾ã™ã€‚" },
+    { en: "Continuity is strength.", l1: "ç¶™ç¶šã¯åŠ›ãªã‚Šã€‚" },
+    { en: "The best time to speak English is now.", l1: "è‹±èªžã‚’è©±ã™æœ€é«˜ã®ã‚¿ã‚¤ãƒŸãƒ³ã‚°ã¯ä»Šã§ã™ã€‚" },
+  ],
+  ko: [
+    { en: "Every mistake is a step forward.", l1: "ëª¨ë“  ì‹¤ìˆ˜ëŠ” í•œ ê±¸ìŒ ì•žìœ¼ë¡œ ë‚˜ì•„ê°€ëŠ” ê²ƒìž…ë‹ˆë‹¤." },
+    { en: "A journey of a thousand miles begins with a single step.", l1: "ì²œ ë¦¬ ê¸¸ë„ í•œ ê±¸ìŒë¶€í„°." },
+    { en: "Courage speaks louder than perfect grammar.", l1: "ìš©ê¸°ëŠ” ì™„ë²½í•œ ë¬¸ë²•ë³´ë‹¤ í¬ê²Œ ë§í•©ë‹ˆë‹¤." },
+    { en: "You are not behind â€” you are on your way.", l1: "ë’¤ì²˜ì§„ ê²ƒì´ ì•„ë‹™ë‹ˆë‹¤ â€” ë‚˜ì•„ê°€ê³  ìžˆëŠ” ê²ƒìž…ë‹ˆë‹¤." },
+    { en: "A new language is a new life.", l1: "ìƒˆë¡œìš´ ì–¸ì–´ëŠ” ìƒˆë¡œìš´ ì‚¶ìž…ë‹ˆë‹¤." },
+    { en: "Practice makes progress, not perfection.", l1: "ì—°ìŠµì€ ì™„ë²½ì´ ì•„ë‹Œ ë°œì „ì„ ê°€ì ¸ì˜µë‹ˆë‹¤." },
+    { en: "Even a small stream becomes a great river.", l1: "ìž‘ì€ ë¬¼ì¤„ê¸°ë„ í° ê°•ì´ ë©ë‹ˆë‹¤." },
+    { en: "The best time to speak English is now.", l1: "ì˜ì–´ë¥¼ ë§í•  ìµœê³ ì˜ ë•ŒëŠ” ë°”ë¡œ ì§€ê¸ˆìž…ë‹ˆë‹¤." },
+  ],
+};
+
+const PRON_TIPS = {
+  zh: [
+    { title: "th sounds /Î¸/ and /Ã°/", tip: "Put your tongue lightly between your teeth. 'Think' is not 'sink', and 'this' is not 'dis'. Practise: three thirsty brothers." },
+    { title: "Word endings", tip: "English words often end in consonants: cold, worked, laughs. Don't drop the final sound â€” 'col' and 'cold' are different words." },
+    { title: "Long vs short vowels", tip: "'Ship' /Éª/ and 'sheep' /iË/ are different vowels, not just different lengths. Smile more for /iË/." },
+    { title: "Word stress", tip: "English stress changes meaning: REcord (noun) vs reCORD (verb). Mark the stressed syllable when you learn a new word." },
+  ],
+  es: [
+    { title: "'ship' vs 'sheep'", tip: "Spanish has one 'i' sound; English has two. /Éª/ in 'ship' is shorter and more relaxed than /iË/ in 'sheep'." },
+    { title: "No 'e' before s+consonant", tip: "'School' is not 'eschool', and 'Spain' is not 'Espain'. Start directly with the /s/." },
+    { title: "/v/ vs /b/", tip: "In English these are different sounds. For /v/, touch your top teeth to your bottom lip: 'very' vs 'berry'." },
+    { title: "-ed endings", tip: "Three sounds: /t/ (worked), /d/ (played), /Éªd/ (wanted). Only add the extra syllable after t or d sounds." },
+  ],
+  pt: [
+    { title: "Final 'l'", tip: "In English, final 'l' stays an /l/ sound. 'Brazil' ends with the tongue touching behind the teeth â€” not 'Braziw'." },
+    { title: "th sounds /Î¸/ and /Ã°/", tip: "Tongue between the teeth: 'think' is not 'fink' or 'sink'. Practise: this, that, these, those." },
+    { title: "English 'h' and 'r'", tip: "English /h/ is soft breath ('house'), and English /r/ is made with the tongue curled back â€” not like Portuguese 'rr'." },
+    { title: "-ed endings", tip: "Three sounds: /t/ (worked), /d/ (played), /Éªd/ (wanted). Only add the extra syllable after t or d sounds." },
+  ],
+  fr: [
+    { title: "th sounds /Î¸/ and /Ã°/", tip: "French doesn't have these sounds. Put your tongue between your teeth â€” 'think' is not 'sink' or 'zink', and 'the' is not 'ze'." },
+    { title: "The /h/ sound", tip: "English /h/ is a real breath sound. 'Happy' starts with air, not silence. French drops it â€” English doesn't." },
+    { title: "Word stress", tip: "French stresses the last syllable; English moves stress around. 'COMfortable' not 'comforTABLE'. Mark the stress when you learn a word." },
+    { title: "-ed endings", tip: "Three sounds: /t/ (worked), /d/ (played), /Éªd/ (wanted). Don't add a French-style vowel â€” 'worked' is one syllable, not two." },
+  ],
+  de: [
+    { title: "The /w/ sound", tip: "English /w/ uses rounded lips, not teeth. 'Water' starts with lips rounded â€” not /v/. 'Wine' and 'vine' are different words." },
+    { title: "th sounds /Î¸/ and /Ã°/", tip: "German doesn't have these. Tongue between teeth: 'think' is not 'sink', and 'the' is not 'de'. Practise: the, this, that, think, three." },
+    { title: "Final consonant voicing", tip: "German devoices final consonants, but English keeps them voiced. 'Dog' ends with /É¡/, not /k/. 'Have' ends with /v/, not /f/." },
+    { title: "Vowel length", tip: "'Ship' /Éª/ and 'sheep' /iË/ are different vowels, not just short vs long. Keep /Éª/ relaxed and short." },
+  ],
+  sv: [
+    { title: "The /dÊ’/ and /tÊƒ/ sounds", tip: "Swedish doesn't have 'j' as in 'job' /dÊ’/ or 'ch' as in 'church' /tÊƒ/. Touch the roof of your mouth with the tip of your tongue." },
+    { title: "th sounds /Î¸/ and /Ã°/", tip: "These don't exist in Swedish. Tongue between your teeth â€” 'think' is not 'tink', and 'this' is not 'dis'." },
+    { title: "The /z/ sound", tip: "Swedish 's' is always voiceless. English has both /s/ (sit) and /z/ (zip). Feel your throat vibrate for /z/." },
+    { title: "Word stress in compounds", tip: "Swedish compounds stress the first part; English varies. 'Under-STAND', not 'UN-derstand'. Check each word individually." },
+  ],
+  ja: [
+    { title: "/l/ and /r/ sounds", tip: "English /l/ (tongue tip touches the ridge behind your teeth) and /r/ (tongue curls back, doesn't touch) are two separate sounds. 'Light' and 'right' are different words." },
+    { title: "Consonant clusters", tip: "English stacks consonants together: 'str-ong', 'spl-ash'. Don't add vowels between them â€” 'strong' is one syllable, not 'su-to-ro-n-gu'." },
+    { title: "th sounds /Î¸/ and /Ã°/", tip: "Tongue between your teeth: 'think' is not 'sinku', and 'the' is not 'za'. Practise: three, this, that, those." },
+    { title: "Word stress", tip: "Japanese gives each syllable roughly equal weight. English stresses one syllable strongly: 'IM-por-tant', not 'im-POR-TANT'. Mark the stress when you learn a word." },
+  ],
+  ko: [
+    { title: "/f/ and /p/ sounds", tip: "English /f/ uses top teeth on bottom lip â€” air flows through. It is different from /p/ (lips together, then pop). 'Fan' and 'pan' are different words." },
+    { title: "/l/ and /r/ sounds", tip: "English /l/ (tongue tip touches the ridge behind your teeth) and /r/ (tongue curls back, doesn't touch) are different sounds. 'Lead' and 'read' are different words." },
+    { title: "Final consonants", tip: "English final consonants must be released clearly. 'Cup' ends with a /p/ pop, 'cat' with a /t/ tap. Don't swallow the final sound." },
+    { title: "th sounds /Î¸/ and /Ã°/", tip: "Korean doesn't have these. Tongue lightly between your teeth: 'think' is not 'sinkeu', and 'the' is not 'deo'." },
+  ],
+};
+
+const AUS_HELP = [
+  {
+    icon: AlertTriangle, title: "Emergency â€” call 000",
+    intro: "In a serious emergency, call Triple Zero (000). It is the fastest way to get the police, fire service, or an ambulance. It is free from any phone.",
+    display: [["ðŸ‘®", "Police â€” 000"], ["ðŸ”¥", "Fire â€” 000"], ["ðŸš‘", "Ambulance â€” 000"]],
+    points: [
+      "Call 000 when someone is very sick or hurt, there is a fire, or a life is in danger.",
+      "Stay calm and call from a safe place.",
+      "Tell the operator which service you need: police, fire, or ambulance.",
+      "Say where you are clearly â€” street number, street name, and suburb.",
+      "Stay on the phone and answer the questions. Do not hang up until they say you can.",
+      "If you cannot speak English well, call from a home phone, say 'Police', 'Fire', or 'Ambulance', and wait â€” they will find a translator.",
+      "Only call 000 in a real emergency.",
+    ],
+    url: "https://www.triplezero.gov.au/triple-zero/How-to-Call-000",
+  },
+  {
+    icon: Waves, title: "Swim between the flags",
+    intro: "Australian beaches are beautiful, but the ocean can be dangerous. Strong water called a 'rip' can pull you away from the beach. Always swim in the safe area.",
+    points: [
+      "Look for the red and yellow flags on the beach.",
+      "Swim only between these flags.",
+      "Lifeguards (safety workers) watch this area and can help you.",
+      "Never swim alone â€” always swim with other people.",
+      "Read and follow the safety signs.",
+      "If you feel tired or scared, raise your arm to ask for help.",
+    ],
+    url: "https://www.royallifesaving.com.au/about/campaigns-and-programs/Water-Safety",
+  },
+  {
+    icon: Sun, title: "Sun safety",
+    intro: "The sun in Australia is very strong. The UV (sun rays that burn your skin) can be dangerous, even on cloudy or cool days. Use five easy steps.",
+    points: [
+      "ðŸ§¥ Slip on clothes that cover your skin, like a shirt with sleeves.",
+      "ðŸ§´ Slop on sunscreen (SPF 30 or higher). Put more on every 2 hours.",
+      "ðŸ§¢ Slap on a hat to protect your face, ears, and neck.",
+      "â›±ï¸ Seek shade, especially in the middle of the day.",
+      "ðŸ•¶ï¸ Slide on sunglasses to protect your eyes.",
+    ],
+    url: "https://www.cancer.org.au/cancer-information/causes-and-prevention/sun-safety/campaigns-and-events/slip-slop-slap-seek-slide",
+  },
+  {
+    icon: CreditCard, title: "Opal card (Sydney)",
+    intro: "An Opal card is a card you use to pay for public transport in Sydney and nearby areas like the Blue Mountains, Central Coast, the Hunter, and the Illawarra.",
+    points: [
+      "Use it on trains, buses, ferries, and light rail.",
+      "You can also tap a credit or debit card, or your phone, instead.",
+      "Top up (add money) online, at stations, at some shops, or with machines. You can set up auto top-up.",
+      "Tap on when you start your trip, and tap off when you finish. This pays the right price.",
+      "There are Adult cards and cheaper concession cards. Concession cards are only for eligible people â€” many international students cannot get one, so please check first.",
+    ],
+    url: "https://transportnsw.info/tickets-fares/opal",
+  },
+  {
+    icon: Stethoscope, title: "Medicare & OSHC (health cover)",
+    intro: "Health care is important. Here are two things you should understand about paying for doctors and hospitals.",
+    subsections: [
+      { heading: "ðŸ©º What is Medicare?", points: [
+        "Medicare is Australia's public health system. It helps Australians pay for doctors and hospitals.",
+        "Most international students cannot use Medicare.",
+        "You may be able to use it only if your home country has a special agreement (a 'reciprocal agreement') with Australia.",
+      ] },
+      { heading: "ðŸ›¡ï¸ What is OSHC?", points: [
+        "OSHC means Overseas Student Health Cover. It is health insurance for international students.",
+        "Most student visas require you to have OSHC.",
+        "It usually helps pay for doctor visits, some hospital care, ambulances, and some medicines.",
+        "Always carry your OSHC details (company name and member number) with you.",
+      ] },
+    ],
+    urls: [["Medicare", "https://www.servicesaustralia.gov.au/medicare"], ["OSHC", "https://oshcaustralia.com.au/en"]],
+  },
+  {
+    icon: Briefcase, title: "Working: TFN & super",
+    intro: "If you have permission to work, there are two important words to know: TFN and super.",
+    subsections: [
+      { heading: "ðŸ”¢ Tax File Number (TFN)", points: [
+        "A Tax File Number is your personal number for tax in Australia.",
+        "You need a TFN to work and to pay the correct tax. Without one, you may pay more tax than you should.",
+        "It is free to apply through the Australian Taxation Office (ATO).",
+        "Keep your TFN private and safe. Do not share it with people you do not trust.",
+      ], url: "https://www.ato.gov.au/individuals-and-families/tax-file-number" },
+      { heading: "ðŸ’° Superannuation (super)", points: [
+        "Super is money saved for when you retire (stop working).",
+        "If you are eligible, your employer usually pays super into a super account for you â€” extra money on top of your pay.",
+        "When you leave Australia for good, you may be able to claim your super if you meet the rules.",
+        "This is general information only. For your own situation, check the official website or ask a professional.",
+      ], url: "https://www.ato.gov.au/individuals-and-families/super-for-individuals-and-families/super" },
+    ],
+  },
+];
+const ERROR_TYPES = ["articles", "verb tense", "prepositions", "word order", "spelling", "vocabulary choice", "subject-verb agreement", "plurals", "punctuation"];
+
+/* ---------------- API helpers ---------------- */
+
+/* ============================================================
+   AI SERVICE  â–¸  the ONE place every AI feature talks to.
+   ------------------------------------------------------------
+   The whole app calls askClaude(prompt). It is currently backed
+   by a MOCK so the entire application can be built and tested
+   without a live AI or backend.
+
+   â–¶ TO GO LIVE LATER: set USE_MOCK_AI = false and point
+     liveAskClaude() at your real backend. NOTHING ELSE in the
+     app needs to change â€” this function is the only seam.
+   ============================================================ */
+const USE_MOCK_AI = false;
+
+/* ---- Cost-logging: lesson grouping key ----
+   Set to "lesson-{timestamp}" at the start of each plan() run, sent as an
+   x-lesson-id header on every proxy call, so Vercel logs can group all AI
+   calls belonging to one lesson generation together for cost analysis.
+   Diagnostic only â€” REMOVE once per-lesson cost figures are established. */
+let _currentLessonId = "no-lesson-id";
+
+/* ================================================================
+   AI FAILURE TAXONOMY â€” so the next failure names itself.
+   The silent-lesson defect survived every debugging attempt because the
+   catch could say a lesson failed but never why. A 504 gateway timeout, a
+   truncated response and a genuine parse error all arrived as the same
+   shapeless throw. These types are what separate them.
+     network        the request never reached the proxy at all
+     proxy_timeout  the serverless function ran out of time (Vercel 504)
+     proxy_error    the proxy or the API answered with an error
+     parse_failure  a response arrived but was not the JSON we expect
+     truncated      the model was cut off at the token ceiling
+     empty          a well-formed response carrying no text
+   Every one carries a detail object with the evidence, so the planner's
+   catch can report the cause rather than the symptom.
+   ================================================================ */
+const AI_ERROR_TYPES = ["network", "proxy_timeout", "proxy_error", "parse_failure", "truncated", "empty", "unknown"];
+function _aiError(type, message, detail) {
+  const err = new Error(message);
+  err.name = "AskClaudeError";
+  err.aiErrorType = AI_ERROR_TYPES.includes(type) ? type : "unknown";
+  err.detail = detail || {};
+  return err;
+}
+
+async function askClaude(prompt, opts) {
+  const intent = (opts && opts.intent) || "untagged";
+  const t0 = (typeof performance !== "undefined" ? performance.now() : Date.now());
+  const ms = () => Math.round((typeof performance !== "undefined" ? performance.now() : Date.now()) - t0);
+  try {
+    const out = await (USE_MOCK_AI ? mockAskClaude(prompt, opts) : liveAskClaude(prompt, opts));
+    // Completion mark for EVERY intent, not just the planner's own stages. A
+    // stage that never marks completion is how we find where the pipeline died
+    // even when the error itself was swallowed further up.
+    console.log(`[Perf] ai:${intent}: ${ms()}ms`);
+    return out;
+  } catch (e) {
+    // Anything thrown from below is already typed; anything else is classified
+    // here so nothing reaches the planner as an anonymous failure.
+    const err = e && e.aiErrorType ? e : _aiError("unknown", (e && e.message) || String(e), { original: String(e) });
+    err.detail = { ...err.detail, intent, ms: ms() };
+    console.error(`[Perf] ai:${intent}: ${ms()}ms FAILED (${err.aiErrorType})`, {
+      intent, type: err.aiErrorType, name: err.name, message: err.message, detail: err.detail, error: err,
+    });
+    throw err;
+  }
+}
+
+/* ---- LIVE backend (inactive while USE_MOCK_AI is true) ---- */
+/* Gateway statuses that mean "the function did not finish in time" rather
+   than "the function answered with an error". Vercel returns 504 with
+   FUNCTION_INVOCATION_TIMEOUT when a serverless function exceeds its limit â€”
+   10s on Hobby, 60s on Pro â€” and the body is usually an HTML error page. */
+const _TIMEOUT_STATUSES = [408, 502, 503, 504, 524];
+function _looksLikeTimeout(status, body) {
+  if (_TIMEOUT_STATUSES.includes(status)) return true;
+  return /FUNCTION_INVOCATION_TIMEOUT|gateway ?time-?out|timed out|ETIMEDOUT/i.test(String(body || ""));
+}
+
+async function liveAskClaude(prompt, opts) {
+  const intent = (opts && opts.intent) || "untagged";
+  let res;
+  try {
+    res = await fetch("https://ask-leo-proxy.vercel.app/api/claude", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-lesson-id": _currentLessonId },
+      body: JSON.stringify({ prompt, intent }),
+    });
+  } catch (networkErr) {
+    throw _aiError("network", "Could not reach the AI service: " + ((networkErr && networkErr.message) || String(networkErr)),
+      { intent, cause: String(networkErr) });
+  }
+  const rawBody = await res.text();
+  const bodyTail = String(rawBody || "").slice(-500);
+
+  // ORDER MATTERS. A Vercel timeout returns 504 with an HTML body, so parsing
+  // first reported every gateway timeout as "server did not return JSON" â€” the
+  // symptom, with the cause hidden. Status is checked BEFORE the body is parsed.
+  if (_looksLikeTimeout(res.status, rawBody)) {
+    throw _aiError("proxy_timeout",
+      `The AI service did not finish in time (HTTP ${res.status}).`,
+      { intent, status: res.status, statusText: res.statusText, bodyTail });
+  }
+
+  let data = null;
+  if (rawBody) {
+    try { data = JSON.parse(rawBody); }
+    catch (parseErr) {
+      throw _aiError("parse_failure",
+        `HTTP ${res.status}: the service did not return JSON.`,
+        { intent, status: res.status, statusText: res.statusText, bodyTail, cause: String(parseErr) });
+    }
+  }
+  if (!res.ok || (data && data.error)) {
+    const type = (data && data.error && data.error.type) || "http_" + res.status;
+    const message = (data && data.error && data.error.message) || res.statusText || "Unknown error";
+    throw _aiError("proxy_error", `${res.status} ${type}: ${message}`,
+      { intent, status: res.status, apiType: type, bodyTail });
+  }
+  const text = (data && data.content ? data.content : []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
+  // ORDER MATTERS â€” same principle as the timeout-before-parse fix above.
+  // A max_tokens response may have extractable text (truncated mid-sentence)
+  // or may not (truncated mid-JSON-structure, leaving no complete text block).
+  // Either way, stop_reason is the DIRECT evidence of truncation. Checking
+  // empty first misclassifies the second case as "no text" when the real
+  // cause is "ran out of tokens". The diagnostic run confirmed this: the
+  // blueprint response hit max_tokens, the content was truncated mid-JSON,
+  // text extraction returned empty, and the error surfaced as type "empty"
+  // instead of "truncated" â€” hiding the cause behind the symptom, which is
+  // exactly the failure class the honesty fix exists to end.
+  if (data && data.stop_reason === "max_tokens") {
+    throw _aiError("truncated", "The AI response was cut off at the token ceiling.",
+      { intent, chars: (text || "").length, stop_reason: data.stop_reason, textTail: (text || "").slice(-500) });
+  }
+  if (!text) throw _aiError("empty", "The AI service returned no text.",
+    { intent, stop_reason: data && data.stop_reason, bodyTail });
+  return text;
+}
+
+/* ==================== MOCK AI SERVICE ====================
+   Clearly-marked development stand-in. Returns realistic,
+   correctly-shaped responses for EVERY AI feature so the app
+   is fully usable offline. Remove this whole block once
+   liveAskClaude() is wired to a real backend.
+   ======================================================== */
+function _mockPick(p, re) { const m = p.match(re); return m ? m[1] : ""; }
+
+/* Warm-up free response â€” Leo's two non-pack lines.
+   These are DIFFERENT MESSAGES and must not stay identical:
+     SKIP     "you didn't do this, and that's fine"
+     FALLBACK "I received something but couldn't read it"
+   A student who types "." and a student who hits a network error are in
+   genuinely different situations. Interim identical is acceptable while
+   Lessons' wording is outstanding; permanent is not. */
+const WARMUP_SKIP_LINE = "No problem â€” let's move on.";     // judgement: nothing meaningful was typed
+const WARMUP_FALLBACK_LINE = "Got it â€” let's keep going.";  // failure only, never an AI call
+
+// Directive 2 â€” Exercise disclaimer principle (all levels)
+const EXERCISE_DISCLAIMER = `\nEXERCISE DISCLAIMER: when the correct answer uses a formal or textbook form, and a valid informal or spoken alternative exists, include a brief disclaimer in the note field. Example: if the correct answer is "Do you finish at five?" and a student might say "You finish at five?" â€” the note should read: "Australians also say 'You finish at five?' with rising intonation â€” but 'Do you finish at five?' is the safe form for new situations."\nDo NOT mark informal alternatives as wrong. Do NOT list every possible alternative. Name the ONE most common spoken form the student will hear, acknowledge it, and explain why the textbook form is taught: it is the safe form that works everywhere.\n`;
+
+// Directive 3 â€” Stem-answer consistency
+const STEM_ANSWER_CONSISTENCY = `\nSTEM-ANSWER CONSISTENCY: the situation described in a question stem must be the situation the answer options address. If the stem says "A coworker asks about your break," every option must be about a break, not about finishing time. Read each stem-and-options set back as a pair before including it â€” if the stem says one thing and the options answer a different thing, rewrite the stem to match the options or the options to match the stem.\n`;
+
+// Amendment 1 (P-06/P-08): Australian English spelling â€” prepended to every
+// student-facing AI call. Not needed on the merged student-and-needs call
+// (private reasoning). One constant, referenced everywhere.
+const AUSTRALIAN_SPELLING = `\nAUSTRALIAN ENGLISH SPELLING â€” use throughout, no exceptions.
+practise (verb) / practice (noun), organise / organize, colour / color,
+centre / center, travelling / traveling, favour / favor, licence (noun) /
+license (verb), defence / defense, programme (except computer program).
+If unsure, use the British English spelling â€” it is always correct in Australia.\n`;
+
+// Amendment 3 (P-02): catches the case where the needs assessment named two
+// grammar points â€” the blueprint must reduce before building.
+const GRAMMAR_ENFORCEMENT = `\nGRAMMAR ENFORCEMENT: the grammar.point field must name ONE structure. If your needs assessment named two (e.g. "to be + possessives"), you have already violated the single-point directive â€” pick the ONE that serves today's objective and drop the other. Possessives appearing in examples ("She's my daughter") are CONTEXT, not a second grammar point. The board teaches the ONE structure; other grammar that appears in sentences is there because the sentence needs it, not because it is being taught.\n`;
+
+// Amendment 4b (P-03): fallback instruction for the grammar section call â€”
+// if the form field still contains the full paradigm, drill only one piece.
+const GRAMMAR_PARADIGM_FALLBACK = `\nIf the Form above contains multiple person forms (I am / You are / He is), pick the ONE the student needs most for today's situation and drill only that. Five questions on "I'm + name" beat two questions each on three different forms.\n`;
+
+// G-10(2): closing-summary honesty rules, held once so the first-pass summary
+// prompt and (once Genesis rules) the summary retry can never drift apart.
+// Static text, no interpolation.
+const SUMMARY_HONESTY_RULES = `WHAT YOU KNOW, AND WHAT YOU DO NOT
+You have been given: (1) a Performance line with scores and a speaking turn count; (2) today's vocabulary list â€” the specific words from bp.vocabulary that were taught, not invented; (3) the speaking transcript â€” the actual exchange between you and the student, marked Leo: and Student:. These are your only sources. Anything not present in these three sources did not happen in this lesson: do not mention it, do not praise it, do not imply it occurred.
+
+USING THE TRANSCRIPT
+The transcript is real evidence â€” use it:
+- Ground your praise in what the student actually said. Cite specific Student: turns where they tried something.
+- If you made a correction during the conversation (a recast or direct correction in a Leo: turn), you may reference it â€” that correction happened and the student deserves to know it was noticed.
+- Do not correct an error that does not appear in a Student: turn. If you find yourself writing a correction, locate it in the transcript first â€” if it is not there, remove it.
+- Name only people and roles who genuinely appeared in the transcript. If no names were used, no names appear in the summary.
+- Do not describe the quality of the student's English in general terms. Describe what happened: what they tried, how many times they spoke, what situation they practised.
+- If speaking was not attempted (turn count is 0 or transcript is absent), do not mention the speaking content â€” acknowledge only that it is there whenever they are ready.
+
+USING THE VOCABULARY LIST
+The vocabulary list names the specific words that were taught today â€” use these words, do not invent others. You may say "today you worked with words like X and Y" using words from this list. You may not say "you used X correctly" or "you struggled with Y" unless the transcript contains direct evidence of this. The vocabulary list is not a usage record; it is a record of what was presented.
+
+WHAT YOU MAY AND MAY NOT CLAIM
+- Do NOT say the student LEARNED, MASTERED, ACQUIRED, or NOW KNOWS anything. One lesson does not make a skill. Words were PRESENTED and PRACTISED â€” say that.
+- Do NOT tell the student what they can now do. Name what they PRACTISED, then point forward: "Today you practised X â€” next time you're in that situation, try one line of it."
+- Name one strength the evidence actually shows â€” from the Performance line or the transcript. If neither shows a clear strength, name the strength of finishing.
+- Suggest ONE thing to work on, drawn from the predicted difficulties â€” framed as something worth practising next time, never as a correction of something observed unless the transcript shows it directly.
+- Reference the memorable moment only as part of today's lesson â€” never as something you personally watched the student enjoy or understand.
+- Connect today to their journey ONLY if the prior-lesson context above is non-empty. If it is empty, this is their first lesson: say so warmly, and never imply a history that does not exist.
+- Preview tomorrow as your intention, not a promise of specific content.
+- Every field must leave the student with something to do or somewhere to go next. A closing screen that only grades is a receipt, not teaching.`;
+// Shared mock content packs: one pack = one coherent real-life situation.
+// Every mock lesson branch (blueprint, reading, listening, grammar, summary)
+// draws from the SAME pack so offline lessons never mix scenarios.
+const MOCK_PACKS = [
+  { match: /direction|lost|way/, warmUpQs: ["Do you know how to get to your nearest train station?", "Have you ever asked a stranger for directions in English?", "What would you say if you were lost near Central Station?", "Do you know what straight ahead means in directions?", "If someone said turn left at the lights, would you understand?", "What is the most confusing part about asking for directions in English?"], ctx: "Asking for directions",
+    warmupMinimalResponse: "Thanks â€” good start. Here's an easier one: when you're lost, do you usually ask someone, or check your phone? Today we'll practise the asking part.",
+    warmupAttemptResponse: "A proper answer â€” that's how a warm-up should work. Hold onto that thinking: today you'll learn exactly what to say when you're lost and need a stranger's help.",
+    warmQ: "Have you ever asked a stranger for directions in English? What did you say?",
+    model: "Excuse me, could you tell me how to get to the station?",
+    dialogue: `"Excuse me, how do I get to Central Station?"\n"Go straight ahead and turn left at the lights."\n"Is it far?"\n"About five minutes. You can't miss it."`,
+    vocab: ["intersection", "station", "traffic lights", "straight ahead", "turn left", "turn right", "opposite", "across from"],
+    grammar: { point: "Polite question forms", meaning: "We use question forms like 'Could youâ€¦' to ask strangers politely.", form: "Could/Can + you + verb â€¦?", usage: "Use with strangers and in public â€” it softens the request.", examples: ["Could you tell me where the station is?", "Can you point me towards the harbour?"] } },
+  { match: /caf|coffee|barista|food|lunch|eat|restaurant|order/, warmUpQs: ["What is your usual coffee order?", "Do you know the difference between a flat white and a latte?", "Have you ever ordered food in English in Australia?", "What would you say if you wanted soy milk instead of regular?", "How would you ask for the bill at a restaurant?", "Do you feel confident ordering takeaway in English?"], ctx: "Ordering at a caf\u00e9",
+    warmupMinimalResponse: "Short and sweet â€” that works. Something easier: do you drink coffee at home, or out? Either way, today you'll learn to order like a local.",
+    warmupAttemptResponse: "Thanks for a real answer â€” you're already using English about food, and that's today's whole point. Let's make your next caf\u00e9 order feel easy.",
+    warmQ: "What's your usual coffee order? How would you ask for it in English?",
+    model: "Could I get a flat white, please?",
+    dialogue: `"G'day, what can I get you?"\n"Could I get a flat white, thanks?"\n"No worries â€” regular or large?"\n"Large, takeaway please."`,
+    vocab: ["flat white", "takeaway", "barista", "order", "soy milk", "long black", "regular", "eftpos"],
+    grammar: { point: "Polite requests with 'could'", meaning: "'Could I getâ€¦' is the natural way to order in Australia.", form: "Could I get/have + noun (+ please)?", usage: "At counters, caf\u00e9s and shops â€” friendly and standard.", examples: ["Could I get a flat white, please?", "Could I have the bill, thanks?"] } },
+  { match: /doctor|gp|medical|pharmac|dentist|symptom|health/, warmUpQs: ["Have you ever visited a GP in Australia?", "Do you know how to book an appointment?", "What would you say if you had a headache for three days?", "Do you know what Medicare means?", "How would you ask for a repeat prescription?", "What is the hardest part about explaining health problems in English?"], ctx: "A visit to the doctor",
+    warmupMinimalResponse: "Thanks â€” that's a start. An easier question: have you found a doctor near where you live yet? Today's lesson will help whenever you need one.",
+    warmupAttemptResponse: "A full answer on a topic most students avoid â€” good on you. Talking about health is hard in any language. Today we'll make it manageable in English.",
+    warmQ: "Have you ever explained a health problem in English? What did you say?",
+    model: "I've had a sore throat for three days.",
+    dialogue: `"Good morning, how can I help?"\n"Hi, I'd like to book an appointment with a GP, please."\n"Of course â€” the clinic has an opening tomorrow morning. Any good?"\n"Yes, that works. Thank you."`,
+    vocab: ["appointment", "prescription", "GP", "symptom", "receptionist", "clinic", "Medicare", "referral"],
+    grammar: { point: "Present perfect for symptoms", meaning: "We use the present perfect for things that started in the past and are still true.", form: "I've + past participle (+ since/for â€¦)", usage: "Perfect for describing ongoing symptoms to a doctor.", examples: ["I've had a headache since Monday.", "I've been feeling tired for a week."] } },
+  { match: /rent|flat|apartment|lease|landlord|inspection|housing|maintenance/, warmUpQs: ["Have you ever rented a flat in Australia?", "Do you know what a bond is in Australian renting?", "What questions would you ask at a rental inspection?", "How would you report a broken tap to your landlord?", "What does available from mean on a rental ad?", "Do you feel confident reading a lease agreement?"], ctx: "Renting a flat",
+    warmupMinimalResponse: "Good â€” thanks. Try this easier one: do you rent your own place, or share with others? Today is about handling renting conversations in English.",
+    warmupAttemptResponse: "Thanks for that answer â€” renting is one of the most useful topics we can work on. Let's get you ready for landlords, leases and inspections.",
+    warmQ: "Have you ever asked a landlord or agent a question in English? What was it?",
+    model: "Could you tell me when the flat is available?",
+    dialogue: `"Hi, are you here for the inspection?"\n"Yes â€” could I ask a couple of questions about the lease?"\n"Of course, fire away."\n"How much is the bond, and when is it available?"`,
+    vocab: ["bond", "lease", "landlord", "inspection", "rent", "available", "agent", "utilities"],
+    grammar: { point: "Indirect questions", meaning: "Indirect questions ('Could you tell me whenâ€¦') sound politer than direct ones.", form: "Could you tell me + question word + subject + verb", usage: "Ideal for agents, landlords and officials.", examples: ["Could you tell me when the flat is available?", "Do you know how much the bond is?"] } },
+  { match: /bank|account|atm|card/, warmUpQs: ["Do you have an Australian bank account?", "What ID did you need to open it?", "Do you know what a BSB number is?", "How would you ask about savings accounts?", "Have you ever used an Australian ATM?", "What would you do if your card stopped working?"], ctx: "Opening a bank account",
+    warmupMinimalResponse: "Thanks â€” short answers still count. An easier one: do you pay by card or cash most days? Today we'll practise the English that banks use.",
+    warmupAttemptResponse: "A real answer â€” good. Bank English is full of odd words, but by the end of today it won't feel so foreign. Let's get started.",
+    warmQ: "Have you ever been to a bank in Australia? What did you need?",
+    model: "I'd like to open a savings account, please.",
+    dialogue: `"Hi there, how can I help today?"\n"I'd like to open a savings account, please. What identification do I need?"\n"A passport and proof of address is perfect â€” and your debit card will arrive within a week."\n"Great. Could I also get my BSB and account number today?"`,
+    vocab: ["identification", "savings account", "debit card", "branch", "teller", "BSB", "statement", "transfer"],
+    grammar: { point: "'I'd like to' for formal requests", meaning: "'I'd like to' is the standard polite opener for services.", form: "I'd like to + verb", usage: "Banks, offices, phone calls â€” anywhere formal but friendly.", examples: ["I'd like to open an account, please.", "I'd like to update my address."] } },
+  { match: /train|bus|ferry|opal|transport|taxi|uber|airport/, warmUpQs: ["How do you usually get to class?", "Do you have an Opal card?", "Have you ever missed a bus or train here?", "What would you say if the train was delayed?", "Do you know what tap on and tap off mean?", "How would you ask which platform your train leaves from?"], ctx: "Catching a train or bus",
+    warmupMinimalResponse: "Thanks. Here's an easier one: train, bus or walking â€” how do you get around most days? Today's transport English is language you'll use constantly.",
+    warmupAttemptResponse: "Thanks for a full answer. Public transport comes up every single day here, so today's practice will pay off almost immediately. Let's go.",
+    warmQ: "How do you usually get around? Have you asked about tickets or platforms in English?",
+    model: "Excuse me, which platform is the train to the city?",
+    dialogue: `"Excuse me, does this bus go to Circular Quay?"\n"Sure does â€” the timetable says the express is next, but this one's all stops. Tap on and grab a seat."\n"Thanks â€” and do I tap off as well?"\n"Yep, tap off when you hop out. No worries."`,
+    vocab: ["platform", "Opal card", "tap on", "tap off", "delay", "timetable", "service", "express"],
+    grammar: { point: "Question word order with 'do'", meaning: "English questions need an auxiliary: 'Where do Iâ€¦?', not 'Where Iâ€¦?'", form: "Question word + do/does + subject + verb", usage: "Every everyday question uses this pattern.", examples: ["Where do I tap my card?", "Does this bus go to the city?"] } },
+  { match: /shop|supermarket|return|checkout|clothes|grocer|item|parcel|post/, warmUpQs: ["Have you ever returned something to a shop in Australia?", "Do you keep your receipts?", "What would you say if something you bought was faulty?", "How would you ask for a different size?", "Do you feel confident using self-checkout?", "What is the difference between a refund and an exchange?"], ctx: "Shopping and returns",
+    warmupMinimalResponse: "Thanks â€” that counts. An easier one: do you keep your receipts? Today you'll learn to return things and ask for refunds without stress.",
+    warmupAttemptResponse: "A proper answer â€” nicely done. Returning things feels awkward even for native speakers, so today's lesson will genuinely help. Let's build your counter confidence.",
+    warmQ: "Have you ever returned something to a shop or asked for help finding an item?",
+    model: "Excuse me, I'd like to return this â€” it doesn't fit.",
+    dialogue: `"Hi, need any help?"\n"Yes â€” I'd like a refund for this jumper, please. It's faulty."\n"No worries at all. Have you got the receipt?"\n"Right here. Could I look for another size while you sort the exchange?"\n"Of course â€” jumpers are down aisle four."`,
+    vocab: ["receipt", "refund", "exchange", "checkout", "aisle", "discount", "size", "faulty"],
+    grammar: { point: "Comparatives for shopping", meaning: "Short adjectives take -er when comparing.", form: "adjective + -er / more + adjective + than", usage: "Comparing prices, sizes and options.", examples: ["This one is cheaper online.", "Do you have a bigger size?"] } },
+  { match: /universit|enrol|class|teacher|study|tafe|student|presentation|lecture/, warmUpQs: ["Have you ever asked a teacher a question in English?", "What would you say if you did not understand something in class?", "How would you ask about an assignment deadline?", "Do you feel confident speaking in class discussions?", "What is the hardest part about studying in English?", "How would you email your teacher about a late assignment?"], ctx: "Talking to your teacher",
+    warmupMinimalResponse: "Thanks â€” a start is a start. An easier question: do you prefer asking questions in class, or after class? Today we'll practise both.",
+    warmupAttemptResponse: "Thanks for a real answer. Asking teachers questions is a skill â€” and it's how you get full value from any course. Let's sharpen it today.",
+    warmQ: "Have you ever asked a teacher a question in English? How did you start?",
+    model: "Excuse me, could you explain that last part again?",
+    dialogue: `"Excuse me, could I ask about the assignment?"\nTeacher: "Of course â€” what would you like to know?"\n"Is it due Friday or Monday?"\nTeacher: "Friday at 5pm â€” but a draft earlier is always fine!"`,
+    vocab: ["due", "assignment", "semester", "tutorial", "lecture", "campus", "draft", "feedback"],
+    grammar: { point: "Asking for clarification", meaning: "Clarification questions keep you learning without embarrassment.", form: "Could you + explain/repeat/clarify â€¦?", usage: "In class, at work, anywhere you didn't catch something.", examples: ["Could you explain that again, please?", "Sorry, could you say that more slowly?"] } },
+  { match: /job|interview|work|manager|colleague|sick|time off|meeting|email/, warmUpQs: ["Have you ever had a job interview in English?", "How would you call in sick to work?", "What would you say if you needed to swap a shift?", "Do you feel confident talking to your manager?", "How would you ask a colleague for help?", "What is workplace small talk like in Australia?"], ctx: "Speaking to your manager",
+    warmupMinimalResponse: "Thanks. Here's an easier one: have you had a job here yet, or are you still looking? Either way, today's workplace English will be useful.",
+    warmupAttemptResponse: "A full answer â€” good on you. Workplace conversations are high-stakes, and that's exactly why we practise them here first, where mistakes cost nothing.",
+    warmQ: "Have you ever spoken English at work or in an interview? What was the situation?",
+    model: "Could I ask a quick question about the roster?",
+    dialogue: `"Morning! How's it all going?"\n"Good, thanks â€” could I grab you for a minute about my shifts?"\n"Sure, come through â€” I've got the roster up now."\n"Thanks â€” I was hoping to swap Saturday if possible."`,
+    vocab: ["roster", "shift", "manager", "colleague", "leave", "workplace", "swap", "overtime"],
+    grammar: { point: "Softening requests at work", meaning: "'I was hoping toâ€¦' and 'Could Iâ€¦' make workplace requests easy to say yes to.", form: "I was hoping to + verb / Could I + verb", usage: "Asking managers for time, swaps or help.", examples: ["I was hoping to take Friday off.", "Could I grab you for a minute?"] } },
+  { match: /neighbour|party|friend|bbq|barbecue|small talk|invit|social|weekend/, warmUpQs: ["Have you met your neighbours yet?", "What would you say if a neighbour invited you to a BBQ?", "Do you know what arvo means in Australian English?", "How do Australians usually greet each other?", "What topics are good for small talk in Australia?", "How would you politely accept or decline an invitation?"], ctx: "Small talk with neighbours",
+    warmupMinimalResponse: "Thanks â€” short but real. An easier one: do you know your neighbours' names yet? Today we'll practise the small talk that starts friendships here.",
+    warmupAttemptResponse: "Thanks for a genuine answer. Small talk sounds small, but it's how Australians open every friendship. Today we'll make it feel natural, not scary.",
+    warmQ: "Have you chatted with a neighbour or made small talk in English? What did you talk about?",
+    model: "How's your weekend been?",
+    dialogue: `"G'day! Settling in alright?"\n"Yeah, really well thanks â€” it's a lovely street."\n"Good to hear! We're having a barbie Saturday arvo â€” heaps of food, so come along!"\n"That sounds great, mate â€” thanks for inviting me."`,
+    vocab: ["arvo", "barbie", "mate", "reckon", "heaps", "invite", "weekend", "how ya going"],
+    grammar: { point: "Present perfect for small talk", meaning: "'How's your week been?' keeps conversation flowing naturally.", form: "How has + noun + been?", usage: "The classic Australian small-talk opener.", examples: ["How's your weekend been?", "How've you been settling in?"] } },
+  { match: /beach|swim|surf|ocean|sun|sand|flag|lifeguard|rip|sunscreen|sunburn|thong/, warmUpQs: ["Do you like going to the beach?", "What do you do when you are at the beach?", "What must you bring to the beach?", "Is there anything you shouldn't do when at the beach?", "Have you ever been to an Australian beach?", "Do you know what the red and yellow flags mean?"], ctx: "Going to the beach",
+    warmupMinimalResponse: "Thanks. An easier one: do you prefer swimming, or just sitting on the sand? Today's beach English covers both â€” plus how to stay safe.",
+    warmupAttemptResponse: "A proper answer â€” great. The beach is where Australian English gets very Australian. Today you'll learn the words, and the safety rules that matter.",
+    warmQ: "Do you like going to the beach? What must you bring?",
+    model: "You should always swim between the flags.",
+    dialogue: `"G'day! First time at the beach?"\n"Yes â€” where should I swim?"\n"See those red and yellow flags? Swim between them â€” that's where the lifeguards are watching."\n"Thanks! Should I put on sunscreen?"\n"Definitely â€” the Australian sun is no joke. Slip, slop, slap, mate."`,
+    vocab: ["flags", "swim", "shade", "sunbathe", "sunscreen", "shark", "drown", "towel", "sunburn", "thongs", "rip current", "lifeguard"],
+    grammar: { point: "Modal verbs of obligation, prohibition and advice", meaning: "Modal verbs like must, should, mustn't and can't express rules, advice and things that are not allowed.", form: "modal (must/should/mustn't/can't) + base verb", usage: "Giving safety advice, explaining rules, expressing what you think is a good idea â€” essential for everyday Australian life.", examples: ["You must swim between the flags.", "You should wear sunscreen every day.", "You mustn't swim outside the flags.", "I think people should learn about beach safety."] } },
+];
+/* ==================== PACK WARM-UPS & GRAMMAR PRACTICE ====================
+   Educational reasoning: a warm-up and a grammar exercise are only worth doing
+   if they belong to TODAY. These are authored per scenario, so the warm-up
+   primes the exact language the lesson teaches, and every grammar question
+   drills the exact structure the explanation just taught â€” never politeness,
+   never a different tense, never generic filler.
+   Technical reasoning: these live on the pack, preserving the existing
+   "ONE pack = ONE coherent situation" invariant, so a scenario can never be
+   paired with another scenario's practice.
+   ======================================================================== */
+const PACK_WARMUPS = {
+  "Asking for directions": [
+    { type: "context_discussion", instruction: "Just chat â€” there are no wrong answers here.", prompt: "Have you ever been lost in Australia? Where were you, and what did you do?" },
+    { type: "unscramble", instruction: "Tap the words in the right order.", prompt: "Put this polite question in order:", tokens: ["Could", "you", "tell", "me", "how", "to", "get", "to", "the", "station?"], note: "Modal + subject + verb â€” 'Could you tell meâ€¦' is the pattern you'll lean on all lesson." },
+    { type: "complete_dialogue", instruction: "Choose the missing line.", prompt: "You stop someone in the street. What do you say?", text: "You: ______\nThem: â€œGo straight ahead and turn left at the lights.â€", options: ["Excuse me, could you tell me how to get to Central Station?", "Where station?", "You tell me the station now.", "Station. Please."], answer: "Excuse me, could you tell me how to get to Central Station?", note: "'Excuse me, could youâ€¦' is how Australians open a request to a stranger. It opens doors." },
+    { type: "prediction", instruction: "Have a guess â€” predicting primes you to notice.", prompt: "Someone giving you directions says â€œYou can't miss it.â€ What do you think they mean?" },
+  ],
+  "Ordering at a cafÃ©": [
+    { type: "context_discussion", instruction: "Just chat â€” there are no wrong answers here.", prompt: "What's your usual coffee order? How would you ask for it in English?" },
+    { type: "is_this_correct", instruction: "Read it carefully â€” would an Australian say this?", prompt: "Is this correct?", text: "â€œI want one coffee.â€", options: ["Correct", "Not correct"], answer: "Not correct", note: "It's understandable, but blunt. At a counter Australians say 'Could I getâ€¦' or 'Could I haveâ€¦' â€” softer, and completely standard." },
+    { type: "best_response", instruction: "Choose the most natural reply.", prompt: "The barista says: â€œNo worries â€” regular or large?â€", options: ["Large, takeaway please.", "Yes.", "I don't know it.", "Coffee."], answer: "Large, takeaway please.", note: "Answer the actual question and add the detail they need â€” that's what keeps a counter exchange flowing." },
+    { type: "order_conversation", instruction: "Tap the lines in the order you'd hear them.", prompt: "Put this cafÃ© exchange in order:", tokens: ["G'day, what can I get you?", "Could I get a flat white, thanks?", "No worries â€” regular or large?", "Large, takeaway please."], note: "Greeting â†’ order â†’ clarifying question â†’ answer. That's the shape of nearly every counter conversation here." },
+  ],
+  "A visit to the doctor": [
+    { type: "context_discussion", instruction: "Just chat â€” there are no wrong answers here.", prompt: "Have you ever had to explain a health problem in English? How did it go?" },
+    { type: "spot_mistake", instruction: "Find the learner's error.", prompt: "What is the mistake in this sentence?", text: "â€œI have a headache since three days.â€", options: ["'since' should be 'for'", "'have' should be 'has'", "'a' should be removed", "'headache' should be plural"], answer: "'since' should be 'for'", note: "'For' goes with a length of time (for three days); 'since' goes with a starting point (since Monday)." },
+    { type: "true_false", instruction: "True or false?", prompt: "Most international students in Australia can use Medicare.", options: ["True", "False"], answer: "False", note: "False â€” most international students rely on OSHC, not Medicare. Worth knowing before you're unwell." },
+    { type: "mini_task", instruction: "A real task â€” say it out loud if you can.", prompt: "In one sentence, book an appointment with a GP for tomorrow morning." },
+  ],
+  "Renting a flat": [
+    { type: "context_discussion", instruction: "Just chat â€” there are no wrong answers here.", prompt: "Have you been to a rental inspection here? What did you want to ask, but couldn't?" },
+    { type: "unscramble", instruction: "Tap the words in the right order.", prompt: "Put this indirect question in order:", tokens: ["Could", "you", "tell", "me", "when", "the", "flat", "is", "available?"], note: "Indirect questions keep statement order: 'â€¦when the flat IS available', never 'is the flat'." },
+    { type: "mcq", instruction: "Choose the correct answer.", prompt: "What is a 'bond' in Australian renting?", options: ["A deposit you get back if the place is undamaged", "The monthly rent", "A cleaning fee you never get back", "A contract with the agent"], answer: "A deposit you get back if the place is undamaged", note: "The bond is held, not spent. Leave the place as you found it and it comes back to you." },
+    { type: "finish_sentence", instruction: "Finish it in your own words.", prompt: "Complete this question for the agent: â€œCould you tell me how much â€¦â€" },
+  ],
+  "Opening a bank account": [
+    { type: "context_discussion", instruction: "Just chat â€” there are no wrong answers here.", prompt: "Have you opened a bank account in Australia? What did they ask you for?" },
+    { type: "complete_dialogue", instruction: "Choose the missing line.", prompt: "Complete the exchange:", text: "Teller: â€œHi there, how can I help today?â€\nYou: ______", options: ["I'd like to open a savings account, please.", "Account. Now.", "You give me account.", "I am wanting account opening."], answer: "I'd like to open a savings account, please.", note: "'I'd like to + verb' is the standard polite opener for any service in Australia." },
+    { type: "is_this_correct", instruction: "Read it carefully â€” is the form right?", prompt: "Is this correct?", text: "â€œI'd like to opening an account.â€", options: ["Correct", "Not correct"], answer: "Not correct", note: "After 'I'd like to' we need the base verb: 'I'd like to OPEN an account.'" },
+    { type: "mini_task", instruction: "A real task â€” say it out loud if you can.", prompt: "In one sentence, ask the teller what identification you need." },
+  ],
+  "Catching a train or bus": [
+    { type: "context_discussion", instruction: "Just chat â€” there are no wrong answers here.", prompt: "How do you usually get to class? Have you ever had to ask about a platform or a ticket in English?" },
+    { type: "mcq", instruction: "Choose the correct answer.", prompt: "What do 'tap on' and 'tap off' mean?", options: ["Touch your card at the start and the end of the trip", "Turn the machine on and off", "Pay the driver in cash", "Ask the driver for a receipt"], answer: "Touch your card at the start and the end of the trip", note: "Forget to tap off and you're charged the maximum fare â€” an expensive mistake, and a very common one." },
+    { type: "spot_mistake", instruction: "Find the learner's error.", prompt: "What is the mistake in this question?", text: "â€œWhere I do tap my Opal card?â€", options: ["'I do' should be 'do I'", "'Where' should be 'What'", "'tap' should be 'tapping'", "'my' should be 'the'"], answer: "'I do' should be 'do I'", note: "English questions invert: question word + do + subject + verb â€” 'Where DO I tapâ€¦?'" },
+    { type: "prediction", instruction: "Have a guess â€” predicting primes you to notice.", prompt: "The driver says â€œSure does â€” tap on and grab a seat.â€ What do you think 'grab a seat' means?" },
+  ],
+  "Shopping and returns": [
+    { type: "context_discussion", instruction: "Just chat â€” there are no wrong answers here.", prompt: "Have you ever returned something to a shop here? What did you say?" },
+    { type: "best_response", instruction: "Choose the most natural reply.", prompt: "The assistant says: â€œNo worries at all. Have you got the receipt?â€", options: ["Yes, right here.", "Receipt is what?", "No, I want money.", "You give refund."], answer: "Yes, right here.", note: "Short, natural, and it keeps things moving â€” exactly what you want at a counter." },
+    { type: "true_false", instruction: "True or false?", prompt: "A refund and an exchange are the same thing.", options: ["True", "False"], answer: "False", note: "False â€” a refund gives your money back; an exchange swaps the item. Ask for the one you actually want." },
+    { type: "unscramble", instruction: "Tap the words in the right order.", prompt: "Put this question in order:", tokens: ["Do", "you", "have", "a", "bigger", "size", "in", "this?"], note: "Short adjectives take -er: big â†’ bigger. That's the comparative you'll use all day when shopping." },
+  ],
+  "Talking to your teacher": [
+    { type: "context_discussion", instruction: "Just chat â€” there are no wrong answers here.", prompt: "Have you ever asked a teacher a question in English? How did you start?" },
+    { type: "finish_sentence", instruction: "Finish it in your own words.", prompt: "Complete this: â€œSorry, I didn't catch that â€” could you â€¦â€" },
+    { type: "complete_dialogue", instruction: "Choose the missing line.", prompt: "Complete the exchange:", text: "You: ______\nTeacher: â€œFriday at 5pm â€” but a draft earlier is always fine!â€", options: ["Could I ask when the assignment is due?", "When assignment?", "Assignment due when it is?", "You tell me the assignment day."], answer: "Could I ask when the assignment is due?", note: "'Could I ask whenâ€¦' is polite, and it buys you a second of thinking time too." },
+    { type: "mcq", instruction: "Choose the correct answer.", prompt: "Your teacher says the draft is 'due Friday'. What does that mean?", options: ["You must hand it in by Friday", "It was returned to you on Friday", "It is optional until Friday", "Friday is when you start it"], answer: "You must hand it in by Friday", note: "'Due' means the deadline. Misread this one and it costs marks, not just meaning." },
+  ],
+  "Speaking to your manager": [
+    { type: "context_discussion", instruction: "Just chat â€” there are no wrong answers here.", prompt: "Have you spoken English at work or in an interview? What was the situation?" },
+    { type: "order_conversation", instruction: "Tap the lines in the order you'd hear them.", prompt: "Put this workplace exchange in order:", tokens: ["Morning! How's it all going?", "Good, thanks â€” could I grab you for a minute about my shifts?", "Sure, come through â€” I've got the roster up now.", "Thanks â€” I was hoping to swap Saturday if possible."], note: "Small talk â†’ ask for a moment â†’ they agree â†’ THEN the real request. Australians warm up before they ask." },
+    { type: "is_this_correct", instruction: "Read it carefully â€” is the form right?", prompt: "Is this correct?", text: "â€œI was hoping to swapping my shift.â€", options: ["Correct", "Not correct"], answer: "Not correct", note: "After 'hoping to' we need the base verb: 'I was hoping to SWAP my shift.'" },
+    { type: "best_response", instruction: "Choose the most natural reply.", prompt: "Your manager says: â€œSure, come through â€” what's up?â€", options: ["I was hoping to swap my Saturday shift, if that's possible.", "You must change my shift.", "Shift. Saturday. No.", "I don't work Saturday now."], answer: "I was hoping to swap my Saturday shift, if that's possible.", note: "'I was hoping toâ€¦' makes it easy for a manager to say yes. That's the whole point of softening." },
+  ],
+  "Small talk with neighbours": [
+    { type: "context_discussion", instruction: "Just chat â€” there are no wrong answers here.", prompt: "Have you met your neighbours yet? What did you talk about?" },
+    { type: "true_false", instruction: "True or false?", prompt: "In Australian English, 'arvo' means 'afternoon'.", options: ["True", "False"], answer: "True", note: "True â€” 'Saturday arvo' is Saturday afternoon. You'll hear it constantly." },
+    { type: "mini_task", instruction: "A real task â€” say it out loud if you can.", prompt: "A neighbour invites you to a barbie on Saturday arvo. Accept the invitation in one friendly sentence." },
+    { type: "spot_mistake", instruction: "Find the learner's error.", prompt: "What is the mistake in this small-talk question?", text: "â€œHow has your weekend be?â€", options: ["'be' should be 'been'", "'has' should be 'have'", "'your' should be 'you'", "'weekend' should be plural"], answer: "'be' should be 'been'", note: "The present perfect needs the past participle: 'How has your weekend BEEN?'" },
+  ],
+  "Going to the beach": [
+    { type: "context_discussion", instruction: "Just chat â€” there are no wrong answers here.", prompt: "Have you ever been to an Australian beach? What was it like?" },
+    { type: "mcq", instruction: "Choose the correct answer.", prompt: "What do the red and yellow flags on an Australian beach mean?", options: ["They show the safest area to swim", "They mean the beach is closed", "They show where you can have a barbecue", "They mark the car park"], answer: "They show the safest area to swim", note: "The flags mark the area watched by lifeguards â€” always swim between them." },
+    { type: "complete_dialogue", instruction: "Choose the missing line.", prompt: "Complete the exchange:", text: "You: \"Is it safe to swim here?\"\nLifeguard: ______", options: ["\"Yes, swim between the red and yellow flags.\"", "\"No, go home.\"", "\"I don't know.\"", "\"The water is cold.\""], answer: "\"Yes, swim between the red and yellow flags.\"", note: "Lifeguards direct you to the flagged area â€” that's where they're watching." },
+    { type: "spot_mistake", instruction: "Find the learner's error.", prompt: "What is the mistake in this sentence?", text: "\u201cYou should to wear sunscreen at the beach.\u201d", options: ["\u2018to' should be removed", "\u2018should' should be \u2018must'", "\u2018wear' should be \u2018wearing'", "\u2018at' should be \u2018in'"], answer: "\u2018to' should be removed", note: "After a modal verb (should, must, can) we use the base verb directly â€” no \u2018to'." },
+  ],
+};
+
+/* Five practice questions per scenario, each drilling THAT scenario's grammar
+   point â€” the same structure the explanation screen has just taught. Every note
+   names the rule, so the feedback teaches rather than merely marks. */
+const PACK_GRAMMAR_PRACTICE = {
+  "Asking for directions": [
+    { stem: "Complete the question: â€œ___ you tell me where the station is?â€", options: ["Could", "Am", "Does", "Is"], answer: "Could", note: "'Could' is the modal verb, and in a question it comes before the subject: Could + you + verb." },
+    { stem: "Choose the correct word order:", options: ["Could you tell me the way to the station?", "Could tell you me the way to the station?", "You could tell me the way to the station?", "Tell could you me the way to the station?"], answer: "Could you tell me the way to the station?", note: "The polite question form is modal + subject + verb: 'Could you tellâ€¦'" },
+    { stem: "Find the mistake: â€œCan you tells me how to get there?â€", options: ["'tells' should be 'tell'", "'Can' should be 'Could'", "'you' should be 'your'", "'to' should be 'for'"], answer: "'tells' should be 'tell'", note: "After a modal verb (can, could) we always use the base verb â€” never the -s form." },
+    { stem: "Complete: â€œCould you ___ me to the traffic lights?â€", options: ["direct", "directs", "directing", "directed"], answer: "direct", note: "Base verb after 'could' â€” that's the form rule for every polite question form." },
+    { stem: "Which sentence is grammatically correct?", options: ["Can you show me the intersection?", "Can you to show me the intersection?", "Can showing you me the intersection?", "Can you showing me the intersection?"], answer: "Can you show me the intersection?", note: "Modal + subject + base verb. No 'to', no -ing." },
+  ],
+  "Ordering at a cafÃ©": [
+    { stem: "Complete the request: â€œ___ I get a flat white, please?â€", options: ["Could", "Do", "Am", "Have"], answer: "Could", note: "'Could I getâ€¦' is the polite request form: modal + subject + base verb." },
+    { stem: "Choose the correct word order:", options: ["Could I have a long black, please?", "Could have I a long black, please?", "I could have a long black, please?", "Have could I a long black, please?"], answer: "Could I have a long black, please?", note: "In a question the modal comes first: Could + I + have." },
+    { stem: "Find the mistake: â€œCould I to get a takeaway coffee?â€", options: ["'to' should be removed", "'Could' should be 'Can'", "'I' should be 'me'", "'get' should be 'getting'"], answer: "'to' should be removed", note: "We never put 'to' after a modal: 'Could I GETâ€¦', not 'Could I to getâ€¦'" },
+    { stem: "Complete: â€œCould I ___ the bill, thanks?â€", options: ["have", "having", "had", "to have"], answer: "have", note: "Base verb after 'could' â€” the polite request form never changes." },
+    { stem: "Which sentence is grammatically correct?", options: ["Could I get soy milk instead?", "Could I getting soy milk instead?", "Could get I soy milk instead?", "Could I gets soy milk instead?"], answer: "Could I get soy milk instead?", note: "Could + subject + base verb. That's the whole pattern for polite requests." },
+  ],
+  "A visit to the doctor": [
+    { stem: "Complete: â€œI ___ had a sore throat since Monday.â€", options: ["have", "am", "did", "was"], answer: "have", note: "The present perfect is have/has + past participle: 'I have hadâ€¦'" },
+    { stem: "Find the mistake: â€œI have had a headache since three days.â€", options: ["'since' should be 'for'", "'have' should be 'has'", "'had' should be 'have'", "'a' should be removed"], answer: "'since' should be 'for'", note: "With the present perfect: 'for' + a length of time, 'since' + a starting point." },
+    { stem: "Complete: â€œI've ___ tired all week.â€", options: ["been feeling", "feeling", "feel", "am feeling"], answer: "been feeling", note: "After 'I've' we need a past participle â€” 'been' â€” to build the present perfect." },
+    { stem: "Complete: â€œShe ___ seen the GP twice this month.â€", options: ["has", "have", "is", "did"], answer: "has", note: "Third person singular takes 'has' in the present perfect: has + past participle 'seen'." },
+    { stem: "Which sentence is grammatically correct?", options: ["I've had a fever for two days.", "I have a fever since two days.", "I had a fever for two days ago.", "I am having fever since Monday."], answer: "I've had a fever for two days.", note: "Present perfect + 'for' + a length of time â€” the standard way to describe an ongoing symptom." },
+  ],
+  "Renting a flat": [
+    { stem: "Complete the indirect question: â€œCould you tell me when ___?â€", options: ["the flat is available", "is the flat available", "available is the flat", "is available the flat"], answer: "the flat is available", note: "Indirect questions use STATEMENT word order: subject + verb â€” 'the flat is', not 'is the flat'." },
+    { stem: "Find the mistake: â€œDo you know how much is the bond?â€", options: ["'is the bond' should be 'the bond is'", "'know' should be 'knowing'", "'how much' should be 'how many'", "'Do' should be 'Does'"], answer: "'is the bond' should be 'the bond is'", note: "Inside an indirect question we don't invert â€” keep subject before verb." },
+    { stem: "Choose the correct word order:", options: ["Could you tell me where the inspection is?", "Could you tell me where is the inspection?", "Could you tell me where is inspection the?", "Could tell me you where the inspection is?"], answer: "Could you tell me where the inspection is?", note: "Indirect question = 'Could you tell me' + question word + subject + verb." },
+    { stem: "Complete: â€œI'd like to know if the landlord ___ pets.â€", options: ["allows", "allow", "allowing", "is allow"], answer: "allows", note: "Statement order inside the indirect question, so the verb agrees normally: the landlord allows." },
+    { stem: "Which sentence is grammatically correct?", options: ["Do you know when the lease starts?", "Do you know when starts the lease?", "Do you know when does the lease start?", "Do you know when the lease start?"], answer: "Do you know when the lease starts?", note: "No inversion and no extra auxiliary inside an indirect question â€” just subject + verb." },
+  ],
+  "Opening a bank account": [
+    { stem: "Complete: â€œI'd like ___ open a savings account.â€", options: ["to", "for", "of", "at"], answer: "to", note: "The pattern is 'I'd like TO + verb' â€” the 'to' is part of the form." },
+    { stem: "Find the mistake: â€œI'd like to opening an account.â€", options: ["'opening' should be 'open'", "'like' should be 'liking'", "'to' should be removed", "'an' should be 'a'"], answer: "'opening' should be 'open'", note: "'I'd like to' takes the base verb: I'd like to OPEN." },
+    { stem: "Complete: â€œI'd like ___ my address, please.â€", options: ["to update", "updating", "update", "to updating"], answer: "to update", note: "'I'd like to' + base verb. Both parts matter: the 'to' AND the base form." },
+    { stem: "Choose the correct word order:", options: ["I'd like to transfer some money.", "I'd to like transfer some money.", "I like to would transfer some money.", "To I'd like transfer some money."], answer: "I'd like to transfer some money.", note: "Subject + 'd like + to + verb. That's the polite formal request form." },
+    { stem: "Which sentence is grammatically correct?", options: ["I'd like to speak to a teller.", "I'd like speak to a teller.", "I'd like to speaking to a teller.", "I'd liked to speak to a teller."], answer: "I'd like to speak to a teller.", note: "'I'd like to speak' â€” base verb after 'to', and 'like' never takes -ed here." },
+  ],
+  "Catching a train or bus": [
+    { stem: "Complete: â€œWhere ___ I tap my Opal card?â€", options: ["do", "am", "does", "is"], answer: "do", note: "Question word + DO + subject + verb. With 'I' we use 'do'." },
+    { stem: "Complete: â€œ___ this bus go to the city?â€", options: ["Does", "Do", "Is", "Are"], answer: "Does", note: "'This bus' is third person singular, so the auxiliary is 'does' â€” and the verb stays base: go." },
+    { stem: "Find the mistake: â€œWhere I do tap off?â€", options: ["'I do' should be 'do I'", "'tap' should be 'tapping'", "'Where' should be 'What'", "'off' should be 'on'"], answer: "'I do' should be 'do I'", note: "English questions invert: the auxiliary 'do' comes BEFORE the subject." },
+    { stem: "Choose the correct word order:", options: ["What time does the express leave?", "What time the express does leave?", "What time leaves the express?", "Does what time the express leave?"], answer: "What time does the express leave?", note: "Question word + does + subject + base verb â€” the standard question pattern." },
+    { stem: "Which sentence is grammatically correct?", options: ["Which platform does the train leave from?", "Which platform the train leaves from?", "Which platform does the train leaves from?", "Which platform do the train leave from?"], answer: "Which platform does the train leave from?", note: "After the auxiliary 'does', the main verb goes back to its base form: leave, not leaves." },
+  ],
+  "Shopping and returns": [
+    { stem: "Complete: â€œThis jumper is ___ than that one.â€", options: ["cheaper", "cheapest", "more cheap", "cheap"], answer: "cheaper", note: "Short adjectives take -er to compare: cheap â†’ cheaper + than." },
+    { stem: "Complete: â€œDo you have a ___ size?â€", options: ["bigger", "biggest", "more big", "more bigger"], answer: "bigger", note: "Comparative of a short adjective: big â†’ bigger. One comparative marker only." },
+    { stem: "Find the mistake: â€œThis one is more cheaper online.â€", options: ["'more' should be removed", "'cheaper' should be 'cheap'", "'is' should be 'are'", "'online' should be 'on line'"], answer: "'more' should be removed", note: "Never double the comparative: it's 'cheaper', not 'more cheaper'." },
+    { stem: "Complete: â€œThe blue one is ___ expensive than the red one.â€", options: ["more", "most", "much", "very"], answer: "more", note: "Longer adjectives take 'more â€¦ than' instead of -er: more expensive than." },
+    { stem: "Which sentence is grammatically correct?", options: ["This shirt is nicer than that one.", "This shirt is more nicer than that one.", "This shirt is more nice than that one.", "This shirt is nicest than that one."], answer: "This shirt is nicer than that one.", note: "Short adjective â†’ -er + than. 'Nicest' is the superlative, and doesn't take 'than'." },
+  ],
+  "Talking to your teacher": [
+    { stem: "Complete: â€œCould you ___ that again, please?â€", options: ["explain", "explains", "explaining", "to explain"], answer: "explain", note: "After the modal 'could' we use the base verb: Could you EXPLAINâ€¦" },
+    { stem: "Choose the correct word order:", options: ["Could you repeat the question, please?", "Could repeat you the question, please?", "You could repeat the question, please?", "Repeat could you the question, please?"], answer: "Could you repeat the question, please?", note: "Clarification questions follow modal + subject + base verb." },
+    { stem: "Find the mistake: â€œCould you to explain the assignment?â€", options: ["'to' should be removed", "'Could' should be 'Can'", "'explain' should be 'explaining'", "'the' should be 'a'"], answer: "'to' should be removed", note: "No 'to' after a modal verb: 'Could you explainâ€¦', never 'Could you to explainâ€¦'" },
+    { stem: "Complete: â€œSorry, could you say that ___ slowly?â€", options: ["more", "most", "much", "very"], answer: "more", note: "'More slowly' â€” and the base verb 'say' still follows 'could you'." },
+    { stem: "Which sentence is grammatically correct?", options: ["Could you clarify the due date?", "Could you clarifies the due date?", "Could you clarifying the due date?", "Could clarify you the due date?"], answer: "Could you clarify the due date?", note: "Modal + subject + base verb â€” the same form every time you ask for clarification." },
+  ],
+  "Speaking to your manager": [
+    { stem: "Complete: â€œI was hoping ___ take Friday off.â€", options: ["to", "for", "that", "of"], answer: "to", note: "The softening pattern is 'I was hoping TO + verb'." },
+    { stem: "Find the mistake: â€œI was hoping to swapping my shift.â€", options: ["'swapping' should be 'swap'", "'hoping' should be 'hope'", "'was' should be 'am'", "'to' should be removed"], answer: "'swapping' should be 'swap'", note: "'Hoping to' takes the base verb: I was hoping to SWAP." },
+    { stem: "Complete: â€œCould I ___ you for a minute about the roster?â€", options: ["grab", "grabs", "grabbing", "to grab"], answer: "grab", note: "Base verb after the modal 'could' â€” 'Could I grab youâ€¦'" },
+    { stem: "Choose the correct word order:", options: ["I was hoping to change my shift.", "I was hoping change to my shift.", "I hoping was to change my shift.", "To change I was hoping my shift."], answer: "I was hoping to change my shift.", note: "Subject + was hoping + to + base verb. That's the softened request form." },
+    { stem: "Which sentence is grammatically correct?", options: ["Could I ask about overtime?", "Could I asking about overtime?", "Could I to ask about overtime?", "Could ask I about overtime?"], answer: "Could I ask about overtime?", note: "Could + subject + base verb â€” no 'to', no -ing." },
+  ],
+  "Small talk with neighbours": [
+    { stem: "Complete: â€œHow ___ your weekend been?â€", options: ["has", "have", "is", "does"], answer: "has", note: "'Your weekend' is singular, so the present perfect auxiliary is 'has' + been." },
+    { stem: "Complete: â€œHow ___ you been settling in?â€", options: ["have", "has", "are", "do"], answer: "have", note: "With 'you' the present perfect auxiliary is 'have': How have you beenâ€¦" },
+    { stem: "Find the mistake: â€œHow has your week be?â€", options: ["'be' should be 'been'", "'has' should be 'have'", "'your' should be 'you'", "'week' should be 'weeks'"], answer: "'be' should be 'been'", note: "The present perfect needs the past participle 'been', not the base verb 'be'." },
+    { stem: "Choose the correct word order:", options: ["How has the barbie been?", "How the barbie has been?", "How been has the barbie?", "Has how the barbie been?"], answer: "How has the barbie been?", note: "Question word + has + subject + been â€” the small-talk pattern you'll hear every week." },
+    { stem: "Which sentence is grammatically correct?", options: ["How have you been, mate?", "How you have been, mate?", "How has you been, mate?", "How you been has, mate?"], answer: "How have you been, mate?", note: "Have + subject + been. The auxiliary goes before the subject in a question." },
+  ],
+  "Going to the beach": [
+    { stem: "Complete: \"You ___ swim between the red and yellow flags.\"", options: ["should", "should to", "shoulding", "to should"], answer: "should", note: "Modal + base verb: \u2018should swim' â€” no \u2018to', no -ing." },
+    { stem: "Complete: \"You ___ swim outside the flags because it is dangerous.\"", options: ["mustn't", "mustn't to", "don't must", "not must"], answer: "mustn't", note: "Prohibition: mustn't + base verb. \u2018Mustn't swim' means it is not allowed." },
+    { stem: "Find the mistake: \"You should to wear sunscreen every day.\"", options: ["\u2018to' should be removed", "\u2018should' should be \u2018must'", "\u2018wear' should be \u2018wearing'", "\u2018every' should be \u2018all'"], answer: "\u2018to' should be removed", note: "After a modal verb we never add \u2018to': should + base verb." },
+    { stem: "Complete: \"People ___ enter the water if there is a shark warning.\"", options: ["mustn't", "should", "must to", "can to"], answer: "mustn't", note: "Prohibition: mustn't + base verb â€” it means you are not allowed." },
+    { stem: "Which sentence is grammatically correct?", options: ["I think visitors should learn about beach safety.", "I think visitors should to learn about beach safety.", "I think visitors should learning about beach safety.", "I think visitors must to learn about beach safety."], answer: "I think visitors should learn about beach safety.", note: "Opinion: think + should + base verb. No \u2018to', no -ing after the modal." },
+  ],
+};
+
+/* Attach the authored content to its scenario. Keeping it ON the pack preserves
+   the "ONE pack = ONE coherent situation" invariant every mock branch relies on. */
+MOCK_PACKS.forEach((pk) => {
+  pk.warmUp = PACK_WARMUPS[pk.ctx] || [];
+  pk.grammar.practice = PACK_GRAMMAR_PRACTICE[pk.ctx] || [];
+});
+
+/* ==================== TEACHER-AUTHORED LESSONS ====================
+   Complete lessons written by a teacher. These bypass the AI planning
+   pipeline entirely â€” the content IS the lesson. AI is used only for
+   speaking conversations and personalised closing summaries.
+
+   STORAGE FORMAT: metadata + content separation.
+   - metadata: indexing, search, sequencing, analytics.
+   - content: pedagogical sections mirroring how teachers plan lessons.
+   The runtime blueprint (what components consume) is flat â€” the
+   prepareAuthoredBlueprint() function bridges storage to runtime.
+
+   SCHEMA VERSIONING: every lesson declares schemaVersion so future
+   format changes never break existing authored content.
+
+   LOCALISATION: string content is stored as-is (English). A future
+   l10n layer could wrap content fields in locale-keyed objects
+   (e.g. { en: "...", zh: "..." }) without restructuring. The
+   architecture avoids assumptions that prevent this.
+
+   FILE STRUCTURE (future):
+     src/lessons/authored/b1/beach-safety.js
+     src/lessons/authored/b1/shopping.js
+     src/lessons/authored/index.js  â† exports all
+   For now, lessons live in this file. Extraction is trivial because
+   each lesson is a self-contained object and prepareAuthoredBlueprint
+   is the only consumer.
+   ================================================================ */
+const AUTHORED_LESSONS = [
+  {
+    metadata: {
+      id: "beach-safety-b1",
+      title: "Going to the Beach",
+      lessonType: "authored",
+      schemaVersion: 1,
+      author: "Teacher Leo",
+      version: 1,
+      level: "Low Intermediate",
+      cefr: "B1",
+      topic: "Beach safety",
+      tags: ["beach", "safety", "modals", "obligation", "advice", "Australian culture"],
+      estimatedDuration: "90\u2013120 minutes",
+      sequence: null,
+      pack: null,
+      lastUpdated: "2026-07-14",
+    },
+
+    // Core lesson identity â€” the "what and why"
+    context: "Going to the beach",
+    communicativeObjective: "Understand beach safety rules and give safety advice using modal verbs",
+    explanation: "Today we're learning about going to the beach in Australia. Beaches here are beautiful, but they can also be dangerous if you don't know the safety rules. By the end of this lesson, you'll be able to give beach safety advice confidently using modal verbs.",
+    mainSkill: "both",
+    mission: "Next time you visit a beach, find the red and yellow flags and tell someone what they mean â€” in English.",
+    learningOutcome: "You can understand Australian beach safety rules and give advice using modal verbs (must, should, mustn't, can't).",
+    learningOutcomes: [
+      "Understand the main ideas of an authentic reading about beach safety",
+      "Use twelve key beach safety vocabulary items appropriately",
+      "Correctly form and use modal verbs of obligation, prohibition, advice and opinion",
+      "Discuss advantages and disadvantages of beach safety rules",
+      "Express opinions using supporting reasons",
+      "Give beach safety advice using sentence frames",
+    ],
+    skillFocus: ["reading", "listening", "speaking", "vocabulary", "grammar", "critical thinking"],
+
+    content: {
+      warmUp: {
+        questions: [
+          "Do you like going to the beach?",
+          "What do you do when you are at the beach?",
+          "What must you bring to the beach?",
+          "Is there anything you shouldn't do when at the beach?",
+        ],
+        activities: [
+          { type: "context_discussion", instruction: "Just chat â€” there are no wrong answers here.", prompt: "Have you ever been to an Australian beach? What was it like?" },
+          { type: "mcq", instruction: "Choose the correct answer.", prompt: "What do the red and yellow flags on an Australian beach mean?", options: ["They show the safest area to swim", "They mean the beach is closed", "They show where you can have a barbecue", "They mark the car park"], answer: "They show the safest area to swim", note: "The flags mark the area watched by lifeguards â€” always swim between them." },
+          { type: "complete_dialogue", instruction: "Choose the missing line.", prompt: "Complete the exchange:", text: "You: \"Is it safe to swim here?\"\nLifeguard: ______", options: ["\"Yes, swim between the red and yellow flags.\"", "\"No, go home.\"", "\"I don't know.\"", "\"The water is cold.\""], answer: "\"Yes, swim between the red and yellow flags.\"", note: "Lifeguards direct you to the flagged area â€” that's where they're watching." },
+          { type: "spot_mistake", instruction: "Find the learner's error.", prompt: "What is the mistake in this sentence?", text: "\u201cYou should to wear sunscreen at the beach.\u201d", options: ["\u2018to' should be removed", "\u2018should' should be \u2018must'", "\u2018wear' should be \u2018wearing'", "\u2018at' should be \u2018in'"], answer: "\u2018to' should be removed", note: "After a modal verb (should, must, can) we use the base verb directly â€” no \u2018to'." },
+        ],
+      },
+
+      vocabulary: {
+        items: [
+          { word: "flags", pos: "noun", meaning: "Pieces of coloured material on a pole that show information or warnings. At Australian beaches, red and yellow flags show the safe area to swim.", ipa: "/fl\u00e6\u0261z/", stress: "O", syllables: "flags", example: "The red and yellow flags show the safe swimming area.", examples: ["Look for the flags before you swim.", "The flags were up, so we knew it was safe."], related: ["warning", "signal", "sign"], collocations: ["red and yellow flags", "between the flags", "look for the flags"] },
+          { word: "swim", pos: "verb", meaning: "To move through water using your arms and legs.", ipa: "/sw\u026am/", stress: "O", syllables: "swim", example: "You should swim between the flags.", examples: ["I learned to swim when I was five.", "We went swimming at Bondi Beach."], related: ["swimmer", "swimming", "stroke"], collocations: ["swim between", "go swimming", "learn to swim"] },
+          { word: "shade", pos: "noun", meaning: "A cool, darker area protected from direct sunlight.", ipa: "/\u0283\u00e6\u026ad/", stress: "O", syllables: "shade", example: "Sit in the shade when the sun is strong.", examples: ["We found some shade under a tree.", "There isn't much shade on this beach."], related: ["shadow", "shelter", "cover"], collocations: ["sit in the shade", "find shade", "in the shade"] },
+          { word: "sunbathe", pos: "verb", meaning: "To sit or lie in the sun to relax or get a tan.", ipa: "/\u02c8s\u028cnbe\u026a\u00f0/", stress: "O o", syllables: "sun\u00b7bathe", example: "Some people like to sunbathe at the beach.", examples: ["She was sunbathing on a towel.", "Be careful when you sunbathe â€” use sunscreen."], related: ["sunbather", "tan", "sunlight"], collocations: ["like to sunbathe", "sunbathe on the beach", "sunbathe safely"] },
+          { word: "sunscreen", pos: "noun", meaning: "A cream or lotion you put on your skin to protect it from the sun.", ipa: "/\u02c8s\u028cnski\u02d0n/", stress: "O o", syllables: "sun\u00b7screen", example: "You should wear sunscreen every day.", examples: ["Don't forget to put on sunscreen.", "I need to buy more sunscreen before the weekend."], related: ["SPF", "sun protection", "lotion"], collocations: ["wear sunscreen", "put on sunscreen", "apply sunscreen"] },
+          { word: "shark", pos: "noun", meaning: "A large sea animal with sharp teeth that lives in the ocean.", ipa: "/\u0283\u0251\u02d0k/", stress: "O", syllables: "shark", example: "A shark warning can close a beach.", examples: ["They spotted a shark near the shore.", "Shark attacks are rare but serious."], related: ["ocean", "predator", "marine life"], collocations: ["shark warning", "shark attack", "great white shark"] },
+          { word: "drown", pos: "verb", meaning: "To die because you cannot breathe while underwater.", ipa: "/dra\u0275n/", stress: "O", syllables: "drown", example: "People can drown if they ignore safety rules.", examples: ["Never swim alone â€” you could drown.", "The lifeguard saved the child from drowning."], related: ["drowning", "underwater", "rescue"], collocations: ["risk of drowning", "almost drowned", "prevent drowning"] },
+          { word: "towel", pos: "noun", meaning: "A piece of cloth used to dry your body after swimming or being in water.", ipa: "/\u02c8ta\u028a\u0259l/", stress: "O o", syllables: "tow\u00b7el", example: "Bring a towel after swimming.", examples: ["I forgot my towel at home.", "She dried herself with a beach towel."], related: ["beach towel", "dry", "cloth"], collocations: ["bring a towel", "beach towel", "dry off with a towel"] },
+          { word: "sunburn", pos: "noun", meaning: "Red and painful skin caused by spending too much time in the sun.", ipa: "/\u02c8s\u028cnb\u025c\u02d0n/", stress: "O o", syllables: "sun\u00b7burn", example: "Too much sun can cause sunburn.", examples: ["I got terrible sunburn on my first day.", "Sunburn can be very painful."], related: ["burn", "UV", "skin damage"], collocations: ["get sunburn", "cause sunburn", "painful sunburn"] },
+          { word: "thongs", pos: "noun", meaning: "A type of open shoe worn in warm weather. In other countries, they are called flip-flops.", ipa: "/\u03b8\u0252\u014bz/", stress: "O", syllables: "thongs", example: "Australians often wear thongs at the beach.", examples: ["I bought a new pair of thongs for summer.", "Don't forget your thongs â€” the sand gets hot!"], related: ["flip-flops", "sandals", "footwear"], collocations: ["wear thongs", "a pair of thongs", "thongs and boardshorts"] },
+          { word: "rip current", pos: "noun", meaning: "A strong flow of water that moves away from the beach and can pull swimmers out to sea.", ipa: "/\u02c8r\u026ap \u02cck\u028cr\u0259nt/", stress: "O o", syllables: "rip cur\u00b7rent", example: "A rip current can pull swimmers away from the beach.", examples: ["If you are caught in a rip current, stay calm.", "Rip currents are one of the biggest dangers at Australian beaches."], related: ["current", "undertow", "tide"], collocations: ["caught in a rip current", "dangerous rip current", "spot a rip current"] },
+          { word: "lifeguard", pos: "noun", meaning: "A trained person who watches swimmers and helps people who are in danger in the water.", ipa: "/\u02c8la\u026af\u0261\u0251\u02d0d/", stress: "O o", syllables: "life\u00b7guard", example: "The lifeguard watches swimmers.", examples: ["Always swim where the lifeguard can see you.", "The lifeguard rescued a swimmer yesterday."], related: ["rescue", "patrol", "safety"], collocations: ["listen to the lifeguard", "lifeguard station", "on-duty lifeguard"] },
+        ],
+        matchSet: ["flags", "sunbathe", "sunscreen", "shark", "drown", "thongs", "rip current", "lifeguard"],
+      },
+
+      pronunciation: {
+        focus: "The /\u03b8/ sound, the /\u00e6/ sound, and word stress in two-syllable beach words",
+        tips: [
+          "Put your tongue lightly between your teeth for /\u03b8/. Push air out gently. Do not use /t/ or /s/.",
+          "For /\u00e6/, keep your mouth open and relaxed â€” like the vowel in cat, map, bad.",
+          "Stress the first syllable in two-syllable beach words: SUNscreen, SUNburn, LIFEguard, TOWel.",
+        ],
+        focusSections: [
+          { title: "The /\u03b8/ sound", description: "Some students may find this sound difficult.", targetWord: "thongs", ipa: "/\u03b8\u0252\u014bz/", instructions: ["Put your tongue lightly between your teeth.", "Push air out gently.", "Do not use /t/ or /s/."], practiceWords: ["thongs", "think", "three"] },
+          { title: "The /\u00e6/ sound", description: "This sound appears in many beach safety words.", targetWords: [{ word: "flags", ipa: "/fl\u00e6\u0261z/" }, { word: "shade", ipa: "/\u0283\u00e6\u026ad/" }], instructions: ["The mouth is open and relaxed."], practiceWords: ["cat", "map", "bad"] },
+          { title: "Word stress", description: "Stress the first syllable in many two-syllable beach words.", correct: ["SUNscreen", "SUNburn", "LIFEguard", "TOWel"], incorrect: ["sunSCREEN", "sunBURN", "lifeGUARD"], practiceWords: ["flags", "sunscreen", "lifeguard", "sunburn", "rip current", "towel"] },
+        ],
+      },
+
+      reading: {
+        passage: "Australia is famous for its beautiful beaches. Every year, many people visit the beach to swim, relax, and enjoy the sunshine. However, it is important to understand beach safety rules before entering the water.\n\nWhen you visit an Australian beach, you should always look for the flags. Red and yellow flags show the safest area to swim. You should swim between these flags because a lifeguard is watching this area and can help if there is a problem.\n\nYou should be careful of a rip current. A rip current is a strong flow of water that moves away from the beach and can pull swimmers out to sea. If you are caught in a rip current, you should stay calm and follow the lifeguard's advice.\n\nThe Australian sun can also be dangerous. You should use sunscreen to protect your skin and sit in the shade when the sun is very strong. Spending too much time in the sun can cause sunburn, which makes your skin red and painful. Some people like to sunbathe, but they should be careful and protect their skin.\n\nAt the beach, you can enjoy many activities. You can swim in the ocean, relax on a towel, or walk along the sand wearing thongs. However, you should always check the safety signs because sometimes there may be dangers, such as a shark in the water.\n\nSwimming can be fun, but it can also be dangerous. If people do not follow safety rules, they can drown. Always listen to the lifeguard, follow the signs, and make safe choices when you visit an Australian beach.",
+        questions: [
+          { stem: "What is the main purpose of the reading?", options: ["To explain how to build a beach house in Australia.", "To teach people how to stay safe at Australian beaches.", "To describe the most beautiful beaches in Australia."], answer: "To teach people how to stay safe at Australian beaches.", note: "Good â€” the whole text is about safety rules and advice." },
+          { stem: "Why should people swim between the red and yellow flags?", options: ["It is the area where the water is warmest.", "It is the area watched by lifeguards and considered safer.", "It is the only place where people can use towels."], answer: "It is the area watched by lifeguards and considered safer.", note: "Exactly â€” the flags mark where the lifeguards are watching." },
+          { stem: "Based on the information in the reading, what is likely true about people who visit Australian beaches?", options: ["They should learn about beach safety before swimming.", "They do not need to follow safety rules.", "They should avoid swimming in the ocean."], answer: "They should learn about beach safety before swimming.", note: "Right â€” the text says it is important to understand safety rules before entering the water." },
+          { stem: "What can happen if someone is caught in a rip current?", options: ["They can be pulled away from the beach.", "They can get sunburn from the water.", "They can find a safer place to swim."], answer: "They can be pulled away from the beach.", note: "Yes â€” a rip current pulls swimmers out to sea, which is why you should stay calm." },
+          { stem: "What message does the author want readers to think about after reading this article?", options: ["Beaches are only dangerous for tourists.", "People can enjoy Australian beaches by making safe choices.", "Swimming is the most important beach activity."], answer: "People can enjoy Australian beaches by making safe choices.", note: "That's the main message â€” enjoy the beach, but be safe." },
+        ],
+      },
+
+      listening: {
+        script: "Australia is famous for its beautiful beaches, and many people visit them every year to swim, relax, and enjoy the sun. However, visitors need to understand beach safety rules before entering the water. People should always look for the red and yellow flags because they show the safest area to swim.\n\nAustralian beaches often have trained lifeguards who watch swimmers and help people in danger. Visitors should listen to their advice and follow safety signs. Swimming outside the flags can be dangerous because strong rip currents can pull swimmers away from the beach.\n\nThe Australian sun can also create health problems. People should use sunscreen to protect their skin and sit in the shade when the sun is very strong. Spending too much time in the sun can cause sunburn, which makes the skin red and painful.\n\nThere are also other dangers at Australian beaches. Sometimes there may be a shark warning, dangerous waves, or unsafe swimming conditions. People must be careful because ignoring safety rules can cause someone to drown.\n\nBeaches are places where people can have fun, but visitors should make safe choices. Learning about beach safety helps people enjoy the ocean while protecting themselves and others in the water.",
+        gapFill: [
+          { position: 1, context: "People should always look for the red and yellow ____________", answer: "flags" },
+          { position: 2, context: "Australian beaches often have trained ____________", answer: "lifeguards" },
+          { position: 3, context: "strong ____________ can pull swimmers away from the beach", answer: "rip currents" },
+          { position: 4, context: "People should use ____________ to protect their skin", answer: "sunscreen" },
+          { position: 5, context: "sit in the ____________ when the sun is very strong", answer: "shade" },
+          { position: 6, context: "Spending too much time in the sun can cause ____________", answer: "sunburn" },
+          { position: 7, context: "Sometimes there may be a ____________ warning", answer: "shark" },
+          { position: 8, context: "ignoring safety rules can cause someone to ____________", answer: "drown" },
+          { position: 9, context: "protecting themselves and others in the ____________", answer: "water" },
+        ],
+      },
+
+      grammar: {
+        point: "Modal verbs of obligation, prohibition and advice",
+        meaning: "Modal verbs like must, should, mustn't and can't express rules, advice and things that are not allowed.",
+        form: "modal (must / should / mustn't / can't) + base verb",
+        usage: "Giving safety advice, explaining rules, expressing what you think is a good idea â€” essential for everyday Australian life.",
+        examples: [
+          "You must wear sunscreen at the beach.",
+          "You mustn't swim outside the flags.",
+          "You should check the weather before swimming.",
+          "I think people should learn about beach safety.",
+        ],
+        reference: [
+          { function: "Obligation", form: "must / have to + base verb", example: "You must wear sunscreen at the beach." },
+          { function: "Prohibition", form: "mustn't / can't + base verb", example: "You mustn't swim outside the flags." },
+          { function: "Advice", form: "should / shouldn't + base verb", example: "You should check the weather before swimming." },
+          { function: "Opinion", form: "think/believe + should/shouldn't + base verb", example: "I think people should learn about beach safety." },
+        ],
+        practice: [
+          { stem: "You __________ wear sunscreen when you spend time in the Australian sun.", options: ["should", "should to", "shoulding", "to should"], answer: "should", note: "Advice: should + base verb. No \u2018to', no -ing." },
+          { stem: "You __________ swim outside the red and yellow flags because it is dangerous.", options: ["mustn't", "mustn't to", "don't must", "not must"], answer: "mustn't", note: "Prohibition: mustn't + base verb. It means you are not allowed." },
+          { stem: "Visitors __________ listen to the lifeguard's instructions at the beach.", options: ["should", "should to", "to should", "shoulding"], answer: "should", note: "Advice: should + base verb â€” the same pattern every time." },
+          { stem: "You __________ check the weather before going swimming.", options: ["should", "should to", "must to", "to must"], answer: "should", note: "Advice: should + base verb. No \u2018to' after a modal." },
+          { stem: "People __________ enter the water if there is a shark warning.", options: ["mustn't", "should", "must to", "can to"], answer: "mustn't", note: "Prohibition: mustn't + base verb â€” it means you are not allowed." },
+          { stem: "You __________ bring a towel, water, and sunscreen when you visit the beach.", options: ["should", "should to", "shoulding", "to should"], answer: "should", note: "Advice: should + base verb." },
+          { stem: "I think international students __________ learn about Australian beach safety.", options: ["should", "should to", "must to", "can to"], answer: "should", note: "Opinion: think + should + base verb. No \u2018to', no -ing after the modal." },
+          { stem: "People __________ ignore warning signs at the beach because they are there to keep people safe.", options: ["mustn't", "should", "must to", "to must"], answer: "mustn't", note: "Prohibition: mustn't + base verb. The signs exist for safety." },
+        ],
+      },
+
+      vocabReview: {
+        oddOneOut: [
+          { options: ["sunscreen", "towel", "shark"], answer: "shark", note: "Sunscreen and towel are things you bring to the beach. A shark is a danger." },
+          { options: ["swim", "drown", "sunbathe"], answer: "drown", note: "Swimming and sunbathing are fun activities. Drowning is a danger." },
+          { options: ["lifeguard", "rip current", "shade"], answer: "shade", note: "Lifeguards and rip currents are about water safety. Shade is about sun protection." },
+          { options: ["flags", "warning", "holiday"], answer: "holiday", note: "Flags and warnings are about safety. A holiday is a time off work." },
+          { options: ["sunburn", "sunscreen", "towel"], answer: "towel", note: "Sunburn and sunscreen are both about the sun. A towel is for drying." },
+        ],
+        completeSentences: [
+          { stem: "You should wear ____________ to protect your skin from the Australian sun.", answer: "sunscreen" },
+          { stem: "A ____________ is a strong flow of water that can pull swimmers away from the beach.", answer: "rip current" },
+          { stem: "The ____________ watches swimmers and helps people who are in danger.", answer: "lifeguard" },
+          { stem: "If you spend too much time in the sun, you may get ____________.", answer: "sunburn" },
+          { stem: "You should swim between the red and yellow ____________ at Australian beaches.", answer: "flags" },
+        ],
+      },
+
+      discussion: {
+        questions: [
+          "What should tourists do when they visit an Australian beach?",
+          "What rules must people follow to stay safe at the beach?",
+          "What things shouldn't people do when swimming in the ocean?",
+          "Do you think people should learn about beach safety before visiting Australia? Why?",
+          "Should beaches have more safety rules, or do people already have enough responsibility?",
+        ],
+        sentenceFrames: [
+          { frame: "When visiting an Australian beach, people should â€¦ because â€¦", example: "When visiting an Australian beach, people should swim between the flags because it is safer." },
+          { frame: "One important beach rule is that people must â€¦", example: "One important beach rule is that people must listen to lifeguards." },
+          { frame: "People shouldn't â€¦ because â€¦", example: "People shouldn't swim alone because it can be dangerous." },
+          { frame: "I think international students should â€¦ because â€¦", example: "I think international students should learn Australian beach safety because beaches can be different from their home countries." },
+          { frame: "I believe beaches should / shouldn't have more rules because â€¦", example: "I believe beaches should have more rules because safety is important." },
+        ],
+      },
+
+      speaking: {
+        sentenceFrames: [
+          { frame: "You should wear sunscreen because â€¦", example: "You should wear sunscreen because the Australian sun is strong." },
+        ],
+      },
+
+      criticalThinking: {
+        prompt: "Australia has many beautiful beaches, but beaches can also be dangerous. Every year, people experience problems such as sunburn, rip currents, and unsafe swimming conditions. Some people believe more education and safety programmes could help keep beach visitors safe.\n\nWith Leo, create a Beach Safety Plan for an Australian beach.",
+        questions: [
+          "What beach safety rules should visitors follow?",
+          "What information should international students learn before visiting an Australian beach?",
+          "What facilities or services should the beach include (e.g. lifeguard stations, signs, shaded areas, drinking water stations)?",
+          "What rules would help people stay safe in the water?",
+          "What challenges might visitors face at the beach, and how could they be solved?",
+        ],
+        sentenceFrames: [
+          { frame: "Visitors should â€¦ because â€¦", example: "Visitors should swim between the flags because it is safer." },
+          { frame: "People must â€¦ to stay safe at the beach.", example: "People must listen to lifeguards to stay safe at the beach." },
+          { frame: "Our beach should include â€¦ so that â€¦", example: "Our beach should include more shaded areas so that people can avoid strong sunlight." },
+          { frame: "One rule we would have is â€¦ . This would help because â€¦", example: "One rule we would have is no swimming alone. This would help because people can get help quickly if there is a problem." },
+          { frame: "One challenge might be â€¦ , and we could solve it by â€¦", example: "One challenge might be dangerous swimming conditions, and we could solve it by adding more warning signs." },
+        ],
+      },
+    },
+
+    teacherNotes: {
+      anticipatedProblems: [
+        { problem: "Students may only give short answers in the warm-up.", solution: "Provide prompts and sentence frames: \u201cI usuallyâ€¦\u201d, \u201cPeople shouldâ€¦\u201d, \u201cPeople shouldn'tâ€¦\u201d" },
+        { problem: "Some vocabulary is culturally specific (rip current, thongs).", solution: "Use images/examples and compare Australian meanings." },
+        { problem: "Students may pronounce thongs as /t\u0252\u014bz/ or /s\u0252\u014bz/.", solution: "Use mouth position demonstration and back-chaining." },
+        { problem: "Students read every word slowly.", solution: "Set a short time limit and emphasise reading for general meaning." },
+        { problem: "Students confuse must/mustn't and should/shouldn't.", solution: "Use timelines/examples and compare meanings." },
+        { problem: "Students use \u2018to' after modal verbs (should to wear).", solution: "Highlight structure: modal + verb (no \u2018to')." },
+        { problem: "Students lack confidence speaking.", solution: "Allow planning time and provide useful language." },
+        { problem: "Students miss words during first listening.", solution: "Play twice: first for meaning, second for detail." },
+      ],
+      differentiation: {
+        support: ["Sentence frames", "Pair work", "Vocabulary visible throughout", "Teacher modelling", "Mixed-ability grouping"],
+        extension: "Debate: Should Australia invest in more beach safety programmes for international visitors? Students prepare arguments for and against.",
+      },
+      conceptCheckingQuestions: [
+        { word: "rip current", question: "Does it move towards the beach or away?", answer: "Away" },
+        { word: "lifeguard", question: "Does a lifeguard help people or sell tickets?", answer: "Help people" },
+        { word: "shade", question: "Is it usually cooler or hotter?", answer: "Cooler" },
+      ],
+      homework: "Write 8 beach safety rules for international visitors using modal verbs. Example: \u201cVisitors shouldâ€¦\u201d",
+    },
+
+    answerKey: {
+      vocabularyMatching: { flags: "d", swim: "h", shade: "b", sunbathe: "f", sunscreen: "c", shark: "j", drown: "a", towel: "i", sunburn: "e", thongs: "g", "rip current": "l", lifeguard: "m" },
+      comprehension: ["b", "b", "a", "a", "b"],
+      oddOneOut: ["shark", "drown", "shade", "holiday", "towel"],
+      completeSentences: ["sunscreen", "rip current", "lifeguard", "sunburn", "flags"],
+      grammarPractice: ["should", "mustn't", "should", "should", "mustn't", "should", "should", "mustn't"],
+      listeningGapFill: ["flags", "lifeguards", "rip currents", "sunscreen", "shade", "sunburn", "shark", "drown", "water"],
+    },
+  },
+
+  /* ================================================================
+     A1 Â· UNIT 1 Â· LESSON 1 â€” "Arriving â€” who I am"
+     Authored by Leo. Transcribed verbatim from
+     A1-Unit1-Lesson1-Plan-v3.docx (read on disk 9 Aug 2026).
+     v3 supersedes v1 and v2 â€” it presents the COMPLETE 'be' paradigm

@@ -1,0 +1,1000 @@
+﻿      "relative clauses",
+      "modals of deduction (must be, might be, can't be)",
+      "used to for past habits"
+    ],
+    vocab: "~1500â€“2000 word families, English Vocabulary Profile A2 tier; concrete concepts; extended familiar-topic range (personal history, plans, routines, feelings, health, community)",
+    tasks: "short-to-medium (under 12 exchanges); routine tasks in familiar contexts; describing past experiences and future plans; simple opinions on familiar topics (I like / I don't like / because...); short narrative on a personal past event; simple comparisons; ordering, requesting, appointment-making at real Australian settings (GP, cafe, workplace, school pickup)",
+    do_examples: [
+      "'I lived in BogotÃ¡ for five years, then I moved to Sydney.' â€” past simple narrative, personal history",
+      "'I'm going to look for a new job next month.' â€” going to future, plans",
+      "'You should call the landlord.' â€” should for advice",
+      "'I've never eaten kangaroo.' â€” LATE A2 present perfect with ever/never, experience only",
+      "'This cafÃ© is better than the one on George Street.' â€” comparative, familiar topic"
+    ],
+    dont_examples: [
+      "'By the time I arrived, they had already left.' â€” past perfect, forbidden",
+      "'I've been learning English for two years.' â€” present perfect continuous, forbidden",
+      "'If I had a car, I'd drive there.' â€” second conditional, forbidden",
+      "'The rent is paid on the first of the month.' â€” passive, forbidden",
+      "'The woman who I met yesterday works at the hospital.' â€” relative clause, forbidden"
+    ]
+  },
+  B1: {
+    allowed: [
+      "everything allowed at A2",
+      "present perfect simple and continuous",
+      "past perfect simple",
+      "past continuous (full range, including with past simple in narrative)",
+      "used to for past habits and states",
+      "zero, first, and second conditionals (full range)",
+      "basic passive voice (present simple, past simple, will future)",
+      "reported speech with basic tense shifts (statements and questions)",
+      "defining relative clauses (who, which, that)",
+      "modals of obligation and permission (have to, don't have to, must, can, could, may)",
+      "modals of deduction (present: must be, might be, can't be)",
+      "verb patterns (extended verb + gerund / verb + infinitive lists)",
+      "future forms range (will, going to, present continuous, present simple for schedules)",
+      "linkers (although, however, because of, so, therefore)"
+    ],
+    forbidden: [
+      "third conditional",
+      "mixed conditionals",
+      "advanced passive constructions (perfect passive, modal passive, get-passive, causative have)",
+      "reported speech with complex tense shifts or modal reporting verbs",
+      "non-defining relative clauses",
+      "reduced relative clauses",
+      "cleft sentences (It was..., What I want is...)",
+      "inversion (any form)",
+      "subjunctive",
+      "would rather, had better",
+      "wish + past / wish + would",
+      "modals of past deduction (must have done, might have done)",
+      "advanced discourse markers (nevertheless, notwithstanding, furthermore in productive use)"
+    ],
+    vocab: "~2500â€“3500 word families, English Vocabulary Profile B1 tier; increasing abstraction; opinions, feelings, workplace and study contexts; basic collocations",
+    tasks: "connected text (paragraph-length); opinions with reasons on familiar topics; describing experiences, events, dreams, hopes, ambitions; short narrative with orientation, complication, resolution; giving and receiving instructions; explaining simple problems; agreeing and disagreeing politely; workplace scenarios (calling in sick, requesting time off, describing a task)",
+    do_examples: [
+      "'I've been living in Melbourne since 2023, but I moved from Brisbane last year.' â€” present perfect continuous + past simple",
+      "'If I studied more, I'd pass the test.' â€” second conditional, hypothetical",
+      "'The letter was sent yesterday.' â€” basic past passive",
+      "'She told me she was tired.' â€” reported speech, basic tense shift",
+      "'The man who fixed my heater was very helpful.' â€” defining relative clause"
+    ],
+    dont_examples: [
+      "'If I had studied harder, I would have passed.' â€” third conditional, forbidden",
+      "'The report will have been finished by Friday.' â€” modal passive, forbidden",
+      "'He asked me whether I would have completed it by then.' â€” complex reported tense shift, forbidden",
+      "'My colleague, who I've known for ten years, is retiring.' â€” non-defining relative clause, forbidden",
+      "'It was the manager who made the decision.' â€” cleft sentence, forbidden"
+    ]
+  },
+  B2: {
+    allowed: [
+      "everything allowed at B1",
+      "third conditional",
+      "mixed conditionals",
+      "all passive constructions (perfect, modal, causative have)",
+      "get-passive (informal register)",
+      "reported speech, full range including modal reporting verbs (suggest, insist, deny)",
+      "non-defining relative clauses",
+      "reduced relative clauses",
+      "cleft sentences (It-cleft, What-cleft)",
+      "modals of past deduction (must have done, might have done, should have done)",
+      "would rather + past, had better",
+      "wish + past, wish + past perfect, wish + would",
+      "future perfect and future continuous",
+      "linking devices for extended argument (however, moreover, nevertheless, on the other hand)",
+      "productive idiomatic language, common phrasal verbs, everyday collocations"
+    ],
+    forbidden: [
+      "advanced inversion (Hardly had I..., Never before have I...) except as receptive input",
+      "subjunctive (except common fixed expressions: 'If I were you')",
+      "complex ellipsis and substitution beyond common patterns",
+      "fronting for emphasis in extended productive use",
+      "highly literary or archaic constructions",
+      "rare or region-specific idioms without prior teaching"
+    ],
+    vocab: "~4000â€“5000 word families, English Vocabulary Profile B2 tier; abstract topics; range of collocations; common idiomatic expressions; register-appropriate synonym choice (start / begin / commence)",
+    tasks: "extended contribution (multiple paragraphs); argument with counter-argument on abstract topics; hypothesising about past and present; main-idea comprehension of complex text; sustained interaction on unfamiliar topics; presenting a case with support; workplace scenarios (leading a short meeting, delivering feedback, negotiating a deadline); academic scenarios (short seminar contribution, discussion of a reading)",
+    do_examples: [
+      "'If we'd left earlier, we would've caught the train â€” and we wouldn't be waiting here now.' â€” mixed conditional",
+      "'The proposal was believed to have been drafted in haste.' â€” perfect passive with reporting",
+      "'What surprised me most was how quickly they responded.' â€” What-cleft",
+      "'She must have forgotten â€” she's usually so reliable.' â€” modal of past deduction",
+      "'The candidate, whose CV we discussed yesterday, has withdrawn.' â€” non-defining relative clause"
+    ],
+    dont_examples: [
+      "'Hardly had I sat down when the phone rang.' â€” advanced inversion, forbidden productively",
+      "'The committee recommends that he be reinstated.' â€” subjunctive outside fixed expressions, forbidden",
+      "'Never before had such a decision been contemplated.' â€” inversion + past perfect, forbidden productively",
+      "'A fine mess he's made of it.' â€” fronting for emphasis, forbidden productively",
+      "'She's dressed to the nines.' â€” rare/regional idiom without prior teaching, forbidden"
+    ]
+  },
+  C1: {
+    allowed: [
+      "everything allowed at B2",
+      "full range of inversion (Hardly had I..., Never before have I..., Only then did...)",
+      "subjunctive (I suggest he take..., It's essential that she be...)",
+      "advanced ellipsis and substitution",
+      "fronting for emphasis",
+      "cleft sentences (all forms, including all-cleft and reversed pseudo-cleft)",
+      "complex noun phrases with multiple modifiers",
+      "nuanced modality (I dare say..., Should you find..., Were it not for...)",
+      "productive idiomatic and collocational range",
+      "register shifting within a single stretch of discourse",
+      "discourse-level cohesion devices (referencing, substitution, ellipsis across a text)"
+    ],
+    forbidden: [
+      "very rare literary constructions (poetic inversion, archaic forms)",
+      "highly regional idiomatic expressions unless the region is the taught target",
+      "constructions requiring cultural knowledge the student has not been taught"
+    ],
+    vocab: "~6000â€“8000 word families, English Vocabulary Profile C1 tier; wide idiomatic and collocational range; register-appropriate synonym choice with subtle meaning distinctions (imply / infer, historic / historical); productive use of hedging and stance-marking language",
+    tasks: "extended contribution on demanding topics; precise expression of subtle distinctions; complex argument with hedging and stance; register control (moving between formal and informal within one discourse); presenting a nuanced case with anticipated objections; academic scenarios (extended seminar contribution, critique of a source); professional scenarios (drafting a policy note, leading a difficult conversation, negotiating with competing interests)",
+    do_examples: [
+      "'Only when the report was published did the full picture emerge.' â€” inversion after only when",
+      "'The committee recommends that the proposal be reconsidered.' â€” subjunctive in formal register",
+      "'Were the funding to be withdrawn, the entire project would collapse.' â€” inverted conditional",
+      "'It's not so much the cost as the timing that concerns me.' â€” cleft with nuanced contrast",
+      "'She's inclined to overpromise â€” a habit she'd do well to curb.' â€” hedged criticism with idiomatic collocation"
+    ],
+    dont_examples: [
+      "'Nay, 'twere better we depart.' â€” archaic literary form, forbidden",
+      "'Fair dinkum, mate, she'll be right.' â€” regional idiom without prior teaching, forbidden",
+      "Cultural allusion assuming knowledge the student has not been taught (e.g. an unglossed reference to a specific Australian political figure or historical event)"
+    ]
+  },
+  C2: {
+    allowed: [
+      "the full productive range of English â€” no grammatical constraint",
+      "sophisticated argumentation with multiple layers of hedging, stance and concession",
+      "precise register control across formal, academic, professional and informal contexts",
+      "nuanced use of idiomatic and figurative language",
+      "productive control of literary and rhetorical devices where appropriate to context",
+      "genre-specific conventions (academic, journalistic, legal, creative)"
+    ],
+    forbidden: [
+      "nothing constrained by level; the constraint is APPROPRIACY, not permission",
+      "constructions inappropriate to the specific target register (a slang idiom in formal writing; academic hedging in casual conversation) â€” flagged as appropriacy errors, not level errors"
+    ],
+    vocab: "~8000+ word families, English Vocabulary Profile C2 tier; near-complete productive control of the language, including low-frequency and specialised vocabulary; precise selection between near-synonyms; productive use of low-frequency idiomatic expressions",
+    tasks: "sophisticated argument in any register; precise expression of nuanced meaning; sustained contribution in any genre; near-native flexibility in switching between contexts; academic scenarios (extended critical analysis, publishable-quality writing); professional scenarios (high-stakes negotiation, keynote presentation, legally-sensitive drafting); creative scenarios (stylistic control across genres)",
+    do_examples: [
+      "'The report, for all its rhetorical polish, rests on assumptions that will not bear scrutiny.' â€” sophisticated critique with hedged confidence",
+      "'One might reasonably infer, though the author does not say so, that the omission is deliberate.' â€” nuanced attribution and stance",
+      "Register-shift within a single discourse: opening formally in a keynote, moving to conversational mid-way for effect, closing on a return to formal register"
+    ],
+    dont_examples: [
+      "There are no level-forbidden constructions at C2. Errors at this level are errors of APPROPRIACY (wrong register for the context), PRECISION (a near-synonym misapplied), or CULTURAL PRAGMATICS (an idiom used in a context where it lands wrong) â€” flagged as such, not as level-inappropriate."
+    ]
+  },
+};
+// One shared block, used by Stage 2 (needs assessment) and Stage 3 (blueprint + retry)
+// so they cannot drift. Formats the structured constraint into prompt text; empty
+// string when the level has no entry (graceful, non-blocking fallback).
+const cefrBlock = (lvl, c) => c ? `\n\nLEVEL CONSTRAINT â€” ${lvl}. This governs the PRODUCTIVE target language only â€” what the lesson teaches and asks the student to produce â€” NOT receptive reading/listening material (which may sit slightly above level). Everything you plan to teach and have the student produce MUST stay within these limits:\n- ALLOWED: ${c.allowed.join("; ")}.\n- FORBIDDEN productively at ${lvl}: ${c.forbidden.join("; ")}.\n- VOCABULARY: ${c.vocab}.\n- TASKS: ${c.tasks}.\n- DO: ${c.do_examples.join("  |  ")}\n- DON'T: ${c.dont_examples.join("  |  ")}\nIf the situation implies content above ${lvl}, SIMPLIFY it to fit â€” never pitch above the student.` : "";
+
+const NARRATION_STANDARD = {
+  A1: {
+    sentence_form: "Max ~8 words per sentence. Max 1 clause per sentence. Simple statements or one-clause questions. No subordination.",
+    allowed_grammar: [
+      "present simple",
+      "to be",
+      "can/can't (ability)",
+      "imperatives for instructions",
+      "yes/no and Wh- questions in present simple",
+      "this is / that's",
+      "very basic past simple with was/were only, for brief orientation ('That was good.')"
+    ],
+    forbidden_grammar: [
+      "present continuous",
+      "modals other than can",
+      "any perfect tense",
+      "past simple with verbs other than was/were",
+      "past continuous",
+      "any conditional",
+      "reported speech",
+      "any relative clause",
+      "subordinate clauses",
+      "comparatives beyond 'good/better/best'",
+      "tenseless framing ('we learn X' without a time anchor â€” always 'today we learn X')"
+    ],
+    vocab: "Top 500 word families. Every noun concrete and imaginable â€” no abstract nouns (origins, exchange, aspect, context). No idiom. No phrasal verbs (except 'sit down', 'stand up', 'come on' as chunks). No metaphor. No hedging vocabulary. NO COMPOUND NOUN PHRASES where either element is above A1 ('workplace greeting' FAILS).",
+    register: "Warm but simple. Contractions OK (I'm, you're, don't). Short praise (Good!, Nice!, Well done!). One thought per sentence. No irony, no wordplay. Every time reference explicit. 'Today' at the start of Leo's session-openers is required, not optional.",
+    function_notes: "All narration functions grade to sub-A1. Chat replies may use A1 productive grammar. Corrective feedback: point to the error in one very simple sentence, then model the correct form â€” never explain the rule.",
+    do_examples: [
+      "Intro: 'Hi! Today we learn cafÃ© words. Are you ready?'",
+      "Instruction: 'Listen. Then choose the right word.'",
+      "Encouragement: 'Nice work! Try one more.'",
+      "Corrective feedback: 'Almost! Say: I would like a coffee.'",
+      "Chat reply: 'Hi! I am good, thank you. And you?'",
+      "Vocab framing: \"'Order' means to ask for food.\"",
+      "Framing (rewrite): 'How to say hello at work.' â€” all top-500, concrete verb.",
+      "Objective (rewrite): 'Today we learn about your country.' â€” time anchor, personal, no meta-vocabulary.",
+      "Explanation (rewrite): 'Two people talk. It's the same every day.' â€” two short sentences, top-500, concrete.",
+      "Objective (rewrite): 'Today we learn cafÃ© words.' â€” time anchor added, everything else unchanged."
+    ],
+    dont_examples: [
+      "Intro (Genesis's live example): 'Today we are leaving the beach behind and going somewhere much more useful this week â€” you will learn the exact words baristas use every single day, so you can walk in, order your coffee, and understand what they ask you back.' â€” present continuous, comparative, subordination, phrasal verb, embedded clauses",
+      "Instruction: 'Now what I would like you to do is have a look at the list.' â€” subordinate clause, phrasal verb, hedged modal",
+      "Vocab: 'This word essentially refers to the act of requesting refreshments.' â€” B2+ vocabulary, formal register, abstraction",
+      "Corrective feedback: 'You almost had it, but the tense should have been past simple.' â€” modal past, comparative, meta-language",
+      "Framing: 'A workplace greeting.' â€” 'workplace' above top 500; compound noun phrase.",
+      "Objective: 'Today's topic is origins.' â€” 'origins' abstract; 'topic' meta-vocabulary.",
+      "Explanation: 'A predictable exchange between two speakers.' â€” both content words above A1; abstract; formal.",
+      "Objective: 'We learn cafÃ© words.' â€” tenseless framing; missing time anchor."
+    ]
+  },
+  A2: {
+    sentence_form: "Max ~12 words per sentence. Max 2 clauses per sentence. Simple linkers (and, but, so, because) OK. No embedded clauses.",
+    allowed_grammar: [
+      "all A1 allowed",
+      "past simple full range",
+      "going to future",
+      "should for advice",
+      "basic comparatives and superlatives",
+      "there is/are, there was/were",
+      "present perfect with ever/never for experience only"
+    ],
+    forbidden_grammar: [
+      "past perfect",
+      "present perfect continuous",
+      "conditionals other than basic first",
+      "any passive",
+      "reported speech beyond 'he said X'",
+      "any relative clause",
+      "advanced modals",
+      "used to",
+      "tenseless framing (still forbidden at A2 â€” students still benefit from time anchors)"
+    ],
+    vocab: "Top 1200 word families. Basic phrasal verbs as lexical chunks (get up, wake up, sit down). No idiom. No metaphor. Simple hedges allowed ('maybe', 'I think'). No above-A2 abstract nouns (professional, environment, communication as noun, adjustment). NO COMPOUND NOUN PHRASES where either element is above A2.",
+    register: "Warm, encouraging. Contractions natural. Short interest tokens ('Oh!', 'Really?', 'Nice!'). Simple follow-up questions.",
+    function_notes: "Framing grades to sub-A2 (A1-ish). Chat replies and corrective feedback may sit at A2 productive. Vocab explanations: framing sub-A2, explanation at A2.",
+    do_examples: [
+      "Intro: 'Today we learn about work. Can you tell me about your job?'",
+      "Instruction: 'Read the text. Then answer three questions.'",
+      "Encouragement: 'Well done! That was a good answer.'",
+      "Corrective feedback: 'Almost right. The past of go is went.'",
+      "Chat reply: 'That is interesting. Did you enjoy it?'",
+      "Vocab: \"'Colleague' means someone you work with.\"",
+      "'The professional environment' â†’ 'Your workplace' or 'At work'.",
+      "'Communication styles at work' â†’ 'How people talk at work.'",
+      "'Cultural adjustment can be difficult' â†’ 'Sometimes it's hard to feel at home in a new country.'"
+    ],
+    dont_examples: [
+      "Intro: 'So today what we're going to do is dive into the world of workplace vocabulary...' â€” subordinate clauses, phrasal verb, idiom, hedged framing",
+      "Vocab: 'Colleague â€” think of it as a peer in your professional environment.' â€” B2+ register, hedging, abstract",
+      "Corrective feedback: 'You were on the right track, though the perfect would have been better.' â€” comparative, hedge, meta-language",
+      // PREDICTED instance, not live-tested at this level â€” awaiting real-instance evidence per lesson-tightening-v1.md
+      "Framing: 'The professional environment.' â€” 'professional' is B1; both content words above A2.",
+      "Objective: 'Communication styles at work.' â€” 'styles' is B1 abstract; compound noun.",
+      "Explanation: 'Cultural adjustment can be difficult.' â€” 'adjustment' abstract; register above A2."
+    ]
+  },
+  B1: {
+    sentence_form: "Max ~18 words per sentence. Max 2-3 clauses. Occasional compound-complex sentences. Natural discourse markers.",
+    allowed_grammar: [
+      "all A2 allowed",
+      "present perfect simple and continuous",
+      "past perfect simple",
+      "past continuous",
+      "zero, first, and second conditionals",
+      "basic passives (present and past simple)",
+      "defining relative clauses",
+      "basic reported speech",
+      "modals of obligation/permission/present deduction"
+    ],
+    forbidden_grammar: [
+      "third conditional",
+      "mixed conditionals",
+      "advanced passive constructions (perfect passive, modal passive, get-passive)",
+      "non-defining relative clauses",
+      "cleft sentences",
+      "any inversion",
+      "subjunctive",
+      "modals of past deduction (must have done)",
+      "advanced discourse markers (nevertheless, furthermore, notwithstanding)"
+    ],
+    vocab: "Top 2500 word families. Common phrasal verbs. Basic idiom (recognisable, no deep cultural reference). Basic collocations. Standard hedging ('might', 'I think', 'perhaps'). No above-B1 abstract nouns (interpersonal, discourse, notwithstanding). NO COMPOUND NOUN PHRASES where either element is above B1.",
+    register: "Warm, conversational. Contractions natural. Personal touches ('That's a great point.', 'I like that.'). Genuine follow-up questions.",
+    function_notes: "Chat replies and corrective feedback at B1. Framing at B1 for short items (instructions, encouragement). Extended intros graded slightly below â€” shorter sentences, no piled subordination, plainer vocabulary â€” because a wall of B1 prose at the START of a lesson lands differently from at-level exchange mid-lesson.",
+    do_examples: [
+      "Intro (extended, graded slightly below): 'Today we are looking at workplace communication. Have you ever had a tricky conversation at work? We will look at some real examples together.'",
+      "Instruction: 'Read the email. Then decide if the tone is polite or not.'",
+      "Encouragement: 'That is really well put â€” you have explained it clearly.'",
+      "Corrective feedback: 'Almost â€” since is used with a starting point. Since 2020 works, but since three years does not.'",
+      "Chat reply: 'That sounds difficult. How did you handle it?'",
+      "'Interpersonal dynamics at work' â†’ 'How people work together at work.'",
+      "'Discourse strategies for meetings' â†’ 'Ways to speak in meetings.'",
+      "'Notwithstanding cultural differences...' â†’ 'Even though every culture is different...'"
+    ],
+    dont_examples: [
+      "Intro with inversion: 'Only after you have read it should you decide.' â€” inversion, forbidden productive at B1",
+      "Vocab with subjunctive: 'Colleague â€” one might think of it as a professional counterpart, were the register more formal.' â€” subjunctive, cleft, C1 register",
+      "Corrective feedback with modal past: 'You should have used the past perfect there.' â€” modal past, forbidden productive at B1",
+      // PREDICTED instance, not live-tested at this level â€” awaiting real-instance evidence per lesson-tightening-v1.md
+      "Framing: 'Interpersonal dynamics at work.' â€” 'interpersonal' is C1; abstract.",
+      "Objective: 'Discourse strategies for meetings.' â€” 'discourse' is meta-language about language; formal.",
+      "Explanation: 'Notwithstanding cultural differences...' â€” 'notwithstanding' is C1 formal."
+    ]
+  },
+  B2: {
+    sentence_form: "Max ~25 words per sentence. Multi-clause with subordination. Natural discourse-level cohesion.",
+    allowed_grammar: [
+      "all B1 allowed",
+      "third conditional",
+      "mixed conditionals",
+      "all passive forms including modal and perfect",
+      "non-defining relative clauses",
+      "modals of past deduction",
+      "reported speech full range",
+      "basic cleft sentences (It-cleft, What-cleft)",
+      "productive idiomatic language and phrasal verbs"
+    ],
+    forbidden_grammar: [
+      "advanced inversion (Hardly had I..., Never before...)",
+      "subjunctive except common fixed expressions ('If I were you')",
+      "highly literary or archaic constructions",
+      "rare or region-specific idioms without gloss"
+    ],
+    vocab: "Top 5000 word families. Common idioms. Phrasal verbs productive. Register-appropriate synonyms. Nuanced hedging. No above-B2 vocabulary (which is a small set at this level).",
+    register: "Natural conversational teacher. Warm, engaged. Hedging ('I think', 'you might find'). Genuine questions and follow-ups.",
+    function_notes: "All narration functions at B2. No sub-level constraint on any function â€” B2 students have enough automaticity that at-level framing does not compete with content.",
+    do_examples: [
+      "Intro: 'Today we are looking at how tone shifts across professional emails â€” a small change in wording can completely reframe a message.'",
+      "Instruction: 'Read both emails, then work out what is off about the second one and how you would revise it.'",
+      "Encouragement: 'Nicely spotted â€” that shift in register is exactly what most learners miss.'",
+      "Corrective feedback: 'Nearly â€” the perfect passive would be has been sent, not has sent.'",
+      "Chat reply: 'That is a fair point, though I would push back on one part.'",
+      "'The overarching objective of this unit' â†’ 'What we're focusing on this week.'",
+      "'Notwithstanding pedagogical considerations...' â†’ 'Even though this is a lesson...'"
+    ],
+    dont_examples: [
+      "Intro with advanced inversion: 'Only when you have read both should you draw a conclusion.' â€” inversion, forbidden productive at B2",
+      "Regional idiom without gloss: 'She is flat out like a lizard drinking.' â€” Australian idiom, no gloss provided",
+      "Subjunctive outside fixed expressions: 'It is essential that the tone be softened.' â€” subjunctive, forbidden productive at B2",
+      // PREDICTED instance, not live-tested at this level â€” awaiting real-instance evidence per lesson-tightening-v1.md
+      "Framing: 'The overarching objective of this unit.' â€” 'overarching' is C1; 'objective' and 'unit' are meta-vocabulary; LMS register.",
+      "Explanation: 'Notwithstanding pedagogical considerations...' â€” 'pedagogical considerations' is meta-vocabulary about teaching."
+    ]
+  },
+  C1: {
+    sentence_form: "No length constraint. Full subordination and rhetorical range. Natural discourse.",
+    allowed_grammar: [
+      "all B2 allowed",
+      "full range of inversion (Hardly had I..., Never before have I..., Only then did...)",
+      "subjunctive (I suggest he take..., It is essential that she be...)",
+      "cleft sentences all forms",
+      "advanced ellipsis and substitution",
+      "fronting for emphasis",
+      "nuanced modality (I dare say..., Should you find..., Were it not for...)"
+    ],
+    forbidden_grammar: [
+      "very rare literary or archaic constructions",
+      "highly regional idioms without gloss unless the region is the taught target"
+    ],
+    vocab: "Top 8000 word families. Wide idiomatic and collocational range. Register shifting within a single stretch of discourse. Vocabulary constraint minimal at C1 â€” the student can handle almost anything appropriately produced.",
+    register: "Full teacher voice. Sophisticated but warm. Hedging, stance-marking, nuanced praise. Genuine intellectual engagement.",
+    function_notes: "All narration functions at C1. No sub-level constraint. Corrective feedback may include meta-language and rule explanation because the student can process it.",
+    do_examples: [
+      "Intro: 'Today we are focusing on a subtle distinction English writers often navigate poorly: the difference between imply and infer. We will work through cases where the distinction actually matters.'",
+      "Instruction: 'Read the piece with an eye to where the writer hedges, and note down anywhere you feel the hedging carries more weight than the argument warrants.'",
+      "Corrective feedback: 'You have almost got it â€” the subjunctive here would be be reconsidered, not is reconsidered, since the reporting verb recommend triggers it.'",
+      "'The pedagogical trajectory of this session' â†’ 'How today's session builds on what we've done.'",
+      "'Our learning outcomes for today are...' â†’ 'What I want to get across today is...' or 'By the end of this you should feel confident with...'"
+    ],
+    dont_examples: [
+      "Archaic form: \"Nay, twere better we discuss this later.\" â€” archaic",
+      "Regional idiom without gloss unless taught: 'She is fair dinkum about it.' â€” Australian idiom, no gloss",
+      // PREDICTED instance, not live-tested at this level â€” awaiting real-instance evidence per lesson-tightening-v1.md
+      "Framing: 'The pedagogical trajectory of this session.' â€” meta-vocabulary; LMS register regardless of level.",
+      "Objective: 'Our learning outcomes for today are...' â€” meta-vocabulary; frames Leo as a system, not a teacher."
+    ]
+  },
+  C2: null,
+};
+
+// Which do/dont examples belong to which narration function (by prefix in narration-standard-v1.md).
+const NARRATION_FN_PREFIX = { framing: ["Intro", "Instruction", "Encouragement", "Preview"], chat: ["Chat"], corrective: ["Corrective"], vocab: ["Vocab"] };
+// Grades LEO'S OWN speech to the student, SEPARATE from CEFR_CONSTRAINTS (which grades target language).
+// functionType picks register: framing sub-level below B1 / at-level B1+; chat + corrective always at-level; vocab framed like framing. Empty string when the level has no block (C2/unknown fallback).
+const narrationGuidance = (lvl, fn) => {
+  const b = NARRATION_STANDARD[lvl];
+  if (!b) return "";
+  const px = NARRATION_FN_PREFIX[fn] || [];
+  const pick = (arr) => { const hit = (arr || []).filter((e) => px.some((p) => e.startsWith(p))); return (hit.length ? hit : (arr || [])).join("  |  "); };
+  const head = "\n\nNARRATION REGISTER (" + fn + ") â€” this governs YOUR OWN speech to the student, SEPARATE from the target grammar you teach. ";
+  if (fn === "chat" || fn === "corrective") {
+    return head + "Speak AT the student's own " + lvl + " level â€” warm and natural, NOT a stricter sub-level register (this is where the student meets language at their level)." +
+      "\n- REGISTER: " + b.register +
+      "\n- NOTES: " + b.function_notes +
+      "\n- DO: " + pick(b.do_examples) +
+      "\n- DON'T: " + pick(b.dont_examples) + NO_META_VOCAB;
+  }
+  return head + "Grade your " + fn + " to this register (sub-level below B1; at-level from B1 up, with extended intros slightly below at B1):" +
+    "\n- SENTENCES: " + b.sentence_form +
+    "\n- FORBIDDEN in your own speech: " + b.forbidden_grammar.join("; ") + "." +
+    "\n- VOCAB: " + b.vocab +
+    "\n- REGISTER: " + b.register +
+    "\n- NOTES: " + b.function_notes +
+    "\n- DO: " + pick(b.do_examples) +
+    "\n- DON'T: " + pick(b.dont_examples) + NO_META_VOCAB;
+};
+
+const TEXT_VOLUME_STANDARD = {
+  A1: {
+    max_words_per_leo_turn: 20,
+    max_sentences_per_leo_turn: 3,
+    max_words_per_stage_teaching: 60,
+    max_words_per_reading_passage: 80,
+    whitespace_directive: "One sentence per line where possible. Blank line between Leo-turns. Never a prose paragraph â€” always separated statements. Substitution tables and boxes over sentences where content permits.",
+    density_notes: "SPARSE by design. Every word must earn its place. If an image can carry the meaning, cut the words. Prefer 30 on-screen words over 60. White space is a feature.",
+    do_examples: [
+      "Intro: 'Hi! Today we learn cafÃ© words. Ready?' â€” 8 words, 3 sentences",
+      "Instruction: 'Look at picture 1. What is it?' â€” 8 words, image-anchored",
+      "Grammar stage showing 'I'm + [name]' + example 'I'm Ana.' â€” under 20 on-screen words total"
+    ],
+    dont_examples: [
+      "Any prose paragraph â€” even A1-graded prose fails at A1 volume",
+      "Grammar page structured as 'What it means / The form / When to use / notes' â€” the pattern itself fails regardless of word difficulty",
+      "Intro of 40+ words even if perfectly A1-graded (Genesis's cafÃ© example was ~50 words)"
+    ]
+  },
+  A2: {
+    max_words_per_leo_turn: 30,
+    max_sentences_per_leo_turn: 4,
+    max_words_per_stage_teaching: 100,
+    max_words_per_reading_passage: 150,
+    whitespace_directive: "One idea per line still preferred. Short paragraphs (max 2 sentences) permitted where the linker justifies the join.",
+    density_notes: "Still sparse. Occasional two-clause sentences OK. Volume rises from A1 but the visual breathing space stays.",
+    do_examples: [
+      "Intro: 'Today we learn about work. Can you tell me about your job? We have three activities.' â€” 18 words, 3 sentences",
+      "Instruction: 'Read the text. Then answer three questions. Take your time.' â€” 11 words"
+    ],
+    dont_examples: [
+      "Extended reasoning in a single turn ('So today what we want to do is...')",
+      "Reading passage exceeding 150 words even at A2 vocab tier"
+    ]
+  },
+  B1: {
+    max_words_per_leo_turn: 45,
+    max_sentences_per_leo_turn: 5,
+    max_words_per_stage_teaching: 180,
+    max_words_per_reading_passage: 300,
+    whitespace_directive: "Natural paragraphs, breaks every 2-3 sentences. Boxes/tables still preferred for grammar form.",
+    density_notes: "Density rises meaningfully â€” students have enough automaticity to process a fuller Leo-turn. The whiteboard aesthetic still applies at grammar stages specifically.",
+    do_examples: [
+      "Intro: 'Today we're looking at workplace communication. Have you ever had a tricky conversation at work? We'll look at some real examples together.' â€” 26 words, 3 sentences"
+    ],
+    dont_examples: [
+      "Reading passage over 300 words even where the content sits at B1",
+      "Extended monologue teaching (>5 sentences without a student response point)"
+    ]
+  },
+  B2: {
+    max_words_per_leo_turn: 70,
+    max_sentences_per_leo_turn: 7,
+    max_words_per_stage_teaching: 300,
+    max_words_per_reading_passage: 500,
+    whitespace_directive: "Natural paragraphs. Cohesion devices doing real work.",
+    density_notes: "Full teacher discourse. The volume constraint is about pacing and student processing rhythm, not about protecting comprehension.",
+    do_examples: [
+      "Extended intro of 3-4 sentences with subordination and hedging is now natural"
+    ],
+    dont_examples: [
+      "Wall-of-text stages (>300 on-screen words) â€” still fails Toolbox Test at B2"
+    ]
+  },
+  C1: {
+    max_words_per_leo_turn: null,
+    max_sentences_per_leo_turn: null,
+    max_words_per_stage_teaching: null,
+    max_words_per_reading_passage: null,
+    whitespace_directive: "Natural discourse.",
+    density_notes: "No numeric constraint. The constraint at C1 is coherence and pacing, not volume. If a C1 stage feels dense, it is a coherence problem, not a length problem.",
+    do_examples: [],
+    dont_examples: []
+  },
+  C2: null,
+};
+
+const SINGLE_POINT_DIRECTIVE = {
+  A1: "ONE communicative objective. ONE target grammar point per lesson. No exceptions. If a topic seems to require a second structure to work (e.g. 'ordering coffee' seems to need both 'I want' AND 'would like'), IT IS TWO LESSONS. Cut, do not compress. Above-level structures that appear naturally in the topic are CUT â€” never taught as 'memorise this formula'. If it cannot be UNDERSTOOD at A1, it cannot be TAUGHT at A1.",
+  A2: "ONE main new grammar point per lesson. Consolidation of a previously-taught A1 point may occur alongside as recycling, but not a second NEW point. Above-level structures still cut, not compressed.",
+  B1: "One or two integrated grammar points MAX. Integration must be genuine â€” the points must be pedagogically inseparable (present perfect + since/for; past simple + past continuous in narrative). Unrelated points are two lessons. B1 students have enough automaticity to hold two integrated ideas; not two unrelated ones.",
+  B2: "Up to two integrated grammar points, as B1. Integration criterion unchanged.",
+  C1: "Up to three integrated points if the lesson theme genuinely warrants (e.g. inversion + fronting + cleft as related emphasis devices; reduced relative clauses + participle clauses as related cohesion devices). If any of the three is unrelated, split.",
+  enforcement_examples_A1: {
+    valid: [
+      "Topic 'cafÃ© ordering' â†’ target 'I want [drink]' (single structure: want + noun)",
+      "Topic 'meeting people' â†’ target 'I'm from [country]' (single structure: to be + prepositional phrase)"
+    ],
+    invalid: [
+      "Topic 'cafÃ© ordering' â†’ target 'I want / I would like [drink]' â€” TWO structures; 'would like' is B1 productive. Cut 'would like'; teach it at A2/B1 as the polite form.",
+      "Topic 'meeting people' â†’ target 'Hi, I'm [name]. Can I have [drink]?' â€” THREE structures. Split into first-meeting and cafÃ© lessons.",
+      "Any target described as 'a formula to memorise' â€” this phrasing is the anti-pattern. Rewrite the lesson."
+    ]
+  }
+};
+
+const LOADING_MESSAGES = {
+  A1: [
+    "One moment â€” nearly ready for you.",
+    "Just a moment. I want to make it good.",
+    "Nearly ready! One moment.",
+    "One moment. Your next part is nearly ready.",
+    "Just a moment for you.",
+    "One moment. I'm getting your lesson ready."
+  ],
+  A2: [
+    "One moment â€” I'm getting your lesson ready.",
+    "Just a moment. I'm choosing a good example for you.",
+    "Nearly ready. I want it to be good.",
+    "One moment. I'm putting your next part together.",
+    "Just a moment â€” I want to get this right for you."
+  ],
+  B1: [
+    "One moment â€” I'm getting things ready for you.",
+    "Just a moment while I put your next section together.",
+    "Nearly there â€” I'm choosing the best example for what we're working on.",
+    "One moment â€” I want this next part to fit what we've been doing.",
+    "Just a moment. I'm thinking about the best way to explain this."
+  ],
+  B2: [
+    "Just a moment â€” I'm working out the best way to approach this next bit.",
+    "One moment while I put together something specific to what we discussed.",
+    "Nearly ready â€” I'm choosing an example that will actually push your writing.",
+    "Just a moment. I want to give you something specific rather than generic."
+  ],
+  C1: [
+    "One moment â€” I'm working out the best angle for this.",
+    "Just a moment while I put together something worth your time.",
+    "Nearly ready â€” matching this to the direction we've taken so far.",
+    "One moment. I want this to build on what we did, not just repeat it."
+  ],
+  C2: null,
+};
+
+const IMAGE_VS_WORD = {
+  A1: {
+    image_taught: [
+      "concrete nouns â€” food, drink, household objects, vehicles, body parts, clothing, common places (cafÃ©, shop, home, hospital), people-roles with visible indicator, numbers, colours",
+      "concrete verbs â€” showable actions taught with image + one example sentence",
+      "adjectives â€” CONTRAST-taught with two images (big/small, hot/cold); never single-image with a label"
+    ],
+    word_taught: [
+      "function words (the, a, in, on, and, but, of) â€” sentence context, no image possible",
+      "abstract nouns â€” NOT TAUGHT at A1 per SINGLE_POINT_DIRECTIVE + narration rules; cut, don't teach",
+      "logical connectors, question words â€” sentence context only"
+    ],
+    hybrid: [
+      "verbs â€” image of the action + one example carrying the target grammar; image alone leaves tense ambiguous"
+    ],
+    rule: "At A1, ask before writing a definition: 'Could an image do this?' If yes, use the image. Text at A1 is fallback, not default. Definitions are for what pictures can't show."
+  },
+  A2: {
+    image_taught: [
+      "concrete nouns as A1 â€” extended range (workplace items, food varieties, situations)",
+      "simple contrast adjectives (comfortable/uncomfortable, safe/dangerous)",
+      "concrete verbs (drive, cook, deliver, repair) with example sentence"
+    ],
+    word_taught: [
+      "function words as A1",
+      "abstract nouns that ARE A2 target (job, weather, family) â€” word-taught in sentence context; image optional if it aids without dominating",
+      "logical connectors, discourse markers"
+    ],
+    hybrid: [
+      "verbs still hybrid",
+      "simple abstract nouns (health, work, home as concept) â€” word-taught, image if a scene can illustrate"
+    ],
+    rule: "Image-first for concrete, word-first for abstract, hybrid where a scene can illustrate an abstract concept. Same test as A1 â€” can an image do this? â€” but the answer shifts to 'no' more often at A2."
+  },
+  B1: {
+    image_taught: [
+      "unfamiliar concrete nouns (toolbox, shift, receipt, invoice) â€” student may not know despite being at B1",
+      "specific setting/situation images to anchor a topic (a meeting room, a shop counter)"
+    ],
+    word_taught: [
+      "abstract vocabulary that IS B1 target (opinion, experience, decision, plan, opportunity) â€” word-taught with rich sentence context and collocation",
+      "phrasal verbs â€” sentence context with common collocates",
+      "connectors, discourse markers"
+    ],
+    hybrid: [
+      "diagrams for abstract concepts where a visual genuinely aids (a timeline for tense sequence; a chart for cause/effect)"
+    ],
+    rule: "Image is a supplement at B1, not the primary teaching mode. Use images for unfamiliar concrete nouns and to anchor topics; text for the abstract vocabulary that is now the target."
+  },
+  B2: {
+    image_taught: [
+      "specialist or unfamiliar concrete terms in a topic (technical vocabulary a student meets in a text)",
+      "occasional scene-anchor for a new topic"
+    ],
+    word_taught: [
+      "the majority of B2 vocabulary â€” abstract, register-varied, collocation-rich",
+      "idioms, phrasal verbs, collocations â€” always in sentence context"
+    ],
+    hybrid: [
+      "diagrams for genuinely visual concepts (data trends, process flows)"
+    ],
+    rule: "Image is occasional at B2, used only where a concrete referent genuinely aids. The teaching mode is text-in-context, and the constraint that used to be about protecting comprehension has become about register and precision."
+  },
+  C1: {
+    image_taught: [
+      "rare unfamiliar concrete terms in specialist texts",
+      "process/system diagrams where visual representation actually aids"
+    ],
+    word_taught: [
+      "the overwhelming majority of C1 target â€” register, collocation, nuance, appropriacy â€” no image benefit",
+      "subtle meaning distinctions between near-synonyms"
+    ],
+    hybrid: [
+      "occasional visual for a specialist domain the student is engaging"
+    ],
+    rule: "Image is rare at C1, used only where a concrete referent or a genuinely visual concept aids. The teaching work at C1 is textual, contextual, and register-oriented."
+  },
+  C2: null,
+};
+
+
+// â”€â”€ Lesson-tightening v1 helpers (lesson-tightening-v1.md). Density, single-point, image rule â€” injected alongside cefrBlock + narrationGuidance. â”€â”€
+/* ---------------------------------------------------------------
+   VOCAB_SELECTION_STANDARD â€” which words earn a slot.
+   Peer to CEFR_CONSTRAINTS, NARRATION_STANDARD, TEXT_VOLUME_STANDARD,
+   SINGLE_POINT_DIRECTIVE, LOADING_MESSAGES and IMAGE_VS_WORD.
+   CEFR_CONSTRAINTS governs whether a word is at the right LEVEL.
+   This governs whether it is worth a SLOT. Different judgements:
+   "Australia" passes the first and fails the second.
+   A1 only. A2-C1 follow the same shape once A1 is proven live, so the
+   object is keyed by level and the helper returns "" for the rest.
+   --------------------------------------------------------------- */
+const VOCAB_SELECTION_STANDARD = {
+  A1: {
+    must_satisfy_all: [
+      "CONTENT WORD â€” noun, verb, adjective, or a high-frequency adverb of time/manner/place.",
+      "NEW BUT REACHABLE â€” plausibly not held yet, inside the A1 band (roughly top 750-1000 word families).",
+      "TRANSFERS BEYOND TODAY â€” does work in situations other than this lesson's.",
+      "SURVIVAL VALUE â€” an adult migrant in Australia could need it in real life within a fortnight.",
+      "DEFINABLE AT A1 â€” one sentence of A1 words, without the word itself, the student's name, or today's lesson.",
+      "PRODUCIBLE â€” the student says or writes it in today's final task or mission.",
+    ],
+    never_occupies_a_slot: [
+      "PROPER NOUNS â€” countries, cities, suburbs, people, brands, institutions. Free in the text; never a slot.",
+      "FUNCTION WORDS â€” prepositions, articles, pronouns, conjunctions, auxiliaries, determiners. Taught by grammar.",
+      "GREETINGS AND DAY-ONE CHUNKS â€” assumed present on arrival. One register exception.",
+      "NUMBERS, DAYS, MONTHS, COLOURS â€” closed sets, assumed known, unless the objective IS that set.",
+      "THE TARGET GRAMMAR IN LEXICAL DISGUISE â€” the grammar point is taught once, as grammar.",
+      "WORDS ALREADY MASTERED â€” anything the record shows as mastered rather than fragile or due for recycling.",
+    ],
+    composition_of_the_set: {
+      nouns: "4-5 â€” concrete and imageable", verbs: "2-3 â€” base form", adjectives: "1-2",
+      adverbs: "0-1 â€” high-frequency only", fixed_chunks: "maximum 1",
+      function_words: 0, proper_nouns: 0,
+      note: "A set with no verbs describes a scene rather than teaching an action.",
+    },
+    recycling_allowance: "At most 2 from the fragile or recycle lists, where today's situation gives them a natural home.",
+    count: "FOUR TO EIGHT. Eight is a CEILING, not a quota. Never invent a word to reach eight â€” padding is what produces proper nouns.",
+  },
+};
+
+/* The mechanical half of the standard (Â§7.3). Instruction reduces the failure
+   rate; enforcement removes it. Four of the six observed failures â€” from,
+   hello, Australia, Spain â€” are caught by these two lists and the country
+   check alone. The judgement half (transfer, survival value, definition
+   quality) stays prompt-side and is checked at review. */
+const VOCAB_POS_ALLOWED = ["noun", "verb", "adjective", "adverb", "phrase"];
+// Tolerated abbreviations. The five categories above are what the standard
+// requires; punishing a model for writing "adj" would spend a retry on
+// formatting rather than on pedagogy.
+const VOCAB_POS_ALIASES = {
+  n: "noun", v: "verb", adj: "adjective", adv: "adverb", ph: "phrase",
+  nouns: "noun", verbs: "verb", adjectives: "adjective", adverbs: "adverb", phrases: "phrase",
+  "noun phrase": "phrase", chunk: "phrase", expression: "phrase", "fixed phrase": "phrase",
+};
+const VOCAB_FUNCTION_WORDS = new Set([
+  // articles
+  "a", "an", "the",
+  // prepositions
+  "about", "above", "across", "after", "against", "along", "among", "around", "at",
+  "before", "behind", "below", "beneath", "beside", "between", "beyond", "by",
+  "down", "during", "except", "for", "from", "in", "inside", "into", "near",
+  "of", "off", "on", "onto", "out", "outside", "over", "past", "since",
+  "through", "to", "toward", "towards", "under", "until", "up", "upon", "with",
+  "within", "without",
+  // pronouns
+  "i", "you", "he", "she", "it", "we", "they", "me", "him", "her", "us", "them",
+  "my", "your", "his", "its", "our", "their", "mine", "yours", "hers", "ours", "theirs",
+  "myself", "yourself", "himself", "herself", "itself", "ourselves", "themselves",
+  "who", "whom", "whose", "which", "what",
+  // conjunctions
+  "and", "but", "or", "nor", "so", "yet", "because", "although", "though",
+  "while", "if", "unless", "whether", "than", "as",
+  // auxiliaries and modals
+  "is", "am", "are", "was", "were", "be", "been", "being",
+  "do", "does", "did", "done", "have", "has", "had", "having",
+  "will", "would", "shall", "should", "can", "could", "may", "might", "must",
+  // determiners and quantifiers
+  "this", "that", "these", "those", "some", "any", "no", "every", "each",
+  "all", "both", "few", "many", "much", "more", "most", "other", "another",
+  "such", "own", "not",
+]);
+const VOCAB_GREETING_WORDS = new Set([
+  "hello", "hi", "hey", "goodbye", "bye", "please", "thank you", "thanks",
+  "yes", "no", "sorry", "excuse me",
+]);
+// Â§3: greetings may take ONE slot, and only where the objective is the
+// register distinction rather than the greeting itself.
+const VOCAB_REGISTER_OBJECTIVE = /\b(register|formal|informal|politeness|greeting|greetings|greet)\b/i;
+
+const volumeBlock = (lvl) => {
+  const v = TEXT_VOLUME_STANDARD[lvl];
+  if (!v) return "";
+  if (v.max_words_per_leo_turn == null) return "\n\nTEXT VOLUME (density, separate from difficulty): " + v.density_notes;
+  return "\n\nTEXT VOLUME â€” how MUCH text is on screen, SEPARATE from difficulty: max " + v.max_words_per_leo_turn + " words / " + v.max_sentences_per_leo_turn + " sentences per Leo turn; max " + v.max_words_per_stage_teaching + " on-screen teaching words per stage; max " + v.max_words_per_reading_passage + " words per reading passage. LAYOUT: " + v.whitespace_directive + " " + v.density_notes;
+};
+const SUMMARY_LENGTH_STANDARD = {
+  A1: {
+    per_field_max_sentences: { praise: 1, summary: 1, strength: 1, improvement: 1, connection: 1, tomorrowPreview: 1 },
+    max_words_per_sentence: 20,
+  },
+  A2: {
+    per_field_max_sentences: { praise: 1, summary: 2, strength: 1, improvement: 1, connection: 1, tomorrowPreview: 1 },
+    max_words_per_sentence: 30,
+  },
+  B1: {
+    per_field_max_sentences: { praise: 1, summary: 2, strength: 1, improvement: 2, connection: 2, tomorrowPreview: 1 },
+    max_words_per_sentence: 45,
+  },
+  B2: {
+    per_field_max_sentences: { praise: 1, summary: 2, strength: 1, improvement: 2, connection: 2, tomorrowPreview: 1 },
+    max_words_per_sentence: 70,
+  },
+  C1: null, // coherence-governed, not volume-governed â€” see summaryLengthBlock's C1 branch
+};
+
+const summaryLengthBlock = (lvl) => {
+  const s = SUMMARY_LENGTH_STANDARD[lvl];
+  if (!s) {
+    return "\n\nSUMMARY LENGTH â€” " + lvl + ": no fixed sentence count for most fields, and no fixed per-sentence word cap â€” sentence length is coherence-governed, matching the sentences this student has been reading throughout the lesson. But no field may run past 3 sentences, and tomorrowPreview stays at max 1 sentence at every level, including this one â€” a preview is a teaser, never a plan. The whole summary must still read as a closing reflection, not an essay. If a field feels long, the problem is focus, not permission to keep writing.";
+  }
+  const perField = Object.entries(s.per_field_max_sentences)
+    .map(([field, max]) => field + ": max " + max + " sentence" + (max > 1 ? "s" : ""))
+    .join(" | ");
+  return "\n\nSUMMARY LENGTH â€” " + lvl + " (this is a teaching standard, not a token limit):\n" +
+    "Per-field sentence limits â€” " + perField + ".\n" +
+    "Per-sentence word limit â€” no sentence in this summary may exceed " + s.max_words_per_sentence + " words. This matches the outer bound of any Leo turn the student has been reading all lesson (TEXT VOLUME " + lvl + "): no sentence in the closing reflection may be harder to read than the sentences the lesson itself has been feeding them. Both limits â€” sentences per field, and words per sentence â€” must be obeyed.\n" +
+    "The whole summary must be readable by this student, at this level, in under a minute on a phone screen, with no scrolling.\n" +
+    "If either limit and full completeness are in tension, protect specificity: one true, observed detail beats several vague ones. Cut breadth before you cut truth, and never pad a field with filler to reach either limit.\n" +
+    "These limits do not relax the honesty rules above. Shorter is not licence to praise generically, invent a detail, or skip pointing forward â€” every claim must still trace to today's transcript, vocabulary list, or performance line.";
+};
+const singlePointBlock = (lvl) => {
+  const d = SINGLE_POINT_DIRECTIVE[lvl];
+  if (!d) return "";
+  return "\n\nSINGLE GRAMMAR POINT (one target per lesson; cut, do not compress; never 'a formula to memorise'): " + d;
+};
+const imageRuleBlock = (lvl) => {
+  const r = IMAGE_VS_WORD[lvl];
+  if (!r) return "";
+  return "\n\nIMAGE-VS-WORD (guidance only â€” which vocab teaches by image vs word; ask 'can an image do this?'): IMAGE-taught: " + r.image_taught.join("; ") + ". WORD-taught: " + r.word_taught.join("; ") + ". HYBRID: " + r.hybrid.join("; ") + ". RULE: " + r.rule;
+};
+/* Â§5's prompt text, verbatim. Returns "" for any level other than A1 until
+   A2-C1 are authored â€” the same shape as its peer helpers. */
+/* ================================================================
+   BOARD_TITLE_STANDARD and BOARD_NOTE_STANDARD (v2 Â§2, Â§3)
+   Peer to CEFR_CONSTRAINTS, NARRATION_STANDARD, etc.
+   A1 only; A2-C1 follow when A1 is proven live.
+   ================================================================ */
+const BOARD_TITLE_STANDARD = {
+  A1: {
+    max_words: 7,
+    constraints: [
+      "Names the grammar, not the lesson",
+      "Student-facing language only",
+      "Never a question, never an instruction",
+      "Lowercase except the first word",
+      "The grammar point itself, not a description of it",
+    ],
+    continuation: "Same title text, no '(continued)' or numbering",
+  },
+};
+
+const BOARD_NOTE_STANDARD = {
+  A1: {
+    max_words: 12,
+    max_per_board: 1,
+    register: "Sub-A1: top-500 words, one clause, no subordination, no grammar meta-language",
+    preference_order: [
+      "L1-transfer warning matched to this student's language",
+      "Pronunciation trap",
+      "Memory aid",
+      "Real-world anchor",
+      "Link to previously taught point",
+    ],
+    never: [
+      "Encouragement (belongs in chat voice)",
+      "Restatement of the rule the table shows",
+      "An example sentence (use the example element)",
+      "A definition (use the vocabulary card)",
+      "Meta-commentary ('This is important')",
+      "Hedges or caveats",
+    ],
+    l1_cases: {
+      case1: "L1 matched and known: name the language and the error, then the correct form",
+      case2: "L1 unmatched or unknown: drop the language name, flag the error generically",
+      case3: "Corrective form only: when the wrong form itself carries the pattern",
+    },
+  },
+};
+
+/* Â§5.1 and Â§5.2 prompt text, verbatim from the wording standards v2. */
+const boardTitleBlock = (lvl) => {
+  if (!BOARD_TITLE_STANDARD[lvl]) return "";
+  return "\n\nBOARD TITLE â€” the heading at the top of each board (A1). Maximum SEVEN WORDS. Name the grammar, not the lesson: 'Present simple', not 'Talking about your daily routine'. Use the words you would say aloud when naming this grammar to an A1 class. Never a question. Never an instruction. Lowercase except the first word. On continuation boards, use the same title text â€” no '(continued)' or numbering.\n\nDO: 'Present simple' Â· 'there is / there are' Â· 'was and were' Â· 'do and does' Â· 'can and can't'\nDON'T: 'How to talk about your daily routine' (lesson topic, not grammar) Â· 'The present simple tense and how we use it' (too long, meta-language) Â· 'Do you like coffee?' (a question) Â· 'Learn the present simple' (an instruction) Â· 'Existential constructions with there' (meta-language)";
+};
+
+const boardNoteBlock = (lvl) => {
+  if (!BOARD_NOTE_STANDARD[lvl]) return "";
+  return "\n\nBOARD NOTE â€” Leo's margin voice (A1). TWELVE WORDS MAXIMUM. At most one per board. Sub-A1 register (top-500 words, one clause, no subordination, no grammar meta-language). Address the student directly (you/imperative). The note COMMENTS on the teaching â€” it never restates the rule the table already shows, never gives an example (use the example element), never defines a word (use the vocabulary card), never encourages ('You can do it!' belongs in your chat voice, not on the board).\n\nBest uses: a common mistake to watch for (especially L1-transfer errors matched to THIS student's language), a pronunciation trap, a memory shortcut, a real-world anchor, a link to something previously taught.\n\nDO: 'Add -s for he, she, it.' Â· 'Spanish speakers say \"there have\". It's \"there is/are\".' Â· '\"Were\" sounds like \"wer\", not \"weer\".'\nDON'T: 'The present simple is used for habitual actions.' (restates the rule; 'habitual' above A1) Â· 'For example, \"She likes coffee.\"' (an example, not a note) Â· 'You're doing great!' (encouragement, not teaching) Â· 'This is very important.' (meta-commentary, tells the student nothing)";
+};
+
+/* ================================================================
+   PRONUNCIATION_STANDARD â€” what earns a pronunciation slot at A1.
+   Peer to VOCAB_SELECTION_STANDARD, BOARD_TITLE_STANDARD, BOARD_NOTE_STANDARD.
+   Governs selection (which focus) and quality (how it is taught).
+   The standard is intelligibility-first: a feature earns a slot when getting
+   it wrong causes a communication breakdown, not when it merely sounds
+   non-native. Jennifer Jenkins's Lingua Franca Core, adapted for Australia.
+   ================================================================ */
+const PRONUNCIATION_STANDARD = {
+  A1: {
+    earns_a_slot: [
+      "INTELLIGIBILITY-CRITICAL SEGMENT â€” a sound whose misproduction causes a different word to be heard",
+      "WORD STRESS â€” misplaced stress in polysyllabic words",
+      "CONNECTED SPEECH FOR COMPREHENSION â€” linking, reduction, weak forms the student must recognise",
+      "L1-SPECIFIC INTELLIGIBILITY HAZARD â€” a sound this student's L1 predictably produces in a way that causes breakdown",
+    ],
+    does_not_earn_a_slot: [
+      "ACCENT APPROXIMATION â€” sounds non-native but does not prevent comprehension",
+      "FINE VOWEL QUALITY DISTINCTIONS â€” context disambiguates at A1",
+      "ALLOPHONIC VARIATION â€” phonetic detail for naturalness, not intelligibility",
+      "DISCOURSE INTONATION â€” pragmatic contours beyond basic question/statement",
+      "CONSONANT CLUSTER SIMPLIFICATION â€” simplification rarely prevents comprehension at A1",
+      "FEATURES ALREADY CONTROLLED â€” do not re-teach",
+    ],
+    priority_order: [
+      "1. GRAMMATICAL SIGNALS carried by pronunciation (plural -s, past -ed)",
+      "2. L1-SPECIFIC MINIMAL PAIRS (sounds this L1 conflates that create real-word confusion)",
+      "3. WORD STRESS in the lesson's own vocabulary",
+      "4. CONNECTED SPEECH for comprehension",
+      "5. GENERAL INTELLIGIBILITY features (/Î¸/, /Ã°/, /h/) where the L1 predicts difficulty",
+    ],
+    count: "ONE focus per lesson, up to THREE practice items within that focus",
+    schema: {
+      focus: "string, max 5 words, student-facing register",
+      focusSections: "1-3 items, each with: targetWord, ipa, instructions (string â‰¤25 words), practiceWords (2-3), correct (string), incorrect (string)",
+    },
+    constraint: "Every targetWord and practiceWord must come from today's lesson",
+  },
+};
+
+/* Â§2 of the pronunciation standard, verbatim. Injected into the blueprint
+   prompt alongside vocabSelectionBlock, boardTitleBlock, boardNoteBlock. */
+const pronunciationBlock = (lvl) => {
+  if (!PRONUNCIATION_STANDARD[lvl]) return "";
+  return "\n\nPRONUNCIATION â€” choose ONE pronunciation focus for this lesson. The focus must target an intelligibility-critical feature: a sound or pattern whose misproduction would cause the listener to hear a different word or miss a grammatical signal. Not accent approximation â€” only features that cause communication breakdown.\n\nPRIORITY ORDER: (1) grammatical signals carried by pronunciation (plural -s, past -ed endings) â€” highest, because a lesson that teaches past simple without teaching -ed endings leaves the grammar half-taught; (2) L1-specific minimal pairs â€” sounds this student's L1 conflates that create real-word confusion; (3) word stress in today's vocabulary; (4) connected speech for comprehension (weak forms, linking); (5) general intelligibility features (/Î¸/, /Ã°/, /h/) where the student's L1 predicts difficulty.\n\nCONSTRAINT: every targetWord and every practiceWord MUST come from today's lesson â€” the vocabulary set, the grammar examples, or the functional language. Pronunciation is practised on the words the student is learning today, never on decontextualised word lists. This is the constraint that separates pronunciation teaching from a phonics drill.\n\nONE focus, practised on 1-3 words from today's lesson. The focusSections array carries the teaching: targetWord, ipa (standard IPA), instructions (1-2 sentences, sub-A1 register, what the student should DO with their mouth â€” never phonological terminology like 'voiced dental fricative'), practiceWords (2-3 from today), correct (simplified phonetic guide the student reads as a model: 'bruh-ZIL'), incorrect (the predicted error for THIS student's L1 â€” not a generic wrong pronunciation).\n\nThe student's L1 is ${l1}. If you know an L1-specific intelligibility hazard for ${l1} speakers with today's grammar or vocabulary, prioritise it and name the language in the incorrect field.";
+};
+
+const vocabSelectionBlock = (lvl) => {
+  if (!VOCAB_SELECTION_STANDARD[lvl]) return "";
+  return "\n\nVOCABULARY SELECTION â€” which words earn a slot (A1). Choose FOUR TO EIGHT items. Eight is a ceiling, not a target: if this situation honestly holds five words worth teaching, teach five. Never add a word to reach eight.\n\nEVERY item must be ALL of these: a content word (noun, verb, adjective, or a high-frequency adverb); new to the student but inside the A1 band; useful beyond today's situation; something an adult migrant in Australia could need within a fortnight; definable in one A1 sentence; and produced by the student in today's final task or mission.\n\nNEVER give a slot to: proper nouns (countries, cities, suburbs, names, brands â€” use them freely in your text and dialogue, but never as a vocabulary item); function words (from, the, a, in, my, is â€” these belong to the grammar point); greetings and day-one chunks (hello, please, thank you, sorry); numbers, days, months or colours unless the objective IS that set; the target grammar dressed as a word; or anything the student has already mastered.\n\nSHAPE OF THE SET: 4-5 nouns, 2-3 verbs, 1-2 adjectives, at most 1 fixed chunk. Zero function words. Zero proper nouns. A set with no verbs describes a scene instead of teaching an action.\n\nRECYCLING: at most 2 of the set may come from the fragile or recycle lists, chosen where today's situation gives them a natural home. The rest are new.\n\nWRITE THE DEFINITION FIRST, THEN DECIDE. Each meaning is one sentence of A1 English that does not use the word itself, does not name the student, and does not refer to today's lesson. If the only definition you can write is \"the country the student is in now\" or \"the word we use to say hello\", the word has failed â€” remove it and choose another. A definition that would not still be true tomorrow, in a different lesson, for a different student, is not a definition.";
+};
+
+// Level-independent (ruling b, Genesis 27 Jul): meta-vocabulary frames Leo as an LMS and fails the Toolbox Test at EVERY level. Stated ONCE, not per-level.
+const NO_META_VOCAB = "\n- NO META-VOCABULARY about the lesson itself (never: topic, objective, structure, aspect, learning outcome, unit). It frames Leo as a system, not a teacher, and fails the Toolbox Test at EVERY level (A1-C1). Level-independent.";
+
+
+/* Student-facing names for the planner's stages. The console gets the intent
+   string; the student gets the step in words they can read. Leo says what he
+   observed â€” which step he reached â€” and nothing about why it stopped, because
+   the code does not know why and Leo does not guess. */
+const PLAN_STAGE_WORDS = {
+  init: "getting today's lesson started",
+  student_and_needs: "thinking about what you need today",
+  student_and_needs_retry: "thinking about what you need today",
+  blueprint: "putting today's lesson together",
+  blueprint_retry: "putting today's lesson together",
+  handover_to_background: "opening today's lesson",
+};
+const PLAN_FAIL_LINE = (fail) => {
+  const isRateLimited = !!fail && (fail.status === 429 || fail.apiType === "rate_limit_error");
+  if (isRateLimited) return "Leo is busy right now â€” try again in a minute.";
+  const step = (fail && PLAN_STAGE_WORDS[fail.stage]) || null;
+  return step
+    ? `I could not finish today's lesson. I got as far as ${step}, and then it stopped.`
+    : "I could not finish today's lesson.";
+};
+
+const BLUEPRINT_JSON_SHAPE = `{"teacherReflection":"summarise your thinking in 2-3 sentences","communicativeObjective":"ONE plain sentence, spoken directly to the student, saying what they will be able to DO by the end of today â€” not a label, not meta-language ('today's objective is...', 'you will learn...'). Second person. Concrete and checkable: the student should be able to tell for themselves, at the end of the lesson, whether it happened. Max 20 words. Example shape: 'By the end, you'll be able to introduce yourself to a new workmate and ask about their day.'","context":"the Australian situation you chose","cefr":"the student's CEFR level","lessonRationale":"why THIS lesson TODAY from your reasoning","predictedDifficulties":["2-3 mistakes from your analysis"],"emotionalObjective":"from your needs assessment","memorableMoment":"the one thing from your assessment","authenticMaterial":"the actual Australian text you wrote in your assessment","scaffoldingStrategy":"how you will build toward the final task","explanation":"2-3 warm sentences introducing today. Name the student. Set a SITUATION, not a learning objective â€” 'today you're meeting someone at a footy club' not 'today we learn about families'. Anchor in something Australian or specific to the student's life. Must NOT read as a curriculum description or a language-app prompt. Max 25 words.","warmUpActivities":[{"type":"one of: context_discussion|prediction|finish_sentence|mini_task|mcq|best_response|true_false|is_this_correct|spot_mistake|complete_dialogue|unscramble|order_conversation","instruction":"how to do it, one line","prompt":"the question or task, contextualised to TODAY","text":"optional supporting text or dialogue","options":["choice types ONLY: 2-4 options"],"answer":"choice types ONLY: exact text of the correct option","tokens":["sequence types ONLY: the words or lines IN THE CORRECT ORDER"],"note":"the teaching point, in Leo's voice"}],"vocabulary":[{"word":"","pos":"","meaning":"simple definition","ipa":"","example":"in today's situation","examples":["one more"],"related":["2-3"],"collocations":["1-2"]}],"grammar":{"point":"","meaning":"","form":"","usage":"when Australians use this","examples":["2 in today's situation"]},"pronunciation":{"focus":"max 5 words, student-facing","focusSections":[{"targetWord":"from today's lesson","ipa":"/IPA/","instructions":"1-2 sentences, sub-A1, what to do with mouth, max 25 words","practiceWords":["2-3 from today"],"correct":"simplified guide: bruh-ZIL","incorrect":"predicted L1 error: BRA-zil"}]},"mainSkill":"reading or listening","finalTask":"the role-play climax from your assessment","mission":"one doable real-world task","tomorrowConnection":"how today leads to tomorrow","learningOutcome":"what they can now do","canDosAddressed":["which can-do outcomes from the unit this lesson practises"]}`;
+
+/* Proper-noun helpers for the vocabulary selection standard.
+   The country set is built from COUNTRIES â€” the same 200-plus entry list the
+   onboarding country select uses, which is country-list-v1.md already in
+   machine-readable form. Built lazily because COUNTRIES is declared further
+   down the module; validateBlueprint only ever runs after load. */
+let _countryNameSet = null;
+function _isCountryName(lowercasedWord) {
+  if (!lowercasedWord) return false;
+  if (_countryNameSet === null) {
+    _countryNameSet = new Set();
+    try {
+      COUNTRIES.forEach(([key, name, aliases]) => {
+        if (key === "prefer-not-to-say") return;
+        _countryNameSet.add(String(name).toLowerCase());
+        (aliases || []).forEach((a) => _countryNameSet.add(String(a).toLowerCase()));
+      });
+    } catch (e) { console.warn("[Vocab] country list unavailable for the proper-noun check", e); }
+  }
+  return _countryNameSet.has(lowercasedWord);
+}
+
+/* Capitalised where it is not sentence-initial â€” the clearest mechanical
+   signal of a proper noun that is not a country (Sydney, Woolworths, Medicare).
+   Reads the item's own example sentence. */
+function _capitalisedMidSentence(word, example) {
+  const w = String(word || "").trim();
+  const ex = String(example || "");
+  if (!w || !ex || w.toLowerCase() === "i") return false;
+  const re = new RegExp("(^|[^\\w])(" + w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")(?![\\w])", "gi");
+  let m;
+  while ((m = re.exec(ex)) !== null) {
+    if (!/^[A-Z]/.test(m[2])) continue;
+    const before = ex.slice(0, m.index + m[1].length).replace(/\s+$/, "");
+    if (before === "" || /[.!?:;"'\u2018\u2019\u201c\u201d]$/.test(before)) continue; // sentence-initial
+    return true;
+  }
+  return false;
+}
+
+/* ================================================================
+   BOARD VALIDATION (Â§6.2) â€” never trust generated content.
+   Runs at the same two enforcement points as CEFR_CONSTRAINTS. Until the
+   planner emits boards, this is silent: no boards = nothing to validate.
+   When boards arrive, invalid ones fall back to the prose surface (Â§2) â€”
+   the student always gets correct teaching; they never see a malformed
+   board or an error.
+   ================================================================ */
+const BOARD_VALID_TYPES = ["title","rule","formula","subTable","example","contrast","note"];
+const BOARD_VALID_ROLES = ["plain","structure","target","model"];
+const BOARD_WORD_LIMITS = { A1: 40, A2: 55 };
+
+function validateBoards(boards, cefr) {
+  if (!boards) return null; // no boards = not emitted yet; fall back silently
+  if (!Array.isArray(boards)) return "boards must be an array";
+  if (boards.length === 0) return "boards array is empty";
+  if (boards.length > 3) return "too many boards (max 3)";
+  const wl = BOARD_WORD_LIMITS[cefr];
+  for (let bi = 0; bi < boards.length; bi++) {
+    const b = boards[bi];
+    if (!b || !Array.isArray(b.elements)) return `board ${bi+1}: elements missing or not an array`;
+    if (b.elements.length > 6) return `board ${bi+1}: too many elements (max 5 + title)`;
+    let hasTitle = false, contrasts = 0, notes = 0, wordCount = 0;
+    for (let ei = 0; ei < b.elements.length; ei++) {
+      const el = b.elements[ei];
+      if (!el || !el.type) return `board ${bi+1} element ${ei+1}: missing type`;
+      if (el.type === "illustration") return `board ${bi+1} element ${ei+1}: illustration is reserved for Phase 2`;
+      if (!BOARD_VALID_TYPES.includes(el.type)) return `board ${bi+1} element ${ei+1}: unknown type "${el.type}"`;
+      // Per-type checks
+      if (el.type === "title") {
+        if (hasTitle) return `board ${bi+1}: duplicate title`;
+        hasTitle = true;
+        if (!el.text) return `board ${bi+1}: title has no text`;
+        wordCount += _countWords(el.text);
+      }
+      if (el.type === "rule") {
+        if (!Array.isArray(el.pieces) || !el.pieces.length) return `board ${bi+1} element ${ei+1}: rule needs pieces`;
+        wordCount += el.pieces.reduce((n, p) => n + _countWords(p.text), 0);
+        const bad = el.pieces.find(p => p.role && !BOARD_VALID_ROLES.includes(p.role));
+        if (bad) return `board ${bi+1} element ${ei+1}: unknown role "${bad.role}"`;
+      }
+      if (el.type === "formula") {
+        if (!Array.isArray(el.boxes) || el.boxes.length < 2 || el.boxes.length > 4)

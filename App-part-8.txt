@@ -1,0 +1,1000 @@
+﻿            <div className="wc-practise-row">
+              <span className="muted small">Practise: </span>
+              {pronunciation.practiceWords.map((pw, j) => (
+                <span key={j}>
+                  {TTS_OK ? <button className="link-btn small" onClick={() => speakText(pw)}>{pw}</button> : <span className="small">{pw}</span>}
+                  {j < pronunciation.practiceWords.length - 1 ? " \u00b7 " : ""}
+                </span>
+              ))}
+            </div>
+          )}
+          {(pronunciation.instructions || pronunciation.description) && (
+            <p className="wc-pron-tip">{pronunciation.instructions || pronunciation.description}</p>
+          )}
+          {pronunciation.correct && (
+            <p className="wc-pron-correct">{"\u2713"} {Array.isArray(pronunciation.correct) ? pronunciation.correct.join(" \u00b7 ") : pronunciation.correct}</p>
+          )}
+          {pronunciation.incorrect && (
+            <p className="wc-pron-incorrect">{"\u2717"} <s>{Array.isArray(pronunciation.incorrect) ? pronunciation.incorrect.join(" \u00b7 ") : pronunciation.incorrect}</s></p>
+          )}
+        </div>
+      )}
+      {/* Â§5.4 Next */}
+      <button className="primary-btn wide wc-next" onClick={onNext}>{isLast ? (lastLabel || "Continue") : "Next \u2192"}</button>
+    </div>
+  );
+}
+
+/* WordCardSequence â€” manages the current index through a list of word data */
+function WordCardSequence({ words, onComplete, onVocabTap, lastLabel }) {
+  const [idx, setIdx] = useState(0);
+  const w = words[idx];
+  if (!w) return null;
+  return (
+    <WordCard
+      key={w.word + "-" + idx}
+      word={w.word} ipa={w.ipa} pos={w.pos} meaning={w.meaning}
+      example={w.examples && w.examples[0] ? w.examples[0] : w.example}
+      index={idx} total={words.length}
+      pronunciation={w._pronunciation || null}
+      onNext={() => { if (idx < words.length - 1) setIdx(idx + 1); else onComplete(); }}
+      onVocabTap={onVocabTap}
+      lastLabel={lastLabel}
+    />
+  );
+}
+
+function VocabularySection({ bp, onVocabTap, leoMemory, onSkip, onDone, header }) {
+  // Authored lessons declare matchVocab (a curated subset of up to 8 words for
+  // the matching exercise). AI-generated lessons use the first 8 from vocabulary.
+  // The full vocabulary array is always available for tokens, cards, and review.
+  const items = React.useMemo(() => {
+    if (bp.matchVocab && bp.matchVocab.length) {
+      const all = bp.vocabulary || [];
+      // matchVocab can be word strings or indices â€” resolve to vocabulary objects
+      return bp.matchVocab.map((ref) =>
+        typeof ref === "number" ? all[ref] : all.find((v) => v.word.toLowerCase() === ref.toLowerCase())
+      ).filter(Boolean).slice(0, 8);
+    }
+    return (bp.vocabulary || []).slice(0, 8);
+  }, [bp]);
+  // Stable shuffle of definitions â€” seeded from today's context so it never
+  // re-shuffles on re-render, but DOES differ between lessons.
+  const [defs] = useState(() => {
+    const arr = [...items];
+    let s = 7919;
+    for (const ch of (bp.context || "")) s = (s * 31 + ch.charCodeAt(0)) & 0x7fffffff;
+    for (let i = arr.length - 1; i > 0; i--) { s = (s * 1103515245 + 12345) & 0x7fffffff; const j = s % (i + 1); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+    // Derangement guarantee: no position may hold its own original item â€” a
+    // student must never be able to read row N's meaning as row N's word.
+    // A Fisher-Yates shuffle CAN legitimately leave a position unmoved by
+    // chance (more likely on short lists). If it does, fall back to a full
+    // rotation: since every item is distinct, rotating by 1 guarantees
+    // position i now holds items[(i+1) % n] â€” never items[i] â€” for n > 1.
+    if (arr.length > 1 && arr.some((it, i) => it === items[i])) {
+      return [...items.slice(1), items[0]];
+    }
+    return arr;
+  });
+  const [matched, setMatched] = useState({});      // word -> defIndex (0 is valid!)
+  const [missed, setMissed] = useState({});        // word -> true (had a wrong attempt)
+  const [selected, setSelected] = useState(null);  // word chosen by tap/keyboard
+  const [done, setDone] = useState(false);
+  /* Bug fix (Leo's live walkthrough): "Show the answers" used to set
+     `done` directly, which jumps straight to StageComplete â€” the drawn
+     connector lines this reveal computes never got a chance to render.
+     `revealed` holds the filled-in board on screen; the student taps
+     Continue when ready, which is what actually advances. */
+  const [revealed, setRevealed] = useState(false);
+  const [vocabPhase, setVocabPhase] = useState("cards"); // "cards" | "matching" | "review"
+  const [matchScore, setMatchScore] = useState({ correct: 0, total: 0 });
+  const hasReview = !!(bp.vocabReviewExercises && (bp.vocabReviewExercises.oddOneOut || bp.vocabReviewExercises.completeSentences));
+  const [dragState, setDragState] = useState(null);
+  const [lines, setLines] = useState([]);
+  const [wrongFlash, setWrongFlash] = useState(null);
+  const [justMatched, setJustMatched] = useState(null); // word -> plays the pop animation
+  const gridRef = React.useRef(null);
+  const wordRefs = React.useRef({});
+  const defRefs = React.useRef({});
+  // The drag is held in a REF as well as in state. State drives the rendered
+  // line; the ref is what the logic reads, so a pointerdown/pointerup pair that
+  // lands inside a single React batch can never lose the gesture.
+  const dragRef = React.useRef(null);
+
+  const getPos = (el, side) => {
+    if (!el || !gridRef.current) return { x: 0, y: 0 };
+    const grid = gridRef.current.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    return { x: side === "right" ? r.right - grid.left : r.left - grid.left, y: r.top + r.height / 2 - grid.top };
+  };
+
+  const hitTestDef = (clientX, clientY) => {
+    for (let i = 0; i < defs.length; i++) {
+      const el = defRefs.current[i];
+      // NB: matched[] stores a definition INDEX â€” 0 is a valid, falsy match.
+      if (!el || matched[defs[i].word] !== undefined) continue;
+      const r = el.getBoundingClientRect();
+      if (clientX >= r.left - 8 && clientX <= r.right + 8 && clientY >= r.top - 8 && clientY <= r.bottom + 8) return i;
+    }
+    return -1;
+  };
+
+  /* The ONE matching rule â€” drag, tap and keyboard all come through here. */
+  const attemptMatch = (word, wordIdx, defIdx) => {
+    if (defIdx < 0 || matched[word] !== undefined) return;
+    if (defs[defIdx].word === word) {
+      const nextMatched = { ...matched, [word]: defIdx };
+      setMatched(nextMatched);
+      setLines((prev) => [...prev, { word, wordIdx, defIdx }]);
+      setJustMatched(word);
+      setTimeout(() => setJustMatched((w) => (w === word ? null : w)), 500);
+      leoMemory.practiceWord(word, !missed[word]);
+      setSelected(null);
+      if (Object.keys(nextMatched).length === items.length) setDone(true);
+    } else {
+      setMissed((m) => ({ ...m, [word]: true }));
+      setWrongFlash({ wordIdx, defIdx });
+      setTimeout(() => setWrongFlash(null), 600);
+      setSelected(null);
+    }
+  };
+
+  const startDrag = (word, wordIdx, e) => {
+    if (matched[word] !== undefined) return; // 0 is a valid definition index
+    e.preventDefault();
+    const grid = gridRef.current.getBoundingClientRect();
+    const d = { word, wordIdx, x: e.clientX - grid.left, y: e.clientY - grid.top, sx: e.clientX, sy: e.clientY };
+    dragRef.current = d;
+    setDragState(d);
+  };
+  const moveDrag = (e) => {
+    if (!dragRef.current || !gridRef.current) return;
+    e.preventDefault();
+    const grid = gridRef.current.getBoundingClientRect();
+    setDragState((prev) => (prev ? { ...prev, x: e.clientX - grid.left, y: e.clientY - grid.top } : null));
+  };
+  const endDrag = (e) => {
+    const d = dragRef.current;
+    if (!d) return;
+    dragRef.current = null;
+    const moved = Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 6;
+    if (!moved) {
+      // A press with no movement is a TAP: select the word, then tap a meaning.
+      setSelected((s) => (s === d.word ? null : d.word));
+    } else {
+      attemptMatch(d.word, d.wordIdx, hitTestDef(e.clientX, e.clientY));
+    }
+    setDragState(null);
+  };
+
+  const reveal = () => {
+    const newMatched = {}; const newLines = []; const newMissed = { ...missed };
+    items.forEach((it, wi) => {
+      if (matched[it.word] === undefined) {
+        leoMemory.practiceWord(it.word, false);
+        // A revealed word was NOT known. It must not be scored as if it were:
+        // false praise is worse than no praise, and it would quietly tell the
+        // learner model this word is safe when it is the one needing most work.
+        newMissed[it.word] = true;
+      }
+      const di = defs.findIndex((d) => d.word === it.word);
+      newMatched[it.word] = di;
+      newLines.push({ word: it.word, wordIdx: wi, defIdx: di });
+    });
+    setMatched(newMatched); setMissed(newMissed); setLines(newLines); setSelected(null); setRevealed(true);
+  };
+
+  const correct = items.filter((it) => matched[it.word] !== undefined && !missed[it.word]).length;
+  const remaining = items.length - Object.keys(matched).length;
+
+  const svgLines = lines.map((l) => {
+    const from = getPos(wordRefs.current[l.wordIdx], "right");
+    const to = getPos(defRefs.current[l.defIdx], "left");
+    return { ...l, x1: from.x, y1: from.y, x2: to.x, y2: to.y };
+  });
+  const dragLine = dragState ? (() => {
+    const from = getPos(wordRefs.current[dragState.wordIdx], "right");
+    return { x1: from.x, y1: from.y, x2: dragState.x, y2: dragState.y };
+  })() : null;
+  const wrongLine = wrongFlash ? (() => {
+    const from = getPos(wordRefs.current[wrongFlash.wordIdx], "right");
+    const to = getPos(defRefs.current[wrongFlash.defIdx], "left");
+    return { x1: from.x, y1: from.y, x2: to.x, y2: to.y };
+  })() : null;
+
+  // Vocabulary review phase: after matching, if review exercises exist, render them
+  if (done && vocabPhase === "review" && hasReview) return (
+    <SectionShell title="Vocabulary review" blurb="Let's check those words have stuck." onSkip={onSkip}>
+      <VocabReviewExercise
+        exercises={bp.vocabReviewExercises}
+        vocab={(bp.vocabulary || []).map((v) => v.word)}
+        onVocabTap={onVocabTap}
+        onDone={(revCorrect, revTotal) => {
+          const totalCorrect = matchScore.correct + revCorrect;
+          const totalQuestions = matchScore.total + revTotal;
+          onDone(totalCorrect, totalQuestions);
+        }}
+      />
+    </SectionShell>
+  );
+
+  if (done) return (
+    <SectionShell header={header} title="Today's vocabulary" onSkip={onSkip}>
+      <StageComplete correct={correct} total={items.length}
+        onContinue={() => {
+          if (hasReview) {
+            setMatchScore({ correct, total: items.length });
+            setVocabPhase("review");
+          } else {
+            onDone(correct, items.length);
+          }
+        }} />
+    </SectionShell>
+  );
+
+    // Â§10.1: word cards run before the matching exercise
+  if (vocabPhase === "cards") return (
+    <SectionShell header={header} title="Today's vocabulary" blurb="Let's meet today's words." onSkip={onSkip}>
+      <WordCardSequence
+        words={items}
+        onComplete={() => setVocabPhase("matching")}
+        onVocabTap={onVocabTap}
+        lastLabel="Start matching"
+      />
+    </SectionShell>
+  );
+
+  return (
+    <SectionShell header={header} title="Today's vocabulary"
+      blurb={selected ? `â€œ${selected}â€ is selected â€” now choose its meaning.` : "Drag a line from each word to its meaning â€” or tap a word, then tap its meaning."}
+      onSkip={onSkip}>
+      <div className="match-progress" aria-live="polite">
+        <div className="match-progress-bar"><span style={{ width: `${(Object.keys(matched).length / items.length) * 100}%` }} /></div>
+        <span className="muted small">{remaining} to go</span>
+      </div>
+
+      {/* Pointer Events cover mouse, touch and stylus on every supported browser
+          (touchAction:none stops the page scrolling mid-drag). Do NOT add parallel
+          onTouch* handlers: they double-fire alongside pointer events, and a Touch
+          object has no preventDefault, which crashes on mobile. */}
+      <div className="match-grid" ref={gridRef} style={{ position: "relative", touchAction: "none" }}
+        onPointerMove={moveDrag} onPointerUp={endDrag} onPointerLeave={endDrag}>
+        <svg className="match-lines" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 3 }}>
+          {svgLines.map((l, i) => (
+            <line key={"m" + i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke="var(--leo-green)" strokeWidth="2.5" strokeLinecap="round" opacity="0.75">
+              <animate attributeName="opacity" from="0" to="0.75" dur="0.3s" fill="freeze" />
+            </line>
+          ))}
+          {dragLine && <line x1={dragLine.x1} y1={dragLine.y1} x2={dragLine.x2} y2={dragLine.y2} stroke="var(--color-warning)" strokeWidth="3" strokeLinecap="round" strokeDasharray="6 5" opacity="0.9" />}
+          {wrongLine && (
+            <line x1={wrongLine.x1} y1={wrongLine.y1} x2={wrongLine.x2} y2={wrongLine.y2} stroke="var(--color-error)" strokeWidth="2.5" strokeLinecap="round" opacity="0.75">
+              <animate attributeName="opacity" from="0.75" to="0" dur="0.5s" fill="freeze" />
+            </line>
+          )}
+        </svg>
+
+        <div className="match-col" style={{ position: "relative", zIndex: 2 }}>
+          {items.map((it, i) => {
+            const isMatched = matched[it.word] !== undefined;
+            return (
+              <button key={it.word} type="button" ref={(el) => (wordRefs.current[i] = el)}
+                className={"match-word"
+                  + (isMatched ? " match-done" : "")
+                  + (justMatched === it.word ? " match-pop" : "")
+                  + (selected === it.word ? " match-selected" : "")
+                  + (dragState && dragState.word === it.word ? " match-dragging" : "")}
+                disabled={isMatched}
+                aria-pressed={selected === it.word}
+                aria-label={isMatched ? `${it.word}, matched` : `${it.word}, select then choose its meaning`}
+                onPointerDown={(e) => startDrag(it.word, i, e)}
+                onClick={(e) => { if (e.detail === 0 && !isMatched) setSelected((s) => (s === it.word ? null : it.word)); }}>
+                {it.word}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="match-col" style={{ position: "relative", zIndex: 2 }}>
+          {defs.map((it, i) => {
+            const isMatched = matched[it.word] !== undefined;
+            return (
+              <button key={i} type="button" ref={(el) => (defRefs.current[i] = el)}
+                className={"match-meaning" + (isMatched ? " match-done" : "") + (selected && !isMatched ? " match-target" : "")}
+                disabled={isMatched}
+                aria-label={isMatched ? `Meaning matched: ${it.meaning}` : selected ? `Match â€œ${selected}â€ to: ${it.meaning}` : it.meaning}
+                onClick={() => { if (selected) attemptMatch(selected, items.findIndex((x) => x.word === selected), i); }}>
+                {it.meaning}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {revealed
+        ? <button className="primary-btn" onClick={() => setDone(true)}>Continue</button>
+        : <button className="ghost-btn" onClick={reveal}>Show the answers</button>}
+    </SectionShell>
+  );
+}
+
+/* ---------- Stage 3: Pronunciation â€” model, listen, try ---------- */
+function PronunciationSection({ bp, onVocabTap, onSkip, onDone, header, studentCountry, personalisationFacts }) {
+  // Defect 4 fix: cards are built DIRECTLY from focusSections â€” each one
+  // already carries everything a card needs (targetWord, ipa, instructions,
+  // practiceWords, correct, incorrect). No backward matching onto
+  // bp.vocabulary: the prompt explicitly allows a focus word to come from a
+  // grammar example or functional-language phrase, not just the vocabulary
+  // set, so matching against vocabulary alone silently dropped real data.
+  const focusSections = bp.pronunciation && bp.pronunciation.focusSections;
+  /* Â§3d â€” authored lessons carry `targets`, which may include PAIR
+     items (the stress shift is the content). Without this the authored
+     pronunciation stage silently fell back to bare vocabulary cards
+     and the shift â€” the actual teaching point â€” never rendered. */
+  const rawTargets = (bp.pronunciation && bp.pronunciation.targets) || null;
+  /* Personalisation reorder (generalised, fix 4): reads any fact the
+     lesson's personalisation.reads array names for pronunciation, rather
+     than assuming studentCountry is always the right one. Falls back to
+     studentCountry for U1L1, which predates the generalisation. Never
+     fabricates IPA or stress data â€” reorders authored, vetted pairs only. */
+  const reorderFact = React.useMemo(() => {
+    const pFacts = personalisationFacts || {};
+    const reads = (bp.personalisation && bp.personalisation.reads) || [];
+    for (const r of reads) {
+      const val = pFacts[r.fact];
+      if (val && r.usedIn && r.usedIn.some((u) => /pronun/i.test(u)))
+        return String(val).trim().toLowerCase();
+    }
+    return studentCountry ? String(studentCountry).trim().toLowerCase() : null;
+  }, [bp, personalisationFacts, studentCountry]);
+  const targets = React.useMemo(() => {
+    if (!rawTargets || !reorderFact) return rawTargets;
+    const idx = rawTargets.findIndex((t) =>
+      (t.type === "pair" && (String(t.from.word).toLowerCase() === reorderFact || String(t.to.word).toLowerCase() === reorderFact)) ||
+      (t.type === "single" && String(t.word).toLowerCase() === reorderFact));
+    if (idx <= 0) return rawTargets;
+    const reordered = rawTargets.slice();
+    const [mine] = reordered.splice(idx, 1);
+    reordered.unshift(mine);
+    return reordered;
+  }, [rawTargets, reorderFact]);
+  const [done, setDone] = useState(false);
+  const [everSpoke, setEverSpoke] = useState(false);
+  const [pairIdx, setPairIdx] = useState(0);
+
+  if (targets && targets.length > 0) {
+    const t = targets[pairIdx];
+    const isLast = pairIdx + 1 >= targets.length;
+    if (!t) return null;
+    return (
+      <SectionShell header={header} title="Say it like a local" onSkip={onSkip}>
+        <ExerciseChrome index={pairIdx} total={targets.length} label="Sound" />
+        {/* Shown only when factually true: the leading pair genuinely
+            matches the student's own stated country. */}
+        {pairIdx === 0 && studentCountry && t.type === "pair" &&
+          (String(t.from.word).toLowerCase() === String(studentCountry).toLowerCase()
+            || String(t.to.word).toLowerCase() === String(studentCountry).toLowerCase()) && (
+          <p className="ex-instruction">Your own country first.</p>
+        )}
+        {t.type === "pair"
+          ? <PronPairCard pair={t} />
+          : <div className="pp-card"><div className="pp-rows">
+              <div className="pp-word">
+                <p className="pp-word-plain">{t.word}</p>
+                <div className="pp-syls">{(t.syllables || [t.word]).map((s, i) => (
+                  <span key={i} className={"pp-syl" + (i === t.stressIndex ? " pp-syl-on" : "")}>{s}</span>))}</div>
+                <p className="pp-ipa">{t.ipa}</p>
+                <SpeakButton text={t.word} label={`Hear ${t.word}`} />
+              </div>
+            </div>{t.note && <p className="pp-note">{t.note}</p>}</div>}
+        <button className="primary-btn wide" onClick={() => (isLast ? onDone() : setPairIdx(pairIdx + 1))}>
+          {isLast ? "Finish practice" : "Next â†’"}
+        </button>
+      </SectionShell>
+    );
+  }
+
+  const cards = React.useMemo(() => {
+    if (focusSections && focusSections.length > 0) {
+      return focusSections
+        .filter((fs) => fs.targetWord)
+        .map((fs) => ({ word: fs.targetWord, ipa: fs.ipa, _pronunciation: fs }));
+    }
+    // No focus data at all â€” fall back to bare vocabulary cards, same as
+    // before this fix (word + IPA + Hear it + Next, no pronunciation block).
+    return (bp.vocabulary || []).slice(0, 8);
+  }, [bp.vocabulary, focusSections]);
+
+  /* Fix P-2: the vocab fallback above never carries _pronunciation â€” a card
+     from that branch has no stress row, no L1 note, no correct/incorrect
+     models, no practice words. A stage titled "Say it like a local" with
+     none of that is an empty shell wearing the right title. hasPronunciationContent
+     is true only for cards built from focusSections (the only branch that ever
+     sets _pronunciation), so it is false both when cards is empty and when every
+     card came from the vocab fallback â€” exactly the condition to skip. Fires as
+     an effect, matching this file's existing advance-in-effect convention (the
+     {skipped:true} pattern above): advancing during render causes duplicate
+     writes and React update-in-render errors. */
+  const hasPronunciationContent = cards.some((c) => c._pronunciation);
+  useEffect(() => {
+    if (!hasPronunciationContent) onSkip?.();
+  }, [hasPronunciationContent]);
+
+  if (done) return (
+    <SectionShell header={header} title="Say it like a local" onSkip={onSkip}>
+      <StageComplete message={
+        everSpoke
+          ? { title: "You had a go out loud.",
+              sub: "That\u2019s the part that actually changes pronunciation. Keep going with the rest of today\u2019s words \u2014 out loud, even quietly, wherever you are." }
+          : { title: "That\u2019s the sounds covered.",
+              sub: "You\u2019ve seen how these words are built. Pronunciation only changes once the words leave your mouth \u2014 say three of them out loud before today\u2019s over." }
+      } onContinue={onDone} />
+    </SectionShell>
+  );
+
+  return (
+    <SectionShell header={header} title="Say it like a local"
+      blurb={bp.pronunciation && bp.pronunciation.focus ? `Today\u2019s focus: ${bp.pronunciation.focus}.` : undefined}
+      onSkip={onSkip}>
+      <PronCardSequence
+        words={cards}
+        onComplete={() => setDone(true)}
+        onVocabTap={onVocabTap}
+        lastLabel="Continue"
+        onSpoke={() => setEverSpoke(true)}
+      />
+    </SectionShell>
+  );
+}
+
+/* ---------- Sentence frames panel (reusable) ---------- */
+function SentenceFramesPanel({ frames, label }) {
+  const [open, setOpen] = useState(false);
+  if (!frames || !frames.length) return null;
+  return (
+    <div className="frames-panel">
+      <button className="ghost-btn wide" onClick={() => setOpen(!open)}>
+        {open ? "Hide" : "Show"} {label || "sentence frames"}
+      </button>
+      {open && (
+        <div className="frames-list">
+          {frames.map((f, i) => (
+            <div key={i} className="frame-item">
+              <p className="frame-text">{f.frame}</p>
+              {f.example && <p className="frame-example muted small">e.g. {f.example}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Stage 4: Speaking â€” conversation, discussion, critical thinking ---------- */
+/* ================================================================
+   PHASE 9 â€” SPEAKER SYSTEM, PAIR CARD, LISTENING (Â§4.1, Â§3d, Â§3g)
+   ================================================================ */
+
+/* Â§4.1 â€” one speaker component, product-wide. lucide Volume2, not the
+   emoji: emoji is Leo's VOICE, not UI chrome.
+
+   When TTS is unavailable the button DOES NOT RENDER. Never a disabled
+   speaker â€” a dead control teaches the student to stop trying
+   controls, and a pronunciation card without sound still teaches
+   stress and IPA.
+
+   No persistent played-state: hearing again is always equally invited. */
+function SpeakButton({ text, label, className, rate }) {
+  const [playing, setPlaying] = useState(false);
+  if (!TTS_OK || !text) return null;
+  const speak = () => {
+    setPlaying(true);
+    speakText(text, rate ? { rate } : undefined);
+    /* The utterance has no reliable end event across browsers, so the
+       dimmed state is time-boxed rather than pretending to track it. */
+    setTimeout(() => setPlaying(false), Math.min(6000, 900 + String(text).length * 55));
+  };
+  return (
+    <button type="button" className={"speak-btn" + (className ? " " + className : "") + (playing ? " speak-btn-on" : "")}
+      onClick={speak} aria-label={label || `Hear "${text}"`}>
+      <Volume2 size={20} aria-hidden="true" />
+    </button>
+  );
+}
+
+/* Â§3d â€” the pronunciation pair card. The stress SHIFT is the content,
+   so both words share ONE card and the shift is drawn. The syllable
+   that GAINS the stress renders in --marker-orange: the marker points
+   at what moved (Â§2a.4's rule). One card is one item in the sequence. */
+function PronPairCard({ pair }) {
+  if (!pair || !pair.from || !pair.to) return null;
+  const row = (w, highlightShift) => (
+    <div className="pp-word">
+      {/* Bug fix (Leo's live walkthrough, 2nd pass): the plain word was
+          spoken by the button but never shown â€” a student saw only the
+          syllable/IPA breakdown with no way to know which word it was. */}
+      <p className="pp-word-plain">{w.word}</p>
+      <div className="pp-dots" aria-hidden="true">
+        {(w.syllables || []).map((s, i) => (
+          <span key={i} className={"pp-dot" + (i === w.stressIndex ? (highlightShift ? " pp-dot-moved" : " pp-dot-on") : "")} />
+        ))}
+      </div>
+      <div className="pp-syls">
+        {(w.syllables || []).map((s, i) => (
+          <span key={i} className={"pp-syl" + (i === w.stressIndex ? (highlightShift ? " pp-syl-moved" : " pp-syl-on") : "")}>{s}</span>
+        ))}
+      </div>
+      <p className="pp-ipa">{w.ipa}</p>
+      <SpeakButton text={w.word} label={`Hear ${w.word}`} />
+    </div>
+  );
+  /* The stress only "moves" if the index actually changes â€” otherwise
+     orange would claim a shift that did not happen. */
+  const moved = pair.from.stressIndex !== pair.to.stressIndex;
+  return (
+    <div className="pp-card">
+      <div className="pp-rows">
+        {row(pair.from, false)}
+        <span className="pp-arrow" aria-hidden="true">&rarr;</span>
+        {row(pair.to, moved)}
+      </div>
+      {pair.note && <p className="pp-note">{pair.note}</p>}
+    </div>
+  );
+}
+
+/* Â§3g â€” the listening player.
+   NO SCRUBBER: a scrubber invites hunting for the answer inside the
+   audio; at A1 the utterance is the unit, so replay is whole-utterance.
+
+   NO REPLAY COUNT, overruling the brief with reasoning that Genesis
+   ratified: a counter is a score in disguise â€” a student who has
+   played four times reads "4" as their failure whatever tone it is set
+   in, and the app has no pedagogical use for them seeing it. The
+   POLICY is displayed instead, as permission. */
+function ListeningPlayer({ text, onPlayed }) {
+  const [playing, setPlaying] = useState(false);
+  const [playedOnce, setPlayedOnce] = useState(false);
+  if (!TTS_OK) {
+    return (
+      <div className="lp-card">
+        <p className="muted small">Audio isn't available on this device, so the transcript is below instead.</p>
+      </div>
+    );
+  }
+  const play = () => {
+    if (playing) {
+      /* Pausing mid-utterance is allowed; resuming restarts the
+         utterance, because the utterance is the unit. */
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      setPlaying(false);
+      return;
+    }
+    setPlaying(true);
+    setPlayedOnce(true);
+    speakText(String(text || "").replace(/\n/g, ". "));
+    if (onPlayed) onPlayed();
+    setTimeout(() => setPlaying(false), Math.min(60000, 1200 + String(text || "").length * 55));
+  };
+  return (
+    <div className="lp-card">
+      <button className="lp-play" onClick={play} aria-label={playing ? "Pause the audio" : (playedOnce ? "Play again" : "Play the audio")}>
+        {playing ? <span className="lp-glyph">&#10073;&#10073;</span> : <span className="lp-glyph">&#9654;</span>}
+      </button>
+      <p className="lp-label">{playedOnce ? "Play again" : "Play the audio"}</p>
+      {/* This line IS the display of unlimited replays â€” permission,
+          without the surveillance a counter would bring. */}
+      <p className="lp-permission">Listen as many times as you like.</p>
+    </div>
+  );
+}
+
+/* Â§3e â€” the AUTHORED speaking stage.
+   The generic free conversation below is right for generated lessons.
+   An authored lesson carries a designed sequence: a scenario, ordered
+   turns, a repeat-after-me model before each student turn, and ONE
+   sentence frame visible per turn.
+
+   The one-frame rule is not cosmetic. The lesson plan states it
+   prevents the stage's main error â€” reaching for "I'm ___" during the
+   country turn and producing "I'm Brazil". Showing all three frames at
+   once actively causes the mistake the teacher designed against. */
+function AuthoredSpeaking({ bp, onSkip, onDone, header }) {
+  const turns = bp.speakingTurns || [];
+  const [idx, setIdx] = useState(0);
+  const [thread, setThread] = useState([]);
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [replied, setReplied] = useState(false);
+  const turn = turns[idx];
+  const name = (bp._studentName || "").trim();
+
+  if (!turn) {
+    return (
+      <SectionShell header={header} title="Speaking practice" onSkip={onSkip}>
+        <StageComplete correct={turns.length} total={turns.length}
+          message={{ title: "Nicely done", sub: "You introduced yourself â€” name, country and how you feel." }}
+          onContinue={() => onDone(thread.filter((t) => t.role === "you").length, thread)} />
+      </SectionShell>
+    );
+  }
+
+  const prompt = turn.leoPromptTemplate
+    ? String(turn.leoPromptTemplate).replace(/\{name\}/g, name || "there")
+    : turn.leoPrompt;
+
+  const send = async () => {
+    if (!input.trim() || busy) return;
+    const said = input.trim();
+    setThread((t) => t.concat([{ role: "you", text: said }]));
+    setInput("");
+    setBusy(true);
+    try {
+      /* The authored correction bank is the teacher's own per-turn
+         guidance. Passing it means Leo corrects the way this lesson
+         says to correct, rather than improvising. */
+      const bank = (bp.speakingCorrectionBank || [])
+        .filter((c) => c.turn === turn.id || c.turn === "any")
+        .map((c) => `- If they say ${c.studentSays} -> ${c.leoResponds}`)
+        .join("\n");
+      const raw = await askClaude(
+        `${AUSTRALIAN_SPELLING}You are Leo, an ELICOS teacher. Scenario: ${bp.speakingScenario || bp.context}.\n` +
+        `You asked: "${prompt}". The student answered: "${said}".\n` +
+        `The target for this turn is: ${turn.frame}. They may answer in full or short form; BOTH are accepted.\n` +
+        (bank ? `Correction guidance authored by their teacher â€” follow it:\n${bank}\n` : "") +
+        `Reply warmly in ONE or TWO short sentences, max 20 words. If they need the form, model it and invite one more try. Never say "Wrong". Plain text only.`,
+        { intent: "speaking_reply" }
+      );
+      setThread((t) => t.concat([{ role: "leo", text: String(raw || "").trim() }]));
+      setReplied(true);
+    } catch {
+      setThread((t) => t.concat([{ role: "leo", text: "I couldn't reply just then â€” but I heard you. Let's keep going.", _failed: true }]));
+      setReplied(true);
+    } finally { setBusy(false); }
+  };
+
+  const next = () => { setIdx(idx + 1); setThread([]); setInput(""); setReplied(false); };
+
+  return (
+    <SectionShell header={header} title="Speaking practice" onSkip={onSkip}>
+      <ExerciseChrome index={idx} total={turns.length} label="Turn" />
+      {bp.speakingScenario && idx === 0 && <p className="ex-instruction">{bp.speakingScenario}</p>}
+      <div className="bubble bubble-bot">
+        {prompt}
+        <SpeakButton text={prompt} />
+      </div>
+      {/* Repeat-after-me: the model comes BEFORE the student's turn. */}
+      {turn.repeatAfterMe && !replied && (
+        <div className="grammar-form-box">
+          <p className="gb-keypoint-text">Repeat after me: <strong className="ex-answer">{turn.repeatAfterMe}</strong></p>
+        </div>
+      )}
+      {/* Authored images for this turn (e.g. happy / sad), when present. */}
+      {turn.images && !replied && (
+        <div className="turn-images">
+          {turn.images.map((im, i) => (
+            <div key={i} className="turn-image-slot">
+              <LessonImage src={im.src} alt={im.alt} caption={im.alt} />
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="speak-thread">
+        {thread.map((t, i) => (
+          <div key={i} className={"speak-turn " + (t.role === "leo" ? "speak-leo" : "speak-you")}>
+            <p>{t.text}</p>
+            {t.role === "leo" && !t._failed && <SpeakButton text={t.text} />}
+          </div>
+        ))}
+        {busy && <Spinner label="Leo is listeningâ€¦" />}
+      </div>
+      {!replied ? (
+        <>
+          {/* ONE frame for THIS turn â€” unless the lesson explicitly
+              turns the rule off, in which case every frame shows and
+              the current one leads. The authored flag decides. */}
+          {turn.frame && (
+            <FrameChips
+              frames={bp.speakingOneFramePerTurn === false
+                ? [{ frame: turn.frame }].concat(turns.filter((t) => t.frame && t.frame !== turn.frame).map((t) => ({ frame: t.frame })))
+                : [{ frame: turn.frame }]}
+              onInsert={(f) => setInput((v) => (v ? v + " " : "") + String(f).replace(/_+/g, "").trim())} />
+          )}
+          <div className="input-row">
+            <input className="text-input" value={input} placeholder="Say or type your replyâ€¦"
+              onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()}
+              disabled={busy} {...EXERCISE_INPUT_PROPS_PROPER_NOUN} />
+            <MicButton onText={(t) => setInput(t)} />
+          </div>
+          <div className="ex-actions">
+            <button className="primary-btn" onClick={send} disabled={busy || !input.trim()}>Reply</button>
+          </div>
+        </>
+      ) : (
+        <button className="primary-btn wide" onClick={next}>
+          {idx + 1 >= turns.length ? "Finish speaking" : "Next â†’"}
+        </button>
+      )}
+    </SectionShell>
+  );
+}
+
+function SpeakingSection({ bp, memory, vocab, onVocabTap, onSkip, onDone, header }) {
+  /* Â§3e â€” an authored lesson runs its designed sequence; a generated
+     lesson runs the free conversation below, unchanged. */
+  if (bp.speakingTurns && bp.speakingTurns.length) {
+    return <AuthoredSpeaking bp={bp} onSkip={onSkip} onDone={onDone} header={header} />;
+  }
+  const notes = bp._teacherNotes ? bp._teacherNotes.slice(0, 200) : "";
+  // Capability: use discussion questions as prompts when available
+  const discussionQs = bp.discussionQuestions || [];
+  const hasDiscussion = discussionQs.length > 0;
+  const hasCriticalThinking = !!(bp.criticalThinkingTask && bp.criticalThinkingTask.prompt);
+  const speakFrames = bp.sentenceFrames && bp.sentenceFrames.speaking;
+  const discFrames = bp.sentenceFrames && bp.sentenceFrames.discussion;
+  const ctFrames = bp.sentenceFrames && bp.sentenceFrames.criticalThinking;
+
+  const opener = hasDiscussion
+    ? `Let's discuss: ${discussionQs[0]}`
+    : `Let's practise for real. Imagine we're in this situation: ${bp.context}. I'll start â€” tell me what you would say first.`;
+  const [turns, setTurns] = useState([{ role: "leo", text: opener }]);
+  const [input, setInput] = useState("");
+  const [thinking, setThinking] = useState(false);
+  const [phase, setPhase] = useState("speak"); // "speak" | "critical" | "done"
+  const leoTurns = turns.filter((t) => t.role === "leo").length;
+  const youTurns = turns.filter((t) => t.role === "you").length;
+
+  const send = async () => {
+    const said = input.trim(); if (!said || thinking) return;
+    const next = [...turns, { role: "you", text: said }];
+    setTurns(next); setInput(""); setThinking(true);
+    try {
+      const convo = next.map((t) => (t.role === "leo" ? "Teacher: " : "") + t.text).join("\n");
+      const discussionCtx = hasDiscussion ? `\nDiscussion questions to explore: ${discussionQs.join("; ")}` : "";
+      const raw = await askClaude(
+        `You are Leo, one of Australia's best ELICOS teachers, in a speaking practice about "${bp.context}" with your student (${memory}).\nObjective: ${bp.communicativeObjective}\nPredicted difficulties: ${(bp.predictedDifficulties || []).join("; ")}\nFinal task they are building toward: ${bp.finalTask || bp.communicativeObjective}\nEmotional objective: ${bp.emotionalObjective || "build confidence"}${discussionCtx}\n\nBehave like a real teacher: respond to WHAT they said, sound curious and warm, ask ONE genuine follow-up question. Encourage communication over perfection. If they make a predicted mistake, gently recast it â€” but never interrupt the flow. Keep it to 2-3 natural sentences.\n\n${convo}\n\nThe student just said: "${said}"\n\nReply as the teacher in plain text only.${narrationGuidance(bp.cefr, "corrective")}`,
+        { intent: "speaking_reply" }
+      );
+      setTurns((t) => [...t, { role: "leo", text: raw }]);
+    } catch {
+      setTurns((t) => [...t, { role: "leo", text: "Good â€” keep going! What would you say next?" }]);
+    }
+    setThinking(false);
+  };
+
+  if (phase === "done") return (
+    <SectionShell header={header} title="Speaking practice" onSkip={onSkip}>
+      {/* Part B rev 2. "Excellent!" was awarded before anything was known and
+          fired for "s". "N turns of REAL CONVERSATION" attached a fabricated
+          adjective to a true number â€” a count is observation, its quality is
+          not. The count now appears ONCE, and every screen ends with a next
+          step rather than a verdict. youTurns is the only thing knowable here;
+          nothing about content, ever. */}
+      <StageComplete message={
+        youTurns === 0
+          ? { title: "Speaking practice",
+              sub: "No turns this time. Speaking is the one part of English that only moves when you actually use it â€” it's here whenever you're ready." }
+          : youTurns === 1
+          ? { title: "You spoke once.",
+              sub: "Speaking is the hardest skill to practise on your own. Next time, stay in for one turn longer than feels comfortable â€” that's where it grows." }
+          : { title: `You spoke ${youTurns} times.`,
+              sub: "Speaking is the hardest skill to practise on your own. Next time, aim for one more turn than today â€” that's how the habit builds." }
+      }
+        onContinue={() => onDone(youTurns, turns)} />
+    </SectionShell>
+  );
+
+  // Capability: critical thinking task after speaking conversation
+  if (phase === "critical" && hasCriticalThinking) {
+    const ct = bp.criticalThinkingTask;
+    return (
+      <SectionShell title="Critical thinking" blurb="Use your English to solve a real problem." onSkip={() => setPhase("done")}>
+        <p className="passage">{ct.prompt}</p>
+        {ct.questions && ct.questions.map((q, i) => (
+          <p key={i} className="small" style={{ marginTop: 4 }}>â€¢ {q}</p>
+        ))}
+        <SentenceFramesPanel frames={ctFrames} label="sentence frames" />
+        <div style={{ marginTop: 12 }}>
+          <div className="input-row">
+            <input className="text-input" placeholder="Share your ideasâ€¦" value={input}
+              onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} />
+            <MicButton onText={(t) => setInput(t)} />
+          </div>
+          <div className="speak-thread" style={{ marginTop: 8 }}>
+            {turns.filter((_, i) => i > 0 || phase === "critical").map((t, i) => (
+              <div key={i} className={"speak-turn " + (t.role === "leo" ? "speak-leo" : "speak-you")}>
+                
+                <p><VocabText text={t.text} vocab={vocab} onTap={onVocabTap} /></p>
+              </div>
+            ))}
+            {thinking && <Spinner label="Leo is thinkingâ€¦" />}
+          </div>
+          <div className="btn-row">
+            <button className="primary-btn" onClick={send} disabled={thinking || !input.trim()}>Reply</button>
+            <button className="ghost-btn" onClick={() => setPhase("done")}>Finish</button>
+          </div>
+        </div>
+      </SectionShell>
+    );
+  }
+
+  return (
+    <SectionShell header={header} title="Speaking practice" blurb="Answer out loud with the mic, or type. This is about communicating, not being perfect." onSkip={onSkip}>
+      {/* Capability: sentence frames scaffold when available */}
+      {/* Â§3e â€” frames are persistent chips above the input, tap to
+          insert, dismissible as a group for this session only. The old
+          show/hide panel made scaffolding a decision with a cost; at A1
+          the frames must simply be there. */}
+      <div className="speak-thread">
+        {turns.map((t, i) => (
+          <div key={i} className={"speak-turn " + (t.role === "leo" ? "speak-leo" : "speak-you")}>
+            
+            <p><VocabText text={t.text} vocab={vocab} onTap={onVocabTap} /></p>
+            {t.role === "leo" && <SpeakButton text={t.text} />}
+          </div>
+        ))}
+        {thinking && <Spinner label="Leo is listeningâ€¦" />}
+      </div>
+      <FrameChips frames={speakFrames || discFrames} onInsert={(f) => setInput((v) => (v ? v + " " : "") + String(f).replace(/_+/g, "").trim())} />
+      <div className="input-row">
+        <input className="text-input" placeholder="Say or type your replyâ€¦" value={input}
+          onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} />
+        <MicButton onText={(t) => setInput(t)} />
+      </div>
+      <div className="btn-row">
+        <button className="primary-btn" onClick={send} disabled={thinking || !input.trim()}>Reply</button>
+        {/* Â§3e â€” finishing is available, never pushed. The authored
+            minimum decides when it appears; 3 is the fallback for
+            generated lessons, which carry no such figure. */}
+        {leoTurns >= (bp.speakingMinExchanges || 3) && (
+          <button className="ghost-btn" onClick={() => {
+            if (hasCriticalThinking) setPhase("critical");
+            else setPhase("done");
+          }}>
+            {hasCriticalThinking ? "Move to critical thinking" : "Finish speaking practice"}
+          </button>
+        )}
+      </div>
+    </SectionShell>
+  );
+}
+
+/* ---------- Stage 5: Reading / Listening ----------
+   Capability-driven: renders reading, listening, or both based on
+   available content. Listening gap-fill uses GapFillInput when
+   bp.listeningGapFill exists; otherwise falls back to MCQ comprehension.
+   ------------------------------------------------------------------ */
+function ListeningGapFillExercise({ gaps, onDone }) {
+  const [idx, setIdx] = useState(0);
+  const [correct, setCorrect] = useState(0);
+  const [finished, setFinished] = useState(false);
+  if (finished) return (
+    <StageComplete correct={correct} total={gaps.length}
+      message={{ title: "Listening complete!", sub: `${correct} out of ${gaps.length} â€” your ears are getting sharper.` }}
+      onContinue={() => onDone(correct, gaps.length)} />
+  );
+  const g = gaps[idx];
+  return (
+    <div>
+      <p className="muted small">Fill in the blank â€” {idx + 1} of {gaps.length}</p>
+      <GapFillInput
+        key={idx}
+        stem={g.context}
+        answers={g.answer}
+        onDone={(ok) => {
+          if (ok) setCorrect((c) => c + 1);
+          setTimeout(() => {
+            if (idx + 1 < gaps.length) setIdx(idx + 1);
+            else setFinished(true);
+          }, 1600);
+        }}
+      />
+    </div>
+  );
+}
+
+function SkillSection({ bp, section, vocab, onVocabTap, onSkip, onDone, header }) {
+  /* Â§3f â€” the read-first gate and the scroll anchor. The anchor brings
+     each new question to the top of the viewport, which is what keeps
+     the passage exactly one upward flick away. Instant under reduced
+     motion: the movement is a convenience, never information. */
+  const [hasRead, setHasRead] = useState(false);
+  const questionsRef = React.useRef(null);
+  const scrollToQuestions = React.useCallback(() => {
+    const el = questionsRef.current;
+    if (!el || !el.scrollIntoView) return;
+    const reduce = typeof window !== "undefined" && window.matchMedia
+      && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+  }, []);
+  const isListening = bp.mainSkill === "listening";
+  const hasListening = !!(bp.listeningScript || bp.listeningGapFill);
+  const hasReading = !!(section && section.passage);
+  // Capability: dual mode when both reading and listening content exist
+  const isDual = hasReading && hasListening;
+  const [phase, setPhase] = useState("reading"); // "reading" | "listening"
+  const [readScore, setReadScore] = useState({ correct: 0, total: 0 });
+  const [revealed, setRevealed] = useState(!isListening && !isDual);
+  const [playedOnce, setPlayedOnce] = useState(false);
+  const listenScript = bp.listeningScript || (section && section.passage) || "";
+
+  // Phase: reading first, then listening (if dual)
+  if (isDual && phase === "listening") {
+    return (
+      <SectionShell header={header} title="Listening" blurb="Listen carefully and fill in the missing words." onSkip={onSkip}>
+        {/* Â§3g â€” whole-utterance replay, no scrubber, no count. */}
+        <ListeningPlayer text={listenScript} onPlayed={() => setPlayedOnce(true)} />
+        {bp.listeningGapFill ? (
+          <ListeningGapFillExercise gaps={bp.listeningGapFill}
+            onDone={(c, t) => onDone(readScore.correct + c, readScore.total + t)} />
+        ) : (
+          <div>
+            <p className="passage"><VocabText text={listenScript} vocab={vocab} onTap={onVocabTap} /></p>
+            <button className="primary-btn" onClick={() => onDone(readScore.correct, readScore.total)}>Continue</button>
+          </div>
+        )}
+      </SectionShell>
+    );
+  }
+
+  return (
+    <SectionShell header={header} title={isListening ? "Listening" : "Reading"} blurb={isListening ? "Listen first for the general idea, then answer. You can replay as often as you like." : "Skim it once for the main idea, then read again for detail."} onSkip={onSkip}>
+      {isListening ? (
+        <div className="listen-box">
+          {/* Â§3g â€” one 56px control, whole-utterance replay, permission
+              line instead of a count. */}
+          <ListeningPlayer text={section.passage} onPlayed={() => setPlayedOnce(true)} />
+          {(revealed || !TTS_OK) ? (
+            <p className="passage"><VocabText text={section.passage} vocab={vocab} onTap={onVocabTap} /></p>
+          ) : (
+            playedOnce && <button className="ghost-btn" onClick={() => setRevealed(true)}>Show transcript</button>
+          )}
+        </div>
+      ) : (
+        <p className="passage"><VocabText text={section.passage} vocab={vocab} onTap={onVocabTap} /></p>
+      )}
+      {/* Â§3f â€” one thing at a time: the passage renders alone first.
+          Only after the student says they've read it do the questions
+          arrive, with the passage retained above â€” re-reading is the
+          task working, and it must cost one flick, not a decision. */}
+      {!isListening && !hasRead ? (
+        <button className="primary-btn wide" onClick={() => setHasRead(true)}>I've read it â†’</button>
+      ) : (
+        <div ref={questionsRef}>
+          <AuthoredExerciseRunner
+            exercises={bp.readingExercises}
+            fallbackQuestions={section.questions}
+            bp={bp} vocab={vocab} onVocabTap={onVocabTap}
+            onAdvance={scrollToQuestions}
+            onDone={(c, t) => {
+              if (isDual) {
+                setReadScore({ correct: c, total: t });
+                setPhase("listening");
+              } else {
+                onDone(c, t);
+              }
+            }} />
+        </div>
+      )}
+    </SectionShell>
+  );
+}
+
+/* ---------- Stage 6: Grammar â€” meaning, form, usage, then practice ---------- */
+/* ================================================================
+   PHASE 2 â€” GRAMMAR PRESENTATION (Master Design Spec Â§2a)
+
+   Authored lessons arrive with STRUCTURED grammar: subjects, a
+   paradigm, labelled patterns. The existing prose treatment
+   (Meaning / Form / When to use) was designed for GENERATED prose and
+   remains the treatment for generated lessons â€” gram-ref-table is
+   untouched. These blocks render only when bp.grammarBlocks exists.
+
+   Â§2a.4 rules --marker-orange's defining role, once, for the product:
+   orange is the teacher's marker pen â€” it annotates and points AT
+   language; it never judges it and it never IS the language.
+   ================================================================ */
+
+/* Â§2a.2 â€” Block 1. Icon supports, never carries: the meaning is always
+   also present in words, so the row survives the icon not loading and
+   a screen reader never loses it (Â§4.5). */
+/* The authored lesson uses all seven subjects, so the map covers more

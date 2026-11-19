@@ -1,0 +1,1000 @@
+﻿function QuestionsPage({ profile, memory, leoMemory, pendingAsk, onPendingHandled, markActivity, onOpenAustralia }) {
+  const [messages, setMessages] = useState([]); // {role, content}
+  const [input, setInput] = useState("");
+  const [thinking, setThinking] = useState(false);
+  const endRef = React.useRef(null);
+
+  const SYSTEM = `You are Leo, a warm, patient and experienced Australian English teacher â€” the student's trusted learning companion. Never describe yourself as an AI, chatbot, assistant or model; you are simply Leo, their teacher. What you know about this student: ${memory}. They live in Australia.
+
+LEO'S WAY: celebrate what the student does well before correcting anything; treat mistakes as valuable learning opportunities; never embarrass them; prefer the one or two corrections that matter most; use Australian English spelling and, where natural, Australian examples. When the student makes a mistake, gently PROMPT them to self-correct before giving the answer (this helps it stick), and when they are already correct, UPGRADE them with a more natural or more Australian way to say it rather than only approving.
+
+STRICT TOPIC RULE: You ONLY help with the English language â€” grammar, vocabulary, pronunciation, spelling, meaning, word choice, phrasal verbs, idioms, writing, punctuation, differences between words, example sentences, and how to say things in English. This includes Australian English usage.
+
+If the student asks about ANYTHING that is not about learning English (for example maths, history, coding, news, personal advice, homework in other subjects, medical or legal questions, general knowledge), you must politely refuse in simple English and gently steer them back â€” say you can only help with English, and give an example of an English question they could ask instead. Never answer the off-topic question, even partly. When you refuse for this reason, begin your reply with the exact token ${OFF_TOPIC_MARK} before any other text. Use this token ONLY when refusing an off-topic question â€” never in any other reply.
+
+STYLE: Reply in clear, simple English suitable for their level. Keep answers focused and not too long. Use short examples. You may give a one-word translation into ${LANGS[profile.lang].english} in brackets ONLY if it helps them understand a hard word. Be encouraging.`;
+
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    (async () => {
+      const saved = await loadKey("esl-chat", []);
+      setMessages(saved);
+      setLoaded(true);
+    })();
+  }, []);
+
+  // Questions handed to Leo from other pages (dictionary, heard today)
+  useEffect(() => {
+    if (loaded && pendingAsk) {
+      const q = pendingAsk;
+      onPendingHandled();
+      send(q);
+    }
+  }, [loaded, pendingAsk]);
+
+  useEffect(() => {
+    if (endRef.current) endRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, thinking]);
+
+  const send = async (text) => {
+    const q = (text ?? input).trim();
+    if (!q || thinking) return;
+    const nextMsgs = [...messages, { role: "user", content: q }];
+    setMessages(nextMsgs);        // user's message appears immediatelyâ€¦
+    setInput("");                 // â€¦and the input clears, permanently
+    setThinking(true);
+    if (leoMemory) leoMemory.recordQuestion(q); // M6: contributes to Leo's understanding of the learner
+    saveKey("esl-chat", nextMsgs.slice(-40)).catch(() => {}); // keep it even if the reply fails
+    try {
+      const raw = await askTutor(SYSTEM, messages, q, levelFor(profile));
+      const { offTopic, content } = readReply(raw);
+      const withReply = [...nextMsgs, { role: "assistant", content, offTopic, askedAbout: offTopic ? q : undefined }];
+      setMessages(withReply);
+      // Persistence must never be able to roll back a shown reply:
+      saveKey("esl-chat", withReply.slice(-40)).catch(() => {});
+      markActivity();
+    } catch (e) {
+      console.error("[Ask Leo] send failed â€” full error:", e);
+      // During development, show the REAL reason (status + api error type + message)
+      // instead of a generic line, and keep the user's message + cleared input.
+      const detail = e && e.message ? e.message : String(e);
+      const withError = [...nextMsgs, { role: "assistant", content: "âš ï¸ I couldn't reply just now.\nReason: " + detail }];
+      setMessages(withError);
+      saveKey("esl-chat", withError.slice(-40)).catch(() => {});
+    }
+    setThinking(false);
+  };
+
+  const clearChat = async () => {
+    setMessages([]);
+    await saveKey("esl-chat", []);
+  };
+
+  return (
+    <div className="chat-wrap">
+      <div className="chat-banner">
+        <span>ðŸ’¬ Ask Leo anything about <strong>English</strong> â€” grammar, words, pronunciation, spelling. Leo only helps with English!</span>
+        {messages.length > 0 && <button className="clear-chat" onClick={clearChat}>Clear</button>}
+      </div>
+
+      <div className="chat-scroll">
+        {messages.length === 0 && (
+          <div className="chat-empty"> <p className="chat-empty-title">G'day {profile.name}! I'm Leo, your English teacher. What would you like to know?</p>
+          </div>
+        )}
+        {messages.map((m, i) => (
+          <React.Fragment key={i}>
+            <div className={"bubble-row " + (m.role === "user" ? "row-user" : "row-bot")}>
+              {m.role === "assistant" && <span className="bot-avatar-leo">L</span>}
+              <div className={"bubble " + (m.role === "user" ? "bubble-user" : "bubble-bot")}>{m.role === "user" ? m.content : <span dangerouslySetInnerHTML={{ __html: renderMarkdown(m.content) }} />}</div>
+            </div>
+            {/* The refusal becomes a doorway (spec A6): Leo's line, and one
+                control that opens Australia carrying the question across. */}
+            {m.offTopic && onOpenAustralia && (
+              <div className="leo-card doorway">
+                <p className="doorway-line">That's not English practice, but there are answers about life in Australia next door â€” shall I show you?</p>
+                <button className="primary-btn wide" onClick={() => onOpenAustralia(m.askedAbout || "")}>Show me</button>
+              </div>
+            )}
+          </React.Fragment>
+        ))}
+        {thinking && <ChatTypingRow />}
+        <div ref={endRef} />
+      </div>
+
+      <div className="chat-input-bar">
+        <textarea
+          className="chat-input"
+          rows={1}
+          placeholder="Ask Leo an English questionâ€¦"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+          aria-label="Type your English question"
+        />
+        <button className="chat-send" onClick={() => send()} disabled={!input.trim() || thinking} aria-label="Send question">
+          <Send size={18} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Dictionary ---------------- */
+
+function DictionaryPage({ profile, words, setWords, markActivity, onAskLeo, leoMemory }) {
+  const [tab, setTab] = useState("dictionary");
+  const [query, setQuery] = useState("");
+  const [dict, setDict] = useState(null);
+  const [thes, setThes] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const search = async (term) => {
+    const q = (term !== undefined ? term : query).trim();
+    if (!q) return;
+    if (term !== undefined) setQuery(term);
+    setLoading(true); setError(null);
+    if (tab === "dictionary") setDict(null); else setThes(null);
+    try {
+      if (tab === "dictionary") {
+        const raw = await askClaude(
+          `Dictionary entry for an adult ESL student (first language: ${LANGS[profile.lang].english}). Word or phrase: "${q}". Respond ONLY with JSON, no fences:\n{"word":"the word","ipa":"IPA pronunciation","pos":"part of speech","cefr":"CEFR level A1-C2 if known, else empty string","definition":"clear definition in simple English","example":"one natural example sentence","collocations":["up to 4 common collocations or word partners"]}`,
+          { intent: "dictionary" }
+        );
+        const r = parseJSON(raw);
+        setDict(r);
+        if (!words.find((w) => w.word.toLowerCase() === r.word.toLowerCase())) {
+          const next = [{ word: r.word, date: todayStr() }, ...words].slice(0, WORD_BANK_CAP);
+          setWords(next); await saveKey("esl-words", next);
+          if (currentStudentId) scheduleMemoryPush(currentStudentId);
+          leoMemory.touchWord(r.word);
+        }
+      } else {
+        const raw = await askClaude(
+          `Thesaurus entry for an adult ESL student (first language: ${LANGS[profile.lang].english}). Word: "${q}". Respond ONLY with JSON, no fences:\n{"word":"the word","synonyms":["up to 6 synonyms"],"antonyms":["up to 4 antonyms"],"phrases":["up to 4 common phrases or idioms using it"],"examples":["up to 2 example sentences"]}`,
+          { intent: "thesaurus" }
+        );
+        setThes(parseJSON(raw));
+      }
+      await markActivity();
+    } catch { setError("Couldn't find that â€” check the spelling and try again."); }
+    setLoading(false);
+  };
+
+  return (
+    <div>
+      <SectionTitle sub="Look up words, or explore similar and opposite words.">Dictionary &amp; thesaurus</SectionTitle>
+
+      <div className="tabs">
+        <button className={"tab " + (tab === "dictionary" ? "tab-on" : "")} onClick={() => { setTab("dictionary"); setError(null); }}>Dictionary</button>
+        <button className={"tab " + (tab === "thesaurus" ? "tab-on" : "")} onClick={() => { setTab("thesaurus"); setError(null); }}>Thesaurus</button>
+      </div>
+
+      <div className="search-row">
+        <input className="text-input" placeholder={tab === "dictionary" ? "e.g. achievement" : "e.g. happy"} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} />
+        <button className="primary-btn" onClick={search} disabled={loading}><Search size={16} /></button>
+      </div>
+      {loading && <Spinner label="Looking it upâ€¦" />}
+      {error && <p className="bad">{error}</p>}
+      {!loading && !dict && !thes && words.length === 0 && (
+        <Card>
+          <p className="muted">Words you look up are saved here â€” definitions, examples, and word partners, ready whenever you want to revisit them.</p>
+        </Card>
+      )}
+
+      {tab === "dictionary" && dict && (
+        <Card>
+          <h3 className="dict-word">{dict.word} {dict.ipa && <span className="ipa">{dict.ipa}</span>} <span className="pos">{dict.pos}</span> {dict.cefr && <span className="cefr-badge">{dict.cefr}</span>}</h3>
+          <p>{dict.definition}</p>
+          <p className="muted small">â€œ{dict.example}â€</p>
+          {dict.collocations?.length > 0 && <p className="small"><strong>Common word partners:</strong> {dict.collocations.join(" Â· ")}</p>}
+          <button className="ghost-btn" style={{ marginTop: 10 }} onClick={() => onAskLeo(`Can you explain the word "${dict.word}" with more examples?`)}><Sparkles size={14} /> Ask Leo about this word</button>
+        </Card>
+      )}
+
+      {tab === "thesaurus" && thes && (
+        <Card>
+          <h3 className="dict-word">{thes.word}</h3>
+          {thes.synonyms?.length > 0 && <div className="thes-block"><span className="thes-label">Similar words</span><div className="tag-row">{thes.synonyms.map((s) => <button key={s} className="chip" onClick={() => search(s)}>{s}</button>)}</div></div>}
+          {thes.antonyms?.length > 0 && <div className="thes-block"><span className="thes-label">Opposite words</span><div className="tag-row">{thes.antonyms.map((s) => <span key={s} className="chip chip-plain">{s}</span>)}</div></div>}
+          {thes.phrases?.length > 0 && <div className="thes-block"><span className="thes-label">Common phrases</span><ul className="help-list">{thes.phrases.map((p, i) => <li key={i}>{p}</li>)}</ul></div>}
+          {thes.examples?.length > 0 && <div className="thes-block"><span className="thes-label">Examples</span>{thes.examples.map((e, i) => <p key={i} className="muted small">â€œ{e}â€</p>)}</div>}
+        </Card>
+      )}
+
+      {tab === "dictionary" && words.length > 0 && (
+        <Card>
+          <h3>My word bank ({words.length})</h3>
+          <div className="tag-row">
+            {words.slice(0, 30).map((w) => (
+              <button key={w.word} className="chip" onClick={() => { setTab("dictionary"); search(w.word); }}>{w.word}</button>
+            ))}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- Heard today ---------------- */
+
+function HeardPage({ profile, heard, setHeard, markActivity, onAskLeo, leoMemory }) {
+  const [input, setInput] = useState("");
+  const [busyId, setBusyId] = useState(null);
+  const [listening, setListening] = useState(false);
+  const [micError, setMicError] = useState(false);
+  const recRef = React.useRef(null);
+  const voiceOK = typeof window !== "undefined" && (window.SpeechRecognition || window.webkitSpeechRecognition);
+
+  const startVoice = () => {
+    if (!voiceOK) { alert("Voice input isn't supported in this browser. Please type instead."); return; }
+    setMicError(false);
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const rec = new SR();
+    rec.lang = "en-AU"; rec.interimResults = false; rec.maxAlternatives = 1;
+    rec.onresult = (e) => { setMicError(false); setInput(e.results[0][0].transcript); };
+    rec.onend = () => setListening(false);
+    rec.onerror = () => { setListening(false); setMicError(true); };
+    recRef.current = rec;
+    setListening(true);
+    rec.start();
+  };
+  const stopVoice = () => { try { recRef.current && recRef.current.stop(); } catch {} setListening(false); };
+
+  const add = async () => {
+    if (!input.trim()) return;
+    const item = { id: Date.now(), phrase: input.trim(), date: todayStr(), info: null };
+    const next = [item, ...heard].slice(0, HEARD_CAP); // bound growth â€” see HEARD_CAP
+    setHeard(next); await saveKey("esl-heard", next); await markActivity();
+    leoMemory.touchWord(item.phrase); // H3: enters Leo's vocabulary memory at "new" mastery
+    setInput("");
+    explain(item, next);
+  };
+
+  const explain = async (item, list) => {
+    setBusyId(item.id);
+    try {
+      const raw = await askClaude(
+        `An ESL student in Australia (first language: ${LANGS[profile.lang].english}) heard this English word or phrase in real life: "${item.phrase}". Explain it like a smart dictionary. Respond ONLY with JSON, no fences: {"meaning":"clear simple English explanation; note if it is Australian slang","ipa":"IPA pronunciation or empty","pos":"part of speech or empty","example":"one example sentence","collocations":["up to 3 common word partners, or empty"],"formality":"casual, neutral, or formal"}${narrationGuidance(level, "vocab")}`,
+        { intent: "heard_explain" }
+      );
+      const info = parseJSON(raw);
+      const base = list || heard;
+      const nx = base.map((h) => (h.id === item.id ? { ...h, info } : h));
+      setHeard(nx); await saveKey("esl-heard", nx);
+    } catch { alert("I'm having trouble with that one â€” tap it to try again."); }
+    setBusyId(null);
+  };
+
+  const remove = async (id) => {
+    const next = heard.filter((h) => h.id !== id);
+    setHeard(next); await saveKey("esl-heard", next);
+  };
+
+  return (
+    <div>
+      <SectionTitle sub="Caught a word on the bus, at work, in a cafÃ©? Type it or say it, and get a full explanation.">English I heard today</SectionTitle>
+      <div className="search-row">
+        <input className="text-input" placeholder="e.g. â€œno worriesâ€ or â€œI'm flat outâ€â€¦" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} />
+        <button className={"mic-btn " + (listening ? "mic-on" : "")} onClick={listening ? stopVoice : startVoice} aria-label="Speak a word or phrase"><Mic size={18} /></button>
+        <button className="primary-btn" onClick={add}><Plus size={16} /></button>
+      </div>
+      {listening && <p className="muted small center">ðŸŽ¤ Listeningâ€¦ say a word or phrase.</p>}
+      {micError && <p className="muted small center">Didn't catch that â€” try again or type it.</p>}
+
+      {heard.map((h) => (
+        <Card key={h.id}>
+          <div className="entry-head">
+            <span className="q-sentence">â€œ{h.phrase}â€</span>
+            <button className="icon-btn" onClick={() => remove(h.id)}><Trash2 size={14} /></button>
+          </div>
+          {busyId === h.id && <Spinner label="Leo is looking it upâ€¦" />}
+          {!(h.info || h.explanation) && busyId !== h.id && (
+            <button className="ghost-btn" onClick={() => explain(h)}><Sparkles size={14} /> Ask Leo what it means</button>
+          )}
+          {(() => { const info = h.info || h.explanation; return info && (
+            <div className="feedback">
+              <p>{info.meaning} {info.formality && <span className="pos">{info.formality}</span>}</p>
+              {(info.ipa || info.pos) && <p className="small">{info.ipa && <span className="ipa">{info.ipa}</span>} {info.pos && <span className="pos">{info.pos}</span>}</p>}
+              <p className="muted small">â€œ{info.example}â€</p>
+              {info.collocations?.length > 0 && <p className="small"><strong>Often used with:</strong> {info.collocations.join(" Â· ")}</p>}
+              <button className="link-btn small" onClick={() => onAskLeo(`Can you teach me more about the phrase "${h.phrase}"?`)}>Ask Leo more about this</button>
+            </div>
+          ); })()}
+        </Card>
+      ))}
+      {heard.length === 0 && <p className="muted center">Nothing collected yet â€” keep your ears open today!</p>}
+    </div>
+  );
+}
+
+/* ---------------- Australia ---------------- */
+
+function HelpSection({ item }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={"accordion" + (open ? " accordion-open" : "")}>
+      <button className="accordion-head" onClick={() => setOpen(!open)} aria-expanded={open}>
+        <span className="accordion-icon" aria-hidden="true">{item.icon}</span>
+        <span className="accordion-title">{item.title}</span>
+        <span className="accordion-chev" aria-hidden="true">{open ? "âˆ’" : "+"}</span>
+      </button>
+      {open && (
+        <div className="accordion-body">
+          {item.display && (
+            <div className="emergency-box">
+              {item.display.map(([em, label]) => (
+                <div key={label} className="emergency-line"><span aria-hidden="true">{em}</span> <strong>{label}</strong></div>
+              ))}
+            </div>
+          )}
+          <p className="help-intro">{item.intro}</p>
+          {item.points && (
+            <ul className="help-list">
+              {item.points.map((pt, i) => <li key={i}>{pt}</li>)}
+            </ul>
+          )}
+          {item.subsections && item.subsections.map((sub) => (
+            <div key={sub.heading} className="help-sub">
+              <h4 className="help-sub-head">{sub.heading}</h4>
+              <ul className="help-list">
+                {sub.points.map((pt, i) => <li key={i}>{pt}</li>)}
+              </ul>
+              {sub.url && <a className="help-link" href={sub.url} target="_blank" rel="noopener noreferrer">Learn more <ExternalLink size={13} /></a>}
+            </div>
+          ))}
+          {item.url && <a className="help-link" href={item.url} target="_blank" rel="noopener noreferrer">Learn more <ExternalLink size={13} /></a>}
+          {item.urls && (
+            <div className="help-link-row">
+              {item.urls.map(([label, url]) => (
+                <a key={url} className="help-link" href={url} target="_blank" rel="noopener noreferrer">{label} <ExternalLink size={13} /></a>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AustraliaPage({ profile, memory, initialQuery }) {
+  /* Australia is a book Leo left on the desk (spec A6). Third person
+     throughout â€” never "I", never Leo's voice, no accent bar, plain white
+     cards. Browse first: the topic list IS the content and is never empty.
+     Search sits BELOW the list; placement is the signal that this is a book
+     with an index, not an assistant to interrogate. */
+  const [open, setOpen] = useState(null);
+  const [q, setQ] = useState(initialQuery || "");
+  const [ans, setAns] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => { if (initialQuery) setQ(initialQuery); }, [initialQuery]);
+
+  const firstSentence = (t) => {
+    const m = (t || "").match(/^[^.!?]*[.!?]/);
+    return m ? m[0].trim() : (t || "");
+  };
+
+  const ask = async () => {
+    if (!q.trim()) return;
+    setLoading(true); setAns(null);
+    try {
+      const text = await askClaude(
+        `Write a short reference note for an international student living in Australia. This is reference material, NOT a teacher speaking: use the third person, never write "I", never address the reader as a student, and do not offer to help further. Plain, factual, practical. Under 120 words, clear simple English. If the question involves visas, tax, health or legal matters, give general guidance and name the official body to check (for example Home Affairs, the ATO, Fair Work, Service NSW). Question: "${q.trim()}"`,
+        { intent: "australia_ask" }
+      );
+      setAns(text);
+    } catch { setAns("That information could not be loaded just now. Please try again."); }
+    setLoading(false);
+  };
+
+  const topic = open !== null ? AUS_HELP[open] : null;
+
+  if (topic) {
+    const Icon = topic.icon;
+    return (
+      <div className="aus-wrap">
+        <button className="back-btn" onClick={() => setOpen(null)}><ChevronLeft size={20} /> All topics</button>
+        <div className="aus-detail">
+          <h2 className="aus-detail-title"><Icon size={24} className="aus-detail-icon" /> {topic.title}</h2>
+          <p className="aus-intro">{topic.intro}</p>
+          <ul className="aus-points">
+            {(topic.points || []).map((pt, i) => <li key={i}>{pt}</li>)}
+          </ul>
+          {topic.url && (
+            <a className="ghost-btn aus-source" href={topic.url} target="_blank" rel="noreferrer">
+              Official source <ExternalLink size={15} />
+            </a>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="aus-wrap">
+      <ul className="aus-list">
+        {AUS_HELP.map((item, i) => {
+          const Icon = item.icon;
+          return (
+            <li key={item.title}>
+              <button className="aus-card" onClick={() => setOpen(i)}>
+                <Icon size={24} className="aus-card-icon" />
+                <span className="aus-card-text">
+                  <span className="aus-card-title">{item.title}</span>
+                  <span className="aus-card-sum">{firstSentence(item.intro)}</span>
+                </span>
+                <ChevronRight size={18} className="aus-card-chev" />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="aus-search">
+        <label className="aus-search-label" htmlFor="aus-q">Look something up</label>
+        <div className="aus-search-row">
+          <input id="aus-q" className="aus-input" placeholder="e.g. How do I see a doctor?"
+            value={q} onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && ask()} />
+          <button className="primary-btn" onClick={ask} disabled={loading} aria-label="Search"><Search size={16} /></button>
+        </div>
+        {loading && <Spinner label="Looking that upâ€¦" />}
+        {ans && <p className="aus-answer">{ans}</p>}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Onboarding ---------------- */
+
+/* Post-sign-in contextual UI hook â€” structural insertion point for future
+   Australian contextual elements (icons, environmental details, etc.).
+   Renders nothing. Exists only as plumbing so future tasks can add children
+   without modifying the app scaffold. Can be removed entirely without
+   affecting any feature or identity element. */
+/* ---------- Whiteboard logo ----------
+   The Ask Leo mark. Geometry FROZEN from askleo-mark-animready.svg.
+   Do not derive, recompute, round, or alter any coordinate.
+
+   Three-tier size rule:
+     â‰¥ 80px  â€” Full mark (frame path + letter paths)
+     48â€“79px â€” Frame path only
+     < 48px  â€” "L" monogram
+
+   Props:
+     width    â€” scales via viewBox
+     animate  â€” plays the draw sequence (splash only)
+     onDone   â€” fires after animated sequence completes */
+
+/* FRAME_PATH deleted â€” zero consumers after board migration (v3 Â§17.3).
+   Content That Nothing Reads Is Not Shipped. */
+const FRAME_LEN = 2669; // new rounded rect perimeter: 2(740) + 2(500) + 2pi(30)
+const TRAY_LEN = 1383;  // tray perimeter: 2(660) + 2*pi*10 (stadium, v4 Â§9.3)
+
+const LETTER_PATHS = [
+  /* A */ "M100.70947265625 278.0 130.03564453125 197.970703125H139.05908203125L168.65380859375 278.0H160.59716796875L151.94970703125 254.2060546875H117.30615234375L108.81982421875 278.0ZM119.72314453125 247.4384765625H149.47900390625L141.58349609375 225.685546875Q140.13330078125 221.7109375 138.41455078125 216.5009765625Q136.69580078125 211.291015625 134.49365234375 204.1474609375Q132.34521484375 211.3447265625 130.599609375 216.6083984375Q128.85400390625 221.8720703125 127.51123046875 225.685546875Z",
+  /* S */ "M224.35888671875 279.3427734375Q212.05908203125 279.3427734375 204.70068359375 273.380859375Q197.34228515625 267.4189453125 196.69775390625 257.7509765625H204.48583984375Q205.07666015625 264.89453125 210.7431640625 268.654296875Q216.40966796875 272.4140625 224.35888671875 272.4140625Q230.32080078125 272.4140625 234.9130859375 270.4267578125Q239.50537109375 268.439453125 242.13720703125 264.89453125Q244.76904296875 261.349609375 244.76904296875 256.5693359375Q244.76904296875 250.5537109375 240.20361328125 247.384765625Q235.63818359375 244.2158203125 228.11865234375 241.9599609375L218.66552734375 239.220703125Q209.10498046875 236.427734375 203.94873046875 231.40576171875Q198.79248046875 226.3837890625 198.79248046875 218.7568359375Q198.79248046875 212.2578125 202.2568359375 207.31640625Q205.72119140625 202.375 211.68310546875 199.60888671875Q217.64501953125 196.8427734375 225.05712890625 196.8427734375Q232.63037109375 196.8427734375 238.404296875 199.6357421875Q244.17822265625 202.4287109375 247.53515625 207.208984375Q250.89208984375 211.9892578125 251.16064453125 218.1123046875H243.69482421875Q242.99658203125 211.4521484375 237.84033203125 207.5849609375Q232.68408203125 203.7177734375 224.84228515625 203.7177734375Q216.62451171875 203.7177734375 211.44140625 207.88037109375Q206.25830078125 212.04296875 206.25830078125 218.4345703125Q206.25830078125 222.5703125 208.5947265625 225.33642578125Q210.93115234375 228.1025390625 214.556640625 229.875Q218.18212890625 231.6474609375 222.04931640625 232.775390625L230.42822265625 235.1923828125Q235.58447265625 236.642578125 240.6064453125 239.1669921875Q245.62841796875 241.69140625 248.931640625 245.880859375Q252.23486328125 250.0703125 252.23486328125 256.6767578125Q252.23486328125 263.17578125 248.90478515625 268.2783203125Q245.57470703125 273.380859375 239.3173828125 276.36181640625Q233.06005859375 279.3427734375 224.35888671875 279.3427734375Z",
+  /* K */ "M287.79833984375 278.0V197.970703125H295.42529296875V225.7392578125L295.37158203125 242.013671875Q299.02392578125 237.501953125 302.6494140625 233.3125Q306.27490234375 229.123046875 310.24951171875 224.826171875L335.11767578125 197.970703125H345.16162109375L312.82763671875 232.66796875L345.16162109375 278.0H336.08447265625L307.56396484375 237.8779296875L295.42529296875 250.7685546875V278.0Z",
+  /* L */ "M425.90283203125 278.0V197.970703125H433.58349609375V271.1787109375H471.61083984375V278.0Z",
+  /* E */ "M505.99267578125 278.0V197.970703125H552.72119140625V204.7919921875H513.61962890625V234.3330078125H550.25048828125V241.154296875H513.61962890625V271.1787109375H553.47314453125V278.0Z",
+  /* O */ "M620.67236328125 279.07421875Q610.52099609375 279.07421875 602.67919921875 274.025390625Q594.83740234375 268.9765625 590.37939453125 259.76513671875Q585.92138671875 250.5537109375 585.92138671875 238.0390625Q585.92138671875 225.470703125 590.37939453125 216.232421875Q594.83740234375 206.994140625 602.67919921875 201.9453125Q610.52099609375 196.896484375 620.67236328125 196.896484375Q630.77001953125 196.896484375 638.61181640625 201.9453125Q646.45361328125 206.994140625 650.884765625 216.232421875Q655.31591796875 225.470703125 655.31591796875 238.0390625Q655.31591796875 250.5537109375 650.884765625 259.76513671875Q646.45361328125 268.9765625 638.61181640625 274.025390625Q630.77001953125 279.07421875 620.67236328125 279.07421875ZM620.67236328125 271.9306640625Q628.46044921875 271.9306640625 634.6103515625 267.90234375Q640.76025390625 263.8740234375 644.33203125 256.27392578125Q647.90380859375 248.673828125 647.90380859375 238.0390625Q647.90380859375 227.3505859375 644.33203125 219.7236328125Q640.76025390625 212.0966796875 634.6103515625 208.068359375Q628.46044921875 204.0400390625 620.67236328125 204.0400390625Q612.83056640625 204.0400390625 606.65380859375 208.068359375Q600.47705078125 212.0966796875 596.9052734375 219.7236328125Q593.33349609375 227.3505859375 593.33349609375 238.0390625Q593.33349609375 248.6201171875 596.9052734375 256.22021484375Q600.47705078125 263.8203125 606.65380859375 267.87548828125Q612.83056640625 271.9306640625 620.67236328125 271.9306640625Z",
+];
+
+function WhiteboardLogo({ width = 280, animate = false, onDone }) {
+  const fired = React.useRef(false);
+  const onDoneRef = React.useRef(onDone);
+  onDoneRef.current = onDone;
+  const reducedMotion = typeof window !== "undefined"
+    && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  React.useEffect(() => {
+    if (!onDoneRef.current || fired.current) return;
+    fired.current = true;
+    // Addendum Â§4.1: frame 800ms + tray/wordmark 300ms (overlapping at 500ms) + hold 200ms + fade 200ms = 1200ms.
+    // Addendum Â§4.4: reduced motion = hold 600ms + fade 200ms = 800ms.
+    const delay = (animate && !reducedMotion) ? 1200 : (animate ? 800 : 0);
+    const t = setTimeout(() => { if (onDoneRef.current) onDoneRef.current(); }, delay);
+    return () => clearTimeout(t);
+  }, []); // eslint-disable-line -- runs once on mount, callback accessed via ref
+
+  // Minimum viable logo size â€” addendum Â§3.5
+  if (width < 24) return null;
+
+  // Tier 3: <48px â€” monogram. Green rounded rect with reversed-out "L".
+  if (width < 48) {
+    const rx3 = Math.max(4, Math.round(width * 0.15));
+    return (
+      <svg viewBox="0 0 40 40" width={width} height={width} className="wb-logo-svg" aria-label="Ask Leo" role="img">
+        <rect x="0" y="0" width="40" height="40" rx={rx3} fill="var(--leo-green)" />
+        <text x="20" y="21" textAnchor="middle" dominantBaseline="central" className="wb-mono">L</text>
+      </svg>
+    );
+  }
+
+  // Tier 2: 48â€“119px â€” filled mark. No stroke, no wordmark. The shape reads as a silhouette.
+  if (width < 120) {
+    const h2 = Math.round(width * 602 / 810);
+    return (
+      <svg viewBox="-5 -5 810 602" width={width} height={h2} className="wb-logo-svg" aria-label="Ask Leo" role="img">
+        <rect x="0" y="0" width="800" height="560" rx="30" fill="var(--leo-green)" />
+        <rect x="60" y="572" width="680" height="20" rx="10" fill="var(--leo-green)" />
+      </svg>
+    );
+  }
+
+  // Tier 1: >=120px â€” full mark. Stroked frame + tray, wordmark.
+  const h = Math.round(width * 602 / 810);
+  const doAnim = animate && !reducedMotion;
+
+  return (
+    <svg viewBox="-5 -5 810 602" width={width} height={h} className="wb-logo-svg" aria-label="Ask Leo" role="img">
+      {/* Frame â€” stroked, not filled. The logo is line art, not a panel.
+           Beat 1 (v3 Â§9.1): starts bottom-centre (400,560), travels leftward first â€”
+           bottom edge to bottom-left, up left side, across top, down right side,
+           back to start. One continuous counter-clockwise stroke, never lifts. */}
+      <path d="M 400,560 H 30 A 30,30 0 0,1 0,530 V 30 A 30,30 0 0,1 30,0 H 770 A 30,30 0 0,1 800,30 V 530 A 30,30 0 0,1 770,560 Z"
+        className={doAnim ? "wb-frame wb-frame-draw" : "wb-frame"}
+        vectorEffect="non-scaling-stroke" />
+      {/* Tray â€” stroked, same treatment as frame. Drawn after frame (addendum Â§4.1 phase 2a). */}
+      {/* v4 Â§2.1: tray below the frame with 12-unit gap. fill:none â€” line art at logo scale. */}
+      <path d="M 70,572 H 730 A 10,10 0 0,1 740,582 A 10,10 0 0,1 730,592 H 70 A 10,10 0 0,1 60,582 A 10,10 0 0,1 70,572 Z"
+        className={doAnim ? "wb-tray wb-tray-draw" : "wb-tray"}
+        vectorEffect="non-scaling-stroke" />
+      {/* Wordmark â€” LETTER_PATHS, filled. Fade in as one unit, no per-letter stagger (addendum Â§4.2). */}
+      {LETTER_PATHS.map((d, i) => (
+        <path key={i} d={d}
+          className={doAnim ? "wb-letter-anim" : "wb-letter-static"}
+        />
+      ))}
+    </svg>
+  );
+}
+
+function SignedInContext({ profile }) {
+  if (!profile) return null;
+  return null;
+}
+
+/* Â§13.1 â€” the sequence lives in ONE declared constant and nowhere else.
+   Two queued changes insert screens. `setObResume` hard-codes its destination
+   from OUTSIDE this component, so it cannot see what it points at; with
+   numeric pages, each inserting pass adjusts that literal for its own change
+   and the last one wins. The symptom is a returning student resuming at the
+   wrong screen â€” Continuity Integrity arriving as an off-by-one. Named steps
+   put it beyond reach of any insertion.
+   'interests' is now its own step (Â§13.2 step (b)) with its own render,
+   inserted between 'about-you' and 'level'. Navigation derives from position
+   in OB_STEPS; nothing else encodes order. */
+const COUNTRIES = [
+  ["afghanistan","Afghanistan"],
+  ["albania","Albania"],
+  ["algeria","Algeria"],
+  ["andorra","Andorra"],
+  ["angola","Angola"],
+  ["antigua-and-barbuda","Antigua and Barbuda"],
+  ["argentina","Argentina"],
+  ["armenia","Armenia"],
+  ["australia","Australia"],
+  ["austria","Austria"],
+  ["azerbaijan","Azerbaijan"],
+  ["bahamas","Bahamas"],
+  ["bahrain","Bahrain"],
+  ["bangladesh","Bangladesh"],
+  ["barbados","Barbados"],
+  ["belarus","Belarus"],
+  ["belgium","Belgium"],
+  ["belize","Belize"],
+  ["benin","Benin"],
+  ["bhutan","Bhutan"],
+  ["bolivia","Bolivia"],
+  ["bosnia-and-herzegovina","Bosnia and Herzegovina"],
+  ["botswana","Botswana"],
+  ["brazil","Brazil"],
+  ["brunei","Brunei"],
+  ["bulgaria","Bulgaria"],
+  ["burkina-faso","Burkina Faso"],
+  ["burundi","Burundi"],
+  ["cabo-verde","Cabo Verde",["Cape Verde"]],
+  ["cambodia","Cambodia"],
+  ["cameroon","Cameroon"],
+  ["canada","Canada"],
+  ["canada-quebec","Canada (QuÃ©bec)",["Quebec"]],
+  ["central-african-republic","Central African Republic"],
+  ["chad","Chad"],
+  ["chile","Chile"],
+  ["china-mainland","China (Mainland)",["China"]],
+  ["colombia","Colombia"],
+  ["comoros","Comoros"],
+  ["congo-dr","Congo (Democratic Republic)",["DRC", "DR Congo"]],
+  ["congo-republic","Congo (Republic)"],
+  ["costa-rica","Costa Rica"],
+  ["croatia","Croatia"],
+  ["cuba","Cuba"],
+  ["cyprus","Cyprus"],
+  ["czech-republic","Czech Republic",["Czechia"]],
+  ["cote-divoire","CÃ´te d'Ivoire",["Ivory Coast"]],
+  ["denmark","Denmark"],
+  ["djibouti","Djibouti"],
+  ["dominica","Dominica"],
+  ["dominican-republic","Dominican Republic"],
+  ["ecuador","Ecuador"],
+  ["egypt","Egypt"],
+  ["el-salvador","El Salvador"],
+  ["equatorial-guinea","Equatorial Guinea"],
+  ["eritrea","Eritrea"],
+  ["estonia","Estonia"],
+  ["eswatini","Eswatini",["Swaziland"]],
+  ["ethiopia","Ethiopia"],
+  ["fiji","Fiji"],
+  ["finland","Finland"],
+  ["france","France"],
+  ["gabon","Gabon"],
+  ["gambia","Gambia"],
+  ["georgia","Georgia"],
+  ["germany","Germany"],
+  ["ghana","Ghana"],
+  ["greece","Greece"],
+  ["grenada","Grenada"],
+  ["guatemala","Guatemala"],
+  ["guinea","Guinea"],
+  ["guinea-bissau","Guinea-Bissau"],
+  ["guyana","Guyana"],
+  ["haiti","Haiti"],
+  ["honduras","Honduras"],
+  ["hong-kong","Hong Kong"],
+  ["hungary","Hungary"],
+  ["iceland","Iceland"],
+  ["india","India"],
+  ["indonesia","Indonesia"],
+  ["iran","Iran"],
+  ["iraq","Iraq"],
+  ["ireland","Ireland"],
+  ["israel","Israel"],
+  ["italy","Italy"],
+  ["jamaica","Jamaica"],
+  ["japan","Japan"],
+  ["jordan","Jordan"],
+  ["kazakhstan","Kazakhstan"],
+  ["kenya","Kenya"],
+  ["kiribati","Kiribati"],
+  ["kosovo","Kosovo"],
+  ["kuwait","Kuwait"],
+  ["kyrgyzstan","Kyrgyzstan"],
+  ["laos","Laos"],
+  ["latvia","Latvia"],
+  ["lebanon","Lebanon"],
+  ["lesotho","Lesotho"],
+  ["liberia","Liberia"],
+  ["libya","Libya"],
+  ["liechtenstein","Liechtenstein"],
+  ["lithuania","Lithuania"],
+  ["luxembourg","Luxembourg"],
+  ["macau","Macau",["Macao"]],
+  ["madagascar","Madagascar"],
+  ["malawi","Malawi"],
+  ["malaysia","Malaysia"],
+  ["maldives","Maldives"],
+  ["mali","Mali"],
+  ["malta","Malta"],
+  ["marshall-islands","Marshall Islands"],
+  ["mauritania","Mauritania"],
+  ["mauritius","Mauritius"],
+  ["mexico","Mexico"],
+  ["micronesia","Micronesia"],
+  ["moldova","Moldova"],
+  ["monaco","Monaco"],
+  ["mongolia","Mongolia"],
+  ["montenegro","Montenegro"],
+  ["morocco","Morocco"],
+  ["mozambique","Mozambique"],
+  ["myanmar","Myanmar",["Burma"]],
+  ["namibia","Namibia"],
+  ["nauru","Nauru"],
+  ["nepal","Nepal"],
+  ["netherlands","Netherlands",["Holland"]],
+  ["new-zealand","New Zealand"],
+  ["nicaragua","Nicaragua"],
+  ["niger","Niger"],
+  ["nigeria","Nigeria"],
+  ["north-korea","North Korea"],
+  ["north-macedonia","North Macedonia",["Macedonia"]],
+  ["norway","Norway"],
+  ["oman","Oman"],
+  ["pakistan","Pakistan"],
+  ["palau","Palau"],
+  ["palestine","Palestine"],
+  ["panama","Panama"],
+  ["papua-new-guinea","Papua New Guinea"],
+  ["paraguay","Paraguay"],
+  ["peru","Peru"],
+  ["philippines","Philippines"],
+  ["poland","Poland"],
+  ["portugal","Portugal"],
+  ["puerto-rico","Puerto Rico"],
+  ["qatar","Qatar"],
+  ["romania","Romania"],
+  ["russia","Russia"],
+  ["rwanda","Rwanda"],
+  ["saint-kitts-and-nevis","Saint Kitts and Nevis",["St Kitts"]],
+  ["saint-lucia","Saint Lucia",["St Lucia"]],
+  ["saint-vincent-and-the-grenadines","Saint Vincent and the Grenadines",["St Vincent"]],
+  ["samoa","Samoa"],
+  ["san-marino","San Marino"],
+  ["saudi-arabia","Saudi Arabia"],
+  ["senegal","Senegal"],
+  ["serbia","Serbia"],
+  ["seychelles","Seychelles"],
+  ["sierra-leone","Sierra Leone"],
+  ["singapore","Singapore"],
+  ["slovakia","Slovakia"],
+  ["slovenia","Slovenia"],
+  ["solomon-islands","Solomon Islands"],
+  ["somalia","Somalia"],
+  ["south-africa","South Africa"],
+  ["south-korea","South Korea",["Korea"]],
+  ["south-sudan","South Sudan"],
+  ["spain","Spain"],
+  ["sri-lanka","Sri Lanka"],
+  ["sudan","Sudan"],
+  ["suriname","Suriname"],
+  ["sweden","Sweden"],
+  ["switzerland","Switzerland"],
+  ["syria","Syria"],
+  ["sao-tome-and-principe","SÃ£o TomÃ© and PrÃ­ncipe",["Sao Tome"]],
+  ["taiwan","Taiwan"],
+  ["tajikistan","Tajikistan"],
+  ["tanzania","Tanzania"],
+  ["thailand","Thailand"],
+  ["timor-leste","Timor-Leste",["East Timor"]],
+  ["togo","Togo"],
+  ["tonga","Tonga"],
+  ["trinidad-and-tobago","Trinidad and Tobago"],
+  ["tunisia","Tunisia"],
+  ["turkmenistan","Turkmenistan"],
+  ["tuvalu","Tuvalu"],
+  ["turkiye","TÃ¼rkiye",["Turkey"]],
+  ["uganda","Uganda"],
+  ["ukraine","Ukraine"],
+  ["united-arab-emirates","United Arab Emirates",["UAE"]],
+  ["united-kingdom","United Kingdom",["UK", "Britain", "England"]],
+  ["united-states","United States",["USA", "America"]],
+  ["uruguay","Uruguay"],
+  ["uzbekistan","Uzbekistan"],
+  ["vanuatu","Vanuatu"],
+  ["vatican-city","Vatican City"],
+  ["venezuela","Venezuela"],
+  ["vietnam","Vietnam"],
+  ["yemen","Yemen"],
+  ["zambia","Zambia"],
+  ["zimbabwe","Zimbabwe"],
+  ["prefer-not-to-say","Prefer not to say"],
+];
+const COUNTRY_NAME = Object.fromEntries(COUNTRIES.map(([k, n]) => [k, n]));
+const COUNTRY_ALIASES = Object.fromEntries(COUNTRIES.map(([k, n, a]) => [k, a || []]));
+// Strip diacritics + lowercase, so "turkey" finds "TÃ¼rkiye" and "cote" finds "CÃ´te d'Ivoire".
+const obFold = (s) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+const countryMatch = (key, name, query) => {
+  const q = obFold(query);
+  if (!q) return false;
+  if (obFold(name).includes(q)) return true;
+  return (COUNTRY_ALIASES[key] || []).some((a) => obFold(a).includes(q));
+};
+// Storage is the key; the AI prompt and any display need the readable name.
+// Unset or "prefer not to say" reads as empty (Leo teaches without it, Â§12.5);
+// an unmigrated free-text value is returned as-is.
+const countryDisplay = (v) => (!v || v === "prefer-not-to-say") ? "" : (COUNTRY_NAME[v] || v);
+// Migrate a stored free-text country to a key (case-insensitive, name or alias);
+// unmatched values are retained as-is and read as unset for keyed lookups (Â§12.2).
+const countryMigrate = (v) => {
+  if (!v) return "";
+  if (COUNTRY_NAME[v]) return v; // already a key
+  const f = obFold(v);
+  const hit = COUNTRIES.find(([k, n, a]) => obFold(n) === f || (a || []).some((x) => obFold(x) === f));
+  return hit ? hit[0] : v; // retain unmatched free-text as-is
+};
+
+// Legacy interest values (12-option set) mapped to the 24-option set (Â§3.2).
+// Australian life and Other have no target and are dropped silently â€” no
+// error, no prompt. Anything not in this table (already-new-format labels,
+// or free text) is retained as-is, same non-destructive principle as
+// countryMigrate above.
+const LEGACY_INTEREST_MAP = {
+  "Sport": "Sport", "Music": "Music", "Movies & TV": "Film & TV",
+  "Food & cooking": "Cooking", "Travel": "Getting around", "Gaming": "Gaming",
+  "Study": "Study", "Work": "Work", "Reading": "Reading", "Art & design": "Drawing & art",
+  "Australian life": null, "Other": null,
+};
+const interestsMigrate = (arr) => (!Array.isArray(arr) ? arr :
+  arr.map((v) => (v in LEGACY_INTEREST_MAP ? LEGACY_INTEREST_MAP[v] : v)).filter((v) => v !== null));
+
+// â”€â”€ About-you group two: the four questions (Lessons-signed, about-you-questions-signoff.md 6f2e4a96). Chips per Â§5, all skippable, none gates Continue. â”€â”€
+const Q_SETTLEMENT = ["Just arrived", "Less than a year", "1â€“3 years", "More than 3 years", "Not in Australia yet"]; // Q1 single
+const Q_GOALS = ["Work", "Study", "Everyday life", "Family", "Citizenship"]; // Q2 multi
+const Q_HARDEST = ["Understanding fast speech", "Speaking with confidence", "Being understood when I speak", "Finding the right words", "Reading in English", "Writing in English"]; // Q3 multi
+const Q_OCCUPATION = ["Working", "Studying", "Both", "Looking for work", "Neither"]; // Q4 single
+
+// â”€â”€ Conditional spoken-variety question (Â§13.2). Options are the register's (rev 2 b8c7e066): the only L1 the register recognises with >1 spoken variety is Chinese (Mandarin vs Cantonese â€” country/script do not determine speech). â”€â”€
+const CHINESE_SPOKEN = [["mandarin", "Mandarin"], ["cantonese", "Cantonese"]];
+const SPOKEN_VARIETY = { zh: CHINESE_SPOKEN, "zh-Hant": CHINESE_SPOKEN }; // one array, referenced twice â€” zh and zh-Hant cannot drift
+// Spoken-variety label â€” Lessons-signed, 26 July 2026. "at home" makes this a
+// dominance question (answerable by students who speak both), and home variety is
+// the substrate pronunciation teaching needs.
+const SPOKEN_VARIETY_LABEL = "Which of these do you speak at home?";
+
+const OB_STEPS = ["language", "welcome", "about-you", "interests", "notifications", "level"];
+
+// Interests screen v5 (Â§3, Â§4.1). Four clusters of six, unlabelled â€” the
+// grouping is felt via spacing (--space-5 between, --space-2 within), never
+// announced with a heading. Icon substitutions approved by Genesis where the
+// spec's original choice was unavailable in the installed lucide-react
+// version: Trophy for Sport (not Volleyball), BookCheck for English exams
+// (not ClipboardCheck), ShoppingBag for Shopping (not ShoppingBasket),
+// Navigation for Getting around (not Bus), DoorOpen for Renting a home (not
+// KeyRound), PawPrint for Pets (not Dog), Image for Photos (not Camera),
+// Book for Reading (not BookOpen, already used by Reading's own row in
+// several other places in this file). Fitness (Dumbbell) unchanged.
+const INTEREST_CLUSTERS = [
+  [["Cooking", ChefHat], ["Shopping", ShoppingBag], ["Getting around", Navigation],
+   ["Renting a home", DoorOpen], ["Health", Stethoscope], ["Money", Wallet]],
+  [["Work", Briefcase], ["Study", GraduationCap], ["English exams", BookCheck],
+   ["Driving", Car], ["Technology", Smartphone], ["Reading", Book]],
+  [["Sport", Trophy], ["Fitness", Dumbbell], ["Music", Music],
+   ["Film & TV", Clapperboard], ["Gaming", Gamepad2], ["Drawing & art", Palette]],
+  [["Family", Users], ["Friends", Coffee], ["Beach", Waves],
+   ["Nature", TreePine], ["Pets", PawPrint], ["Photos", Image]],
+];
+const INTEREST_LABELS = INTEREST_CLUSTERS.flat().map(([label]) => label);
+
+function Onboarding({ onDone, initialStep, initialProfile }) {
+  const ip = initialProfile || {};
+  const [obStep, setObStep] = useState(initialStep || OB_STEPS[0]);
+  // Navigation derives from position in OB_STEPS. Nothing else encodes order.
+  const next = () => setObStep(OB_STEPS[Math.min(OB_STEPS.indexOf(obStep) + 1, OB_STEPS.length - 1)]);
+  const back = () => setObStep(OB_STEPS[Math.max(OB_STEPS.indexOf(obStep) - 1, 0)]);
+  const [lang, setLang] = useState(ip.lang || null);
+  const [name, setName] = useState(ip.name || "");
+  const [country, setCountry] = useState(() => countryMigrate(ip.country || ""));
+  const [countrySearch, setCountrySearch] = useState("");
+  const [interests, setInterests] = useState(ip.interests || []);
+  const [hasAcknowledged, setHasAcknowledged] = useState(false);
+  const [settlement, setSettlement] = useState(ip.settlement || null);
+  const [goals, setGoals] = useState(ip.goals || []);
+  const [hardest, setHardest] = useState(ip.hardest || []);
+  const [occupation, setOccupation] = useState(ip.occupation || null);
+  const [spokenVariety, setSpokenVariety] = useState(ip.spokenVariety || null);
+  // Onboarding chip taps set this directly to one of the four named values
+  // ("morning"/"afternoon"/"evening"/"no-reminders"); the ghost "Skip for
+  // now" sets "undecided" directly. Neither of those two match any chip,
+  // so no chip shows selected in either case â€” the same state serves as
+  // both the chip-selection UI and the final value finish() reads.
+  const [reminderTime, setReminderTime] = useState(
+    ip.reminderTime && ["morning", "afternoon", "evening", "no-reminders"].includes(ip.reminderTime) ? ip.reminderTime : null
+  );
+  const [level, setLevel] = useState(ip.level || null);
+  const [showLevelPicker, setShowLevelPicker] = useState(false);
+
+  /* Free text is stored as an ordinary member of `interests` â€” spec Â§6:
+     "the card is now, in effect, a twenty-fifth selected chip." Any value in
+     `interests` that isn't one of the 24 preset labels IS the free-text
+     entry (there is only ever one, since the UI exposes a single field).
+     This means resume/persistence needs no separate profile field. */
+  const freeTextValue = interests.find((i) => !INTEREST_LABELS.includes(i)) || "";
+  const [freeTextOpen, setFreeTextOpen] = useState(false);
+  const [freeTextDraft, setFreeTextDraft] = useState(freeTextValue);
+  const openFreeText = () => { setFreeTextDraft(freeTextValue); setFreeTextOpen(true); };
+  const closeFreeText = () => {
+    const trimmed = freeTextDraft.trim();
+    setInterests((prev) => {
+      const withoutOldFreeText = prev.filter((i) => INTEREST_LABELS.includes(i));
+      return trimmed ? [...withoutOldFreeText, trimmed] : withoutOldFreeText;
+    });
+    setFreeTextOpen(false);
+    // Same "any kind of tap" firing as toggleInterest below â€” engaging with
+    // the free-text card is exactly as much an interest signal as a chip tap.
+    if (!hasAcknowledged) setHasAcknowledged(true);
+  };
+
+  const toggleInterest = (item) => {
+    setInterests((prev) =>
+      prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item]
+    );
+    // Fires once, on the first tap of any kind â€” stays true permanently after,
+    // regardless of later selection/deselection. Never flickers, never resets.
+    if (!hasAcknowledged) setHasAcknowledged(true);
+  };
+  const toggleFrom = (setter, item) => setter((prev) =>
+    prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item]
+  );
+
+  const finish = (lvl, wantsPlacement) => onDone({
+    name: name.trim(), lang, country,
+    level: lvl || level, interests,
+    settlement, goals, hardest, occupation, spokenVariety,
+    reminderTime,
+    // TEMPORARY â€” isPaid hardcoded true for development testing; revert when real billing exists
+    isPaid: true,
+  }, wantsPlacement);
+
+  /* Leo's greeting, L1 line â€” SUPPRESSED. Â§13.4a (Genesis, 22 July 2026);
+     welcome-screen-review-package.md rev 1, MD5 cc8efab4200ba4ac545c399d8dac260a.
+     All eight prior entries failed L1-equivalence clause 3 (authored against the
+     English first sentence only); their sign-offs are void. Suppression is by
+     EMPTY DATA, not a flag: the render is `{HELLO_L1[lang] && â€¦}`, so an empty
+     object shows no L1 line, and adding one reviewed entry lights up exactly that
+     one language. The void drafts in the ratified principle doc are NOT a starting
+     point â€” restore only from fresh native review.
+
+     TO RESTORE ONE LANGUAGE â€” read before adding any entry:
+       1. Add a native-reviewed entry to HELLO_L1, reviewed against the reviewer
+          specification for that variety. One key, one language.
+       2. Fix the L1 line's markup at the 'welcome' render below: it still carries
+          the OLD suppressed styling â€” className "text-supporting", opacity 0.65,
+          fontStyle italic. Binding treatment on restoration: className "text-leo";
+          NO inline opacity (and not inside .fade-in until motion Â§11.3); NO italic
+          (invalid for zh and ja); position THIRD, after both English lines â€” order
+          carries the hierarchy.
+     Restoring the string with the old styling reinstates a WCAG failure alongside a
+     reviewed line and looks faithful. Do both, or neither. */
+  const HELLO_L1 = {};
+
+  /* Progress indicator (ONBOARDING_PROGRESS_INDICATOR_SPECIFICATION_v1).
+     Read-only derivation from obStep â€” does not touch navigation state.
+     stepIndex clamps a not-found step to 0 (spec Â§4 edge case: fall back
+     to the first step rather than render a broken indicator). Hidden on
+     'welcome' by simply not being included in that branch's render. */
+  const stepIndex = Math.max(OB_STEPS.indexOf(obStep), 0);
+  const obDots = (
+    <div className="ob-dots" aria-label={`Step ${stepIndex + 1} of ${OB_STEPS.length}`}>
+      {OB_STEPS.map((step, i) => (
+        <span key={step} aria-hidden="true"
+          className={"ob-dot " + (i < stepIndex ? "ob-dot-done" : i === stepIndex ? "ob-dot-current" : "ob-dot-ahead")} />
+      ))}
+    </div>
+  );
+
+  // â”€â”€ PAGE 1: THE LANGUAGE â”€â”€ (no Back)
+  if (obStep === "language") return (
+    <div className="onboard">
+      <div className="ob-card fade-in" style={{ textAlign: "left" }}>
+        {obDots}
+        <p className="text-leo" style={{ marginBottom: "var(--space-4)" }}>What is your first language?</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+          {Object.entries(LANGS).map(([code, l]) => (
+            <button key={code}
+              className={"card" + (lang === code ? " leo-card" : "")}
+              style={{ textAlign: "left", cursor: "pointer", padding: "14px 16px", border: lang === code ? undefined : "1px solid var(--text-tertiary)" }}
+              onClick={() => { setLang(code); setTimeout(next, 300); }}>
+              <span style={{ fontWeight: 600 }}>{l.native}</span>
+              <span className="text-supporting" style={{ marginLeft: 8 }}>{l.english}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  // â”€â”€ PAGE 2: MEET LEO â”€â”€ (Back â†’ Page 1)
+  if (obStep === "welcome") return (
+    <div className="onboard">
+      <div className="ob-card fade-in" style={{ textAlign: "left" }}>
+        <div className="leo-accent" style={{ marginBottom: "var(--space-5)" }}>
+          <p className="text-leo" style={{ fontSize: 20, lineHeight: 1.4, marginBottom: "var(--space-2)" }}>
+            Hi. I'm Leo.
+          </p>
+          <p className="text-leo" style={{ marginBottom: "var(--space-3)" }}>
+            I'm your English teacher here in Australia.
+          </p>
+          {HELLO_L1[lang] && (
+            <p className="text-supporting" style={{ opacity: 0.65, fontStyle: "italic" }}>
+              {HELLO_L1[lang]}
+            </p>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: "var(--space-2)" }}>
+          <button className="ghost-btn" onClick={back}>Back</button>
+          <button className="primary-btn" onClick={next}>Continue</button>
+        </div>
+      </div>
+    </div>

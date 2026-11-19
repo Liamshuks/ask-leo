@@ -1,0 +1,1000 @@
+﻿            invitation), never absent (its absence on one stage would
+            imply that stage is mandatory and the others optional). */}
+        {onSkip && <button className="sh-skip" onClick={onSkip} aria-label={`Skip ${title || eyebrow || "this stage"}`}>Skip</button>}
+      </div>
+      {title && <h3 className="sh-title">{title}</h3>}
+      {/* Absent purpose renders NOTHING â€” never a placeholder. */}
+      {purpose && <p className="sh-purpose">{purpose}</p>}
+    </div>
+  );
+}
+
+/* Resolve a stage's header from the authored lesson, falling back to
+   the system label. The fallback is honest â€” just plainer. */
+function stageHeaderFor(bp, stageId, systemLabel) {
+  const authored = (bp && bp.stageHeaders && bp.stageHeaders[stageId]) || null;
+  return {
+    eyebrow: (authored && authored.eyebrow) || String(systemLabel || "").toUpperCase(),
+    title: (authored && authored.title) || systemLabel,
+    purpose: (authored && authored.purpose) || null,
+  };
+}
+
+/* Â§1.5 â€” resuming is a continuity moment, not an error state.
+   The line names ONLY what the code holds: the stage is always held,
+   so "we were in the middle of grammar" is always honest. Never "you
+   left", never elapsed-time guilt. The word "back" is as far as it
+   goes. */
+function ResumeInterstitial({ stageLabel, stageIndex, totalStages, onContinue }) {
+  return (
+    <div className="resume-card">
+      <div className="step-dots" aria-hidden="true">
+        {Array.from({ length: totalStages }, (_, i) => (
+          <span key={i} className={"step-dot" + (i < stageIndex ? " step-dot-done" : i === stageIndex ? " step-dot-current" : "")} />
+        ))}
+      </div>
+      <p className="leo-accent text-leo resume-line">
+        Welcome back. We were in the middle of {String(stageLabel || "your lesson").toLowerCase()} â€” let's pick it up from there.
+      </p>
+      <button className="primary-btn wide" onClick={onContinue}>Continue</button>
+    </div>
+  );
+}
+
+function SectionShell({ title, blurb, onSkip, stageIndex, totalStages, header, children }) {
+  /* Â§1.3 â€” when the lesson supplies an authored header, it replaces the
+     old title + metadata line. Generated lessons pass no header and
+     render exactly as before. */
+  if (header) {
+    return (
+      <Card>
+        <StageHeader {...header} onSkip={onSkip} stageIndex={stageIndex} totalStages={totalStages} />
+        <div className="stage-enter-delayed">{children}</div>
+      </Card>
+    );
+  }
+  return (
+    <Card>
+      <div className="stage-head">
+        <h3>{title}</h3>
+        {onSkip && <button className="skip-btn" onClick={onSkip} aria-label={`Skip ${title}`}>Skip â†’</button>}
+      </div>
+      {/* Â§5 Step indicator dots */}
+      {typeof stageIndex === "number" && totalStages > 0 && (
+        <div className="step-dots">
+          {Array.from({ length: totalStages }, (_, i) => (
+            <span key={i} className={"step-dot" + (i < stageIndex ? " step-dot-done" : i === stageIndex ? " step-dot-current" : "")} />
+          ))}
+        </div>
+      )}
+      {/* Â§2.9 Bridge line enters first */}
+      {blurb && <p className="muted small stage-enter">{blurb}</p>}
+      {/* Â§2.9 Content enters 0.2s later */}
+      <div className="stage-enter-delayed">{children}</div>
+    </Card>
+  );
+}
+
+/* ---------- Exercise self-testing QA (mandatory before presenting to student) ---------- */
+// Leo must never present the first version of anything. Before any exercise
+// reaches the student, it passes through three checks:
+//   1. STUDENT TEST: can this exercise actually be completed?
+//   2. TEACHER TEST: is the marking fair and the content appropriate?
+//   3. QUALITY TEST: does this genuinely teach something?
+/* Grammar alignment: does this exercise actually practise TODAY's structure?
+   We build a token set from the point, the form and the examples the student has
+   just been shown, then require every question to touch it. Prefix matching
+   (5 chars) tolerates the normal inflections â€” question/questions,
+   comparative/comparatives â€” without needing a stemmer. */
+const GRAMMAR_STOPWORDS = new Set([
+  // ordinary function words
+  "the", "an", "and", "or", "of", "in", "on", "at", "to", "it", "as", "so", "by",
+  "this", "that", "these", "those", "with", "there", "here", "just", "very", "also", "any",
+  "is", "are", "am", "was", "were", "use", "used", "using",
+  // pronouns â€” they appear in every grammar point ever written, so they discriminate nothing
+  "i", "you", "he", "she", "we", "they", "me", "him", "her", "us", "them",
+  "my", "your", "his", "its", "our", "their",
+  // GRAMMAR METALANGUAGE â€” the words we use to TALK about any structure. Left in,
+  // they let a question about a completely different point "align" simply because
+  // it says the word "sentence" or "verb". Removing them means the token set is
+  // made of the STRUCTURE ITSELF (could, does, been, than, hoping, sinceâ€¦),
+  // which is the only thing worth matching on.
+  "sentence", "sentences", "correct", "incorrect", "complete", "completes", "choose",
+  "choice", "find", "mistake", "error", "answer", "answers", "option", "options",
+  "question", "questions", "word", "words", "order", "form", "forms", "verb", "verbs",
+  "noun", "nouns", "subject", "structure", "grammar", "point", "which", "what",
+  "please", "thanks", "grammatically",
+]);
+const _gramWords = (s) => (s || "").toLowerCase().split(/[^a-z']+/).map((w) => w.replace(/'/g, "")).filter((w) => w.length >= 2 && !GRAMMAR_STOPWORDS.has(w));
+function grammarAlignmentTokens(bp) {
+  const g = (bp && bp.grammar) || {};
+  return [...new Set(_gramWords([g.point, g.form, ...(g.examples || [])].join(" ")))];
+}
+function alignsWithGrammar(text, tokens) {
+  const words = new Set(_gramWords(text));
+  for (const t of tokens) {
+    if (words.has(t)) return true;
+    if (t.length >= 5) { const p = t.slice(0, 5); for (const w of words) if (w.startsWith(p)) return true; }
+  }
+  return false;
+}
+const sameGrammarPoint = (a, b) => (a || "").trim().toLowerCase().replace(/[^a-z0-9 ]/g, "") === (b || "").trim().toLowerCase().replace(/[^a-z0-9 ]/g, "");
+
+function validateSection(stageId, data, bp) {
+  const problems = [];
+  if (!data || typeof data !== "object") return ["section data missing"];
+
+  if (stageId === "skill") {
+    // Student test: is there a passage to read?
+    if (!data.passage || data.passage.length < 30) problems.push("passage too short or missing");
+    // Student test: can every question be answered?
+    (data.questions || []).forEach((q, i) => {
+      if (!q.stem) problems.push(`Q${i+1} has no stem`);
+      if (!Array.isArray(q.options) || q.options.length < 3) problems.push(`Q${i+1} has fewer than 3 options`);
+      if (!q.options.includes(q.answer)) problems.push(`Q${i+1} answer not in options`);
+      if (new Set(q.options).size !== q.options.length) problems.push(`Q${i+1} has duplicate options`);
+    });
+    // Teacher test: are there enough questions?
+    if ((data.questions || []).length < 3) problems.push("fewer than 3 valid questions");
+    // Quality test: does the passage use today's vocabulary?
+    if (bp && bp.vocabulary) {
+      const passageLow = (data.passage || "").toLowerCase();
+      const vocabHits = bp.vocabulary.filter(v => passageLow.includes(v.word.toLowerCase())).length;
+      if (vocabHits < 2) problems.push("passage uses fewer than 2 of today's vocabulary items");
+    }
+  }
+
+  if (stageId === "grammar") {
+    // ALIGNMENT (the teacher test that matters): the explanation, the examples,
+    // the practice, the answers and the feedback must all teach ONE grammar
+    // point. A model that quietly drifts to a different structure â€” or to
+    // politeness â€” produces an exercise that is technically valid and
+    // educationally worthless. These two checks catch exactly that.
+    if (bp && bp.grammar && bp.grammar.point) {
+      // 1. Wholesale drift. The generator MUST declare which point it practised.
+      // Requiring the echo (rather than checking it only when present) is what
+      // makes this deterministic: a set that quietly practises another structure
+      // either declares the wrong point and is caught here, or declares the right
+      // point and is caught by the per-question check below.
+      if (!data.grammarPoint) problems.push("grammar exercise did not declare its grammar point");
+      else if (!sameGrammarPoint(data.grammarPoint, bp.grammar.point))
+        problems.push(`grammar point drifted: taught "${bp.grammar.point}" but practised "${data.grammarPoint}"`);
+      // 2. Per-question drift: each question must visibly touch today's structure.
+      const tokens = grammarAlignmentTokens(bp);
+      (data.questions || []).forEach((q, i) => {
+        const hay = [q.stem, ...(q.options || []), q.note].join(" ");
+        if (tokens.length && !alignsWithGrammar(hay, tokens))
+          problems.push(`Q${i+1} does not practise today's grammar point`);
+      });
+    }
+    (data.questions || []).forEach((q, i) => {
+      if (!q.stem) problems.push(`Q${i+1} has no stem`);
+      if (!Array.isArray(q.options) || q.options.length < 3) problems.push(`Q${i+1} fewer than 3 options`);
+      if (!q.options.includes(q.answer)) problems.push(`Q${i+1} answer not in options`);
+      if (new Set(q.options).size !== q.options.length) problems.push(`Q${i+1} duplicate options`);
+      if (!q.note) problems.push(`Q${i+1} has no teaching note`);
+      // Function, not form: "which sounds nicer" is not a grammar question.
+      const stemLow = (q.stem || "").toLowerCase();
+      if (stemLow.includes("most polite") || stemLow.includes("sounds nicer") || stemLow.includes("more polite"))
+        problems.push(`Q${i+1} tests politeness not grammar`);
+    });
+    if ((data.questions || []).length < 3) problems.push("fewer than 3 valid grammar questions");
+  }
+
+  if (stageId === "summary") {
+    ["praise", "summary", "strength", "improvement"].forEach(k => {
+      if (!data[k]) problems.push(`${k} missing from summary`);
+    });
+    // Quality test: is the praise specific (not generic)?
+    if (data.praise && /^(well done|good job|great work|nice work)\.?$/i.test(data.praise.trim()))
+      problems.push("praise is generic â€” must be specific");
+  }
+
+  return problems;
+}
+
+/* ---------- Shared completion feedback (used by every scored activity) ----------
+   Educational reasoning: completing an activity should produce a moment of
+   recognised success (Self-Determination Theory â€” competence), but praise must
+   be proportionate and adult. The message scales with performance, celebrates
+   briefly, then carries the student onward so momentum is never broken.
+   Technical reasoning: ONE component owns the animation, the message ladder and
+   the auto-advance timer, so every stage behaves identically and there is no
+   duplicated celebration logic. The timer is always escapable via the button,
+   and is cleared on unmount so a Skip mid-celebration cannot double-advance. */
+function completionMessage(correct, total) {
+  if (typeof correct !== "number" || !total) return { title: "Nice work!", sub: "That's another step forward." };
+  const ratio = correct / total;
+  if (ratio >= 0.9) return { title: "Outstanding!", sub: `${correct} out of ${total} â€” you've really got this.` };
+  if (ratio >= 0.7) return { title: "Excellent!", sub: `${correct} out of ${total} â€” strong work.` };
+  if (ratio >= 0.5) return { title: "Well done!", sub: `${correct} out of ${total} â€” you're getting there.` };
+  return { title: "Great effort!", sub: `${correct} out of ${total} â€” the ones you missed will come back for more practice.` };
+}
+
+/* Â§1.1 / Â§2b.0 â€” NOTHING AUTO-ADVANCES. The countdown timer and its
+   progress bar are removed: the hold between the tick and Continue
+   belongs to the student, who taps when ready. On a train, control is
+   calm. The `delay` prop is accepted and ignored so existing call
+   sites keep working; it can be dropped once none pass it. */
+function StageComplete({ correct, total, message, onContinue, delay }) {
+  const msg = message || completionMessage(correct, total);
+  return (
+    <div className="stage-complete" role="status" aria-live="polite">
+      <div className="sc-tick" aria-hidden="true">
+        <svg viewBox="0 0 52 52" width="56" height="56">
+          <circle className="sc-tick-ring" cx="26" cy="26" r="23" fill="none" strokeWidth="2.5" />
+          <path className="sc-tick-mark" fill="none" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" d="M15 27 l7.5 7.5 L38 19" />
+        </svg>
+      </div>
+      <h4 className="sc-title">{msg.title}</h4>
+      <p className="sc-sub">{msg.sub}</p>
+      <button className="primary-btn" onClick={onContinue}>Continue</button>
+    </div>
+  );
+}
+
+/* ---------- Reusable MCQ block (used by Reading/Listening and Grammar) ---------- */
+// Content-derived seed: stable across re-renders, different across activities.
+function textSeed(str) {
+  let s = 7919;
+  for (const ch of String(str || "")) s = (s * 31 + ch.charCodeAt(0)) & 0x7fffffff;
+  return s;
+}
+
+function shuffleOptions(options, seed) {
+  const arr = [...options];
+  let s = seed;
+  for (let i = arr.length - 1; i > 0; i--) {
+    s = (s * 1103515245 + 12345) & 0x7fffffff;
+    const j = s % (i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function McqQuiz({ questions, vocab, onVocabTap, onDone, onAdvance }) {
+  const q0 = useExerciseQueue(questions);
+  const [chosen, setChosen] = useState(null);
+  const [shown, setShown] = useState(false);
+  const [correct, setCorrect] = useState(0);
+  const q = q0.current;
+  // Randomise option order so the correct answer is not always first.
+  const [shuffledOpts] = useState(() => questions.map((qu, i) => shuffleOptions(qu.options, i * 7919 + qu.stem.length)));
+  const optsFor = (qq) => {
+    const i = questions.indexOf(qq);
+    return (i >= 0 && shuffledOpts[i]) || qq.options;
+  };
+  const pick = (opt) => {
+    if (chosen || shown) return;
+    setChosen(opt);
+    if (opt === q.answer) setCorrect((c) => c + 1);
+  };
+  const showMe = () => { if (chosen) return; setShown(true); };
+  const settled = !!chosen || shown;
+  const wasCorrect = !!chosen && chosen === q.answer;
+  const next = () => {
+    q0.advance(wasCorrect);
+    setChosen(null);
+    setShown(false);
+    if (onAdvance) onAdvance();
+  };
+  // Completion feedback lives in ONE place for every MCQ-based stage.
+  if (q0.finished || !q) return <StageComplete correct={correct} total={questions.length} onContinue={() => onDone(correct, questions.length)} />;
+  const isLast = q0.index + 1 >= q0.total;
+  return (
+    <div>
+      {/* Â§4.2: dots and N of M. The old width-percentage bar is retired â€”
+          a percentage over unequal items is a number doing a feeling's job. */}
+      <ExerciseChrome index={q0.index} total={q0.total} />
+      <p className="q-sentence"><VocabText text={q.stem} vocab={vocab} onTap={onVocabTap} /></p>
+      <div className="mcq-opts">
+        {optsFor(q).map((opt, i) => (
+          <button key={i}
+            className={"mcq-opt" + (settled ? (opt === q.answer ? " mcq-right" : opt === chosen ? " mcq-chosen" : " mcq-muted") : "")}
+            onClick={() => pick(opt)} disabled={settled}>{opt}</button>
+        ))}
+      </div>
+      {!settled && <ShowMeLink onShow={showMe} shown={shown} />}
+      {settled && (
+        <div>
+          {shown
+            ? <CorrectAnswerReveal answer={q.answer} note={q.note} />
+            : <LeoFeedback ok={wasCorrect}>{wasCorrect ? q.note : <>The answer is <strong className="ex-answer">{q.answer}</strong>. {q.note}</>}</LeoFeedback>}
+          <button className="primary-btn" onClick={next}>{isLast ? "Finish practice" : "Next \u2192"}</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ==================== WARM-UP ACTIVITY SYSTEM ====================
+   Educational reasoning: a warm-up exists to ACTIVATE â€” to switch the student
+   into English, surface what they already know, and prime the exact language
+   the lesson will teach. A single format repeated every day stops activating
+   and starts boring; variety keeps the affective filter low and the noticing
+   high. Every activity below is a recognised ELICOS warm-up type, and every one
+   must be contextualised to today's scenario â€” a generic warm-up teaches nobody.
+
+   Technical reasoning: twelve activity types would mean twelve components and
+   twelve validators. Instead each type declares a FAMILY, and there are exactly
+   three renderers (free / choice / sequence). Adding a thirteenth type is a
+   one-line registry entry, not new UI. Validation is shared per family, so a
+   malformed activity can never reach the student â€” it is filtered out, and if
+   too few survive, the lesson falls back to discussion questions rather than
+   breaking.
+   ================================================================ */
+const WARMUP_TYPES = {
+  context_discussion: { family: "free",     label: "Talk about it" },
+  prediction:         { family: "free",     label: "What do you think?" },
+  finish_sentence:    { family: "free",     label: "Finish the sentence" },
+  mini_task:          { family: "free",     label: "Mini task" },
+  mcq:                { family: "choice",   label: "Choose the answer" },
+  best_response:      { family: "choice",   label: "Choose the best response" },
+  true_false:         { family: "choice",   label: "True or false?" },
+  is_this_correct:    { family: "choice",   label: "Is this correct?" },
+  spot_mistake:       { family: "choice",   label: "Spot the mistake" },
+  complete_dialogue:  { family: "choice",   label: "Complete the dialogue" },
+  unscramble:         { family: "sequence", label: "Unscramble the sentence" },
+  order_conversation: { family: "sequence", label: "Order the conversation" },
+  /* Â§3b â€” the authored warm-up shapes. Without these three registered,
+     validateWarmUpActivity rejects every authored activity and the
+     lesson falls back to generic discussion questions: the teacher's
+     warm-up would never render. All three are "open" â€” they accept
+     what the student offers and Leo responds, so none of them can be
+     marked wrong (a warm-up activates; it does not assess). */
+  image_recognition:  { family: "open",     label: "What is this?" },
+  personal_reveal:    { family: "open",     label: "About you" },
+  frame_drill:        { family: "open",     label: "Say it" },
+};
+const warmUpFamily = (t) => (WARMUP_TYPES[t] ? WARMUP_TYPES[t].family : null);
+
+/* One activity is valid only if it can actually be COMPLETED and MARKED. */
+function validateWarmUpActivity(a) {
+  if (!a || typeof a !== "object") return false;
+  const fam = warmUpFamily(a.type);
+  if (!fam) return false;
+  if (!a.prompt || typeof a.prompt !== "string") return false;
+  if (fam === "free") return true;
+  /* Â§3b â€” "open" activities cannot be marked wrong, so they need only
+     something to answer. An image_recognition without a picture is
+     still a valid question ("What country is this?" answered in
+     words) â€” the image is support, never the task itself. */
+  if (fam === "open") return true;
+  if (fam === "choice") {
+    if (!Array.isArray(a.options) || a.options.length < 2) return false;
+    if (new Set(a.options).size !== a.options.length) return false;
+    if (!a.options.includes(a.answer)) return false;
+    return !!a.note;
+  }
+  // sequence: tokens are the CORRECT order; the student rebuilds it
+  if (!Array.isArray(a.tokens) || a.tokens.length < 3 || a.tokens.length > 12) return false;
+  if (a.tokens.some((t) => !t || typeof t !== "string")) return false;
+  return !!a.note;
+}
+function validateWarmUp(activities) {
+  return (Array.isArray(activities) ? activities : []).filter(validateWarmUpActivity).slice(0, 5);
+}
+/* Backstop: if the planner gives us nothing usable, today's warm-up is still a
+   real warm-up â€” the blueprint's discussion questions, in the original format. */
+function warmUpFallback(bp) {
+  return (bp.warmUpQuestions || []).slice(0, 4).map((q) => ({
+    type: "context_discussion",
+    instruction: "Just chat â€” there are no wrong answers here.",
+    prompt: q,
+  }));
+}
+
+/* ---------- Renderer 1: FREE â€” communicative, never string-matched ---------- */
+/* Â§3b â€” the "open" warm-up renderer. Nothing here can be wrong: if the
+   student can't answer, Leo gives the answer warmly and moves on.
+
+   THE COUNTRY REVEAL, and its honesty constraint: the delight is that
+   the app answered their fact with their place. That only works if the
+   picture genuinely exists. If the image pipeline holds nothing for
+   the country they named, Leo still responds in words and NO empty
+   frame renders â€” the code never promises a picture it does not have. */
+function WarmUpOpen({ activity, vocab, onVocabTap, onDone }) {
+  const [input, setInput] = useState("");
+  const [answered, setAnswered] = useState(false);
+  const isReveal = !!activity.revealImageByAnswer;
+  const said = input.trim();
+  const image = activity.image || null;
+  /* Resolved from the pipeline, not assumed. Today nothing resolves a
+     country image, so revealSrc is null and the words-only path runs â€”
+     which is the honest behaviour until that pipeline exists. */
+  const revealSrc = null;
+  const confirm = activity.leoConfirmTemplate
+    ? String(activity.leoConfirmTemplate).replace(/\{answer\}/g, said)
+    : activity.leoConfirm;
+  return (
+    <div>
+      {/* Prompt image (e.g. the Australian flag), when authored. */}
+      {image && !isReveal && <LessonImage src={image.src} alt={image.alt} caption={image.alt} />}
+      <p className="q-sentence">
+        <VocabText text={activity.prompt} vocab={vocab} onTap={onVocabTap} />
+      </p>
+      {activity.frame && (
+        <div className="grammar-form-box"><p className="gb-keypoint-text">{activity.frame}</p></div>
+      )}
+      {activity.hint && !answered && <p className="ex-hint">{activity.hint}</p>}
+      {!answered ? (
+        <>
+          <div className="input-row">
+            <input className="text-input" value={input} onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && said && setAnswered(true)}
+              placeholder={"Type your answer\u2026"} {...EXERCISE_INPUT_PROPS_PROPER_NOUN} />
+            <MicButton onText={(t) => setInput(t)} />
+          </div>
+          <div className="ex-actions">
+            <button className="primary-btn" onClick={() => setAnswered(true)} disabled={!said}>Send</button>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* The reveal arrives into a frame that was NOT previously on
+              screen â€” the arrival is the event. Only when it exists. */}
+          {isReveal && revealSrc && <LessonImage src={revealSrc} alt={said} caption={said} />}
+          {confirm && <div className="bubble bubble-bot stage-enter">{confirm}</div>}
+          <button className="primary-btn wide" onClick={() => onDone(true)}>Next â†’</button>
+        </>
+      )}
+    </div>
+  );
+}
+
+function WarmUpFree({ activity, vocab, onVocabTap, onDone, context, cefr }) {
+  const [answer, setAnswer] = useState("");
+  const [sent, setSent] = useState(false);
+  const [reply, setReply] = useState(null);      // { category, line }
+  const settledRef = React.useRef(false);        // first result wins; the other is discarded
+  const timerRef = React.useRef(null);
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  /* Whichever arrives first settles the turn. Without this a response landing
+     after the timeout would swap the fallback out from under the student
+     mid-read. */
+  const settle = (result, failureReason) => {
+    if (settledRef.current) return;
+    settledRef.current = true;
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    if (failureReason) console.warn("[warmup_free_response] fallback used:", failureReason);
+    setReply(result);
+  };
+
+  const submit = async () => {
+    const a = answer.trim();
+    if (!a || sent) return;
+    setSent(true);
+    timerRef.current = setTimeout(
+      () => settle({ category: "attempt", line: WARMUP_FALLBACK_LINE }, "timeout after 5000ms"), 5000);
+    try {
+      // Leo's voice, delivered by Lessons 22 July. The JSON shape is unchanged,
+      // so the existing parsing, category clamp, timeout and fallback all keep
+      // working. The mock reads "Context:" out of this prompt to select today's
+      // pack â€” do not reorder or rename that field.
+      const raw = await askClaude(
+        `${AUSTRALIAN_SPELLING}You are Leo, an experienced Australian ELICOS teacher, replying to your student's warm-up answer. A warm-up has one job: switch the student into English and make them feel ready. Never correct grammar, spelling or pronunciation here.
+
+Activity prompt: "${activity.prompt}"
+Today's lesson context: "${context || ""}"
+The student typed: "${a}"
+
+First, classify the answer:
+- "skip": no real effort â€” a single character, repeated characters, punctuation only, or meaningless letters.
+- "minimal": a real answer, but only one or two words, or a short phrase with no detail.
+- "attempt": real communicative content â€” the student actually said something.
+
+Then write ONE reply line, maximum 35 words, ${cefr} English, warm Australian teacher's voice:
+- skip: reply with exactly this and nothing more: No problem â€” let's move on.
+- minimal: acknowledge the short answer warmly and connect it to today's lesson context in ONE short additional sentence that adds something â€” a fact, a link to today, or a light observation â€” WITHOUT asking a question. The student cannot reply to a follow-up here, so a question is a dead end for them. Land your line as a complete, satisfying response on its own.
+- attempt: respond to something SPECIFIC the student said â€” name it in your reply â€” then connect it to today's lesson.
+
+The generic-praise test: if your line would make equal sense no matter what the student typed, rewrite it. Never invent details the student did not give you. Never praise a skip.
+
+${narrationGuidance(cefr, "chat")}\n\nRespond ONLY with JSON, no fences: {"category":"skip|minimal|attempt","line":"your one reply line"}`,
+        { intent: "warmup_free_response" }
+      );
+      const d = parseJSON(raw);
+      if (!d || !d.line) throw new Error("invalid response shape");
+      const cat = d.category === "skip" || d.category === "minimal" ? d.category : "attempt";
+      settle({ category: cat, line: d.line });
+    } catch (err) {
+      settle({ category: "attempt", line: WARMUP_FALLBACK_LINE }, (err && err.message) || "unknown error");
+    }
+  };
+
+  return (
+    <div>
+      <p className="q-sentence"><VocabText text={activity.prompt} vocab={vocab} onTap={onVocabTap} /></p>
+      <div className="input-row">
+        <input className="text-input" placeholder="Type your answer, or use the micâ€¦" value={answer} disabled={sent}
+          onChange={(e) => setAnswer(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} />
+        <MicButton onText={(t) => setAnswer(t)} />
+      </div>
+      {!sent && <button className="primary-btn" onClick={submit} disabled={!answer.trim()}>Send</button>}
+
+      {/* A typing indicator, deliberately not a spinner: a spinner says the
+          system is loading, this says someone is reading your words. */}
+      {sent && !reply && (
+        <WaitIndicator label="Leo is reading" />
+      )}
+
+      {reply && (
+        <div>
+          {/* skip gets no tick â€” a student who typed nothing is not congratulated.
+              minimal and attempt are visually identical, so the student cannot
+              read their grade off the interface; only Leo's words differ. */}
+          {reply.category === "skip"
+            ? <p className="text-leo wu-skip-line">{reply.line}</p>
+            : <LeoFeedback ok>{reply.line}</LeoFeedback>}
+          <button className="primary-btn" onClick={() => onDone(reply.category !== "skip")}>Next</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Renderer 2: CHOICE â€” marked, with a teaching note either way ---------- */
+function WarmUpChoice({ activity, vocab, onVocabTap, onDone }) {
+  const [chosen, setChosen] = useState(null);
+  const [opts] = useState(() => shuffleOptions(activity.options, textSeed(activity.prompt + activity.answer)));
+  const ok = chosen === activity.answer;
+  return (
+    <div>
+      <p className="q-sentence"><VocabText text={activity.prompt} vocab={vocab} onTap={onVocabTap} /></p>
+      {activity.text && <p className="wu-text">{activity.text}</p>}
+      <div className="mcq-opts">
+        {opts.map((o, i) => (
+          <button key={i} disabled={!!chosen} onClick={() => setChosen(o)}
+            className={"mcq-opt" + (chosen ? (o === activity.answer ? " mcq-right" : o === chosen ? " mcq-chosen" : " mcq-muted") : "")}>{o}</button>
+        ))}
+      </div>
+      {chosen && (
+        <div>
+          <LeoFeedback ok={ok}>{activity.note}</LeoFeedback>
+          <button className="primary-btn" onClick={() => onDone(ok)}>Next</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Renderer 3: SEQUENCE â€” rebuild the correct order ---------- */
+function WarmUpSequence({ activity, onDone }) {
+  const correct = activity.tokens;
+  // A shuffle that happens to return the correct order would hand the student the
+  // answer, so it is rejected and nudged. Seeded from the content, not the length,
+  // so two 8-word sentences don't scramble identically.
+  const [pool] = useState(() => {
+    let arr = shuffleOptions(correct.map((t, i) => ({ t, i })), textSeed(correct.join(" ")));
+    if (correct.length > 2 && arr.map((a) => a.t).join("|") === correct.join("|")) arr = [arr[1], arr[0], ...arr.slice(2)];
+    return arr;
+  });
+  const [built, setBuilt] = useState([]);   // [{t,i}]
+  const [checked, setChecked] = useState(null); // null | true | false
+  const isLine = activity.type === "order_conversation";
+  const used = new Set(built.map((b) => b.i));
+  const check = () => setChecked(built.map((b) => b.t).join("|") === correct.join("|"));
+  const reset = () => { setBuilt([]); setChecked(null); };
+  return (
+    <div>
+      <p className="q-sentence">{activity.prompt}</p>
+      <div className={"wu-build" + (isLine ? " wu-build-lines" : "")} aria-live="polite">
+        {built.length === 0 && <span className="wu-build-empty">Tap the {isLine ? "lines" : "words"} below in the right orderâ€¦</span>}
+        {built.map((b, i) => (
+          <button key={i} className="wu-chip wu-chip-built" disabled={checked !== null}
+            onClick={() => setBuilt(built.filter((_, j) => j !== i))} aria-label={`Remove ${b.t}`}>{b.t}</button>
+        ))}
+      </div>
+      <div className={"wu-pool" + (isLine ? " wu-build-lines" : "")}>
+        {pool.filter((p) => !used.has(p.i)).map((p) => (
+          <button key={p.i} className="wu-chip" disabled={checked !== null} onClick={() => setBuilt([...built, p])}>{p.t}</button>
+        ))}
+      </div>
+      {checked === null ? (
+        <div className="btn-row">
+          <button className="primary-btn" onClick={check} disabled={built.length !== correct.length}>Check</button>
+          {built.length > 0 && <button className="ghost-btn" onClick={reset}>Start again</button>}
+        </div>
+      ) : (
+        <div>
+          <LeoFeedback ok={checked}>
+            {checked ? activity.note : `Not quite â€” the natural order is: â€œ${correct.join(isLine ? " / " : " ")}â€. ${activity.note}`}
+          </LeoFeedback>
+          <button className="primary-btn" onClick={() => onDone(checked)}>Next</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WarmUpActivity({ activity, vocab, onVocabTap, onDone, context, cefr }) {
+  const fam = warmUpFamily(activity.type);
+  if (fam === "choice") return <WarmUpChoice activity={activity} vocab={vocab} onVocabTap={onVocabTap} onDone={onDone} />;
+  if (fam === "sequence") return <WarmUpSequence activity={activity} onDone={onDone} />;
+  if (fam === "open") return <WarmUpOpen activity={activity} vocab={vocab} onVocabTap={onVocabTap} onDone={onDone} />;
+  return <WarmUpFree activity={activity} vocab={vocab} onVocabTap={onVocabTap} onDone={onDone} context={context} cefr={cefr} />;
+}
+
+/* ---------- Stage 1: Introduction â€” context, objective, varied warm-up ---------- */
+/* ================================================================
+   PHASE 8 â€” READING, WARM-UP IMAGES, INTRODUCTION (Â§3f, Â§3b, Â§3a)
+   ================================================================ */
+
+/* Â§3b â€” the image treatment, ruled once for the product.
+   Framed by SHAPE, not chrome: radius, no border, no shadow. The
+   placeholder occupies the final size from the start, so the layout
+   never jumps â€” and it is a flat block, not a shimmer, because
+   nothing in this product loops while waiting.
+   On failure the block persists with the caption inside it and the
+   lesson proceeds: a missing photo never blocks teaching (Â§4.4). */
+function LessonImage({ src, alt, caption }) {
+  const [state, setState] = useState(src ? "loading" : "failed");
+  if (!src || state === "failed") {
+    return (
+      <div className="li-frame li-frame-empty">
+        <span className="li-caption">{caption || alt || ""}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="li-frame">
+      <img src={src} alt={alt || ""} className={"li-img" + (state === "ready" ? " li-img-in" : "")}
+        onLoad={() => setState("ready")} onError={() => setState("failed")} />
+    </div>
+  );
+}
+
+/* Â§3a â€” the aims moment. Leo says it, then a quiet list: his voice
+   carries the relationship, the list survives being half-read on a
+   train. Two or three aims maximum â€” more is a syllabus, not a
+   lesson. Renders nothing at all when the lesson authored no aims. */
+function AimsMoment({ aims }) {
+  if (!aims) return null;
+  const list = (aims.list || []).slice(0, 3);
+  return (
+    <>
+      {aims.spoken && (
+        <div className="bubble bubble-bot stage-enter">{aims.spoken}</div>
+      )}
+      {list.length > 0 && (
+        <div className="aims-card stage-enter-delayed">
+          {list.map((a, i) => <p key={i} className="aims-row">Â· {a}</p>)}
+        </div>
+      )}
+    </>
+  );
+}
+
+function IntroductionSection({ bp, vocab, onVocabTap, onSkip, onDone, header }) {
+  const [idx, setIdx] = useState(-1); // -1 = the intro card
+  const [score, setScore] = useState({ ok: 0, done: 0 });
+  const [finished, setFinished] = useState(false);
+  // The planner's activities, filtered by validation; discussion questions if none survive.
+  const [activities] = useState(() => {
+    const valid = validateWarmUp(bp.warmUpActivities);
+    return valid.length >= 2 ? valid : warmUpFallback(bp);
+  });
+
+  const complete = (wasOk) => {
+    const next = { ok: score.ok + (wasOk ? 1 : 0), done: score.done + 1 };
+    setScore(next);
+    if (idx + 1 < activities.length) setIdx(idx + 1);
+    else setFinished(true);
+  };
+
+  if (finished) return (
+    <SectionShell header={header} title="Warm-up" onSkip={onSkip}>
+      <StageComplete message={{ title: "Warmed up!", sub: "You're switched into English â€” now let's build today's language." }}
+        onContinue={() => onDone(score.done)} />
+    </SectionShell>
+  );
+
+  if (idx === -1) return (
+    <SectionShell header={header} title="Today's lesson" onSkip={onSkip}>
+      <div className="lesson-head leo-accent" style={{ animation: "scRise .4s ease-out both" }}>
+        <p className="lesson-greeting text-leo"><VocabText text={bp.explanation} vocab={vocab} onTap={onVocabTap} /></p>
+      </div>
+      {/* Â§3a â€” the aims moment, when the lesson authored one. */}
+      <AimsMoment aims={bp.aims} />
+      <button className="primary-btn wide" style={{ marginTop: "var(--space-4)", animation: "scRise .4s ease-out both", animationDelay: "0.3s" }} onClick={() => setIdx(0)}>Let's warm up</button>
+    </SectionShell>
+  );
+
+  const a = activities[idx];
+  const meta = WARMUP_TYPES[a.type] || WARMUP_TYPES.context_discussion;
+  return (
+    <SectionShell header={header} title="Warm-up" blurb={a.instruction} onSkip={onSkip}>
+      <div className="wu-head">
+        <span className="wu-badge">{meta.label}</span>
+        <span className="muted small">{idx + 1} of {activities.length}</span>
+      </div>
+      <WarmUpActivity key={idx} activity={a} vocab={vocab} onVocabTap={onVocabTap} onDone={complete} context={bp.context} cefr={bp.cefr} />
+    </SectionShell>
+  );
+}
+
+/* ==================== REUSABLE LEARNING PRIMITIVES ====================
+   Generic, exercise-type components used across multiple lesson stages.
+   Each primitive renders one interaction, calls onDone when complete,
+   and never knows which stage or lesson type it belongs to.
+   ==================================================================== */
+
+/* ---------- GapFillInput: a text-input exercise with answer checking ----------
+   Renders a stem containing a blank (______), a text input, and a check button.
+   Compares the student's answer (case-insensitive, trimmed) against one or more
+   valid answers. Shows LeoFeedback on submission.
+
+   Designed for reuse across: vocabulary complete-the-sentences, listening gap-fill,
+   dictation, spelling, grammar gap-fill, translation exercises.
+   ----------------------------------------------------------------------------- */
+function GapFillInput({ stem, answers, note, placeholder, onDone, properNoun }) {
+  const [input, setInput] = useState("");
+  const [checked, setChecked] = useState(null); // null | true | false
+  const [shown, setShown] = useState(false);
+  const validAnswers = Array.isArray(answers) ? answers : [answers];
+  /* Â§2b.2 acceptance surface: case-insensitive, whitespace trimmed,
+     terminal punctuation ignored. Internal spelling must be exact â€”
+     at A1, spelling IS content, so a misspelling is a wrong-moment
+     with the correct spelling shown as teaching. */
+  const norm = (s) => String(s || "").trim().toLowerCase().replace(/[.!?]+$/, "");
+  const isCorrect = (text) => validAnswers.some((a) => norm(a) === norm(text));
+  const check = () => {
+    if (!input.trim() || checked !== null || shown) return;
+    const ok = isCorrect(input);
+    setChecked(ok);
+    if (onDone) onDone(ok);
+  };
+  const showMe = () => {
+    if (checked !== null || shown) return;
+    setShown(true);
+    if (onDone) onDone(false); // Â§2b.0 â€” counts as not-correct
+  };
+  const settled = checked !== null || shown;
+  const displayStem = (stem || "").replace(/_{2,}/g, "______");
+  /* Â§2b.2 â€” on a settled item the gap is filled by the correct answer
+     in the teacher's colour, so the completed sentence is always the
+     last thing the student sees. */
+  const filledParts = settled ? displayStem.split("______") : null;
+  return (
+    <div className="gapfill-item">
+      {settled && filledParts && filledParts.length > 1
+        ? <p className="q-sentence">{filledParts[0]}<strong className="ex-answer">{validAnswers[0]}</strong>{filledParts.slice(1).join("______")}</p>
+        : <p className="q-sentence">{displayStem}</p>}
+      <div className="input-row">
+        <input className="text-input" placeholder={placeholder || "Type the missing word\u2026"} value={input}
+          disabled={settled} onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && check()}
+          {...(properNoun ? EXERCISE_INPUT_PROPS_PROPER_NOUN : EXERCISE_INPUT_PROPS)} />
+        {!settled && <button className="primary-btn" onClick={check} disabled={!input.trim()}>Check</button>}
+      </div>
+      {!settled && <ShowMeLink onShow={showMe} shown={shown} />}
+      {shown && <CorrectAnswerReveal answer={validAnswers[0]} note={note} />}
+      {checked !== null && (
+        <LeoFeedback ok={checked}>
+          {checked
+            ? (note || "That's right \u2014 well done!")
+            : <>The answer is <strong className="ex-answer">{validAnswers[0]}</strong>. {note || ""}</>}
+        </LeoFeedback>
+      )}
+    </div>
+  );
+}
+
+/* ---------- VocabReviewExercise: odd-one-out then complete-the-sentences ----------
+   Internal sub-component used by VocabularySection when bp.vocabReviewExercises
+   exists. Sequences two exercise types, tracks combined score, calls onDone.
+   ----------------------------------------------------------------------------- */
+function VocabReviewExercise({ exercises, vocab, onVocabTap, onDone }) {
+  const [phase, setPhase] = useState("ooo"); // "ooo" | "gapfill" | "done"
+  const [oooScore, setOooScore] = useState({ correct: 0, total: 0 });
+  const [gfIdx, setGfIdx] = useState(0);
+  const [gfCorrect, setGfCorrect] = useState(0);
+  const [gfChecked, setGfChecked] = useState(false);
+
+  const ooo = exercises.oddOneOut || [];
+  const gapfill = exercises.completeSentences || [];
+  const hasOoo = ooo.length > 0;
+  const hasGf = gapfill.length > 0;
+
+  // Convert odd-one-out to McqQuiz format
+  const oooQuestions = React.useMemo(() => ooo.map((q) => ({
+    stem: "Which word does not belong in this group?",
+    options: q.options,
+    answer: q.answer,
+    note: q.note || "That's the odd one out.",
+  })), []);
+
+  if (phase === "ooo" && hasOoo) {
+    return (
+      <div>
+        <h4 className="diary-label">Odd one out</h4>
+        <p className="muted small">Which word does not belong?</p>
+        <McqQuiz questions={oooQuestions} vocab={vocab} onVocabTap={onVocabTap}
+          onDone={(correct, total) => {
+            setOooScore({ correct, total });
+            if (hasGf) setPhase("gapfill");
+            else setPhase("done");
+          }} />
+      </div>
+    );
+  }
+
+  if (phase === "gapfill" && hasGf) {
+    const q = gapfill[gfIdx];
+    return (
+      <div>
+        <h4 className="diary-label">Complete the sentences</h4>
+        <p className="muted small">Use the vocabulary from today's lesson. Question {gfIdx + 1} of {gapfill.length}.</p>
+        <GapFillInput
+          key={gfIdx}
+          stem={q.stem}
+          answers={q.answer}
+          note={q.note}
+          onDone={(ok) => {
+            if (ok) setGfCorrect((c) => c + 1);
+            setGfChecked(true);
+          }}
+        />
+        {/* Â§1.1 â€” nothing auto-advances. This previously jumped after
+            1800ms, which is less time than an A1 student needs to read
+            the feedback they just earned. */}
+        {gfChecked && (
+          <button className="primary-btn" onClick={() => {
+            setGfChecked(false);
+            if (gfIdx + 1 < gapfill.length) setGfIdx(gfIdx + 1);
+            else setPhase("done");
+          }}>{gfIdx + 1 < gapfill.length ? "Next \u2192" : "Finish practice"}</button>
+        )}
+      </div>
+    );
+  }
+
+  // phase === "done" or skipped phases
+  if (phase === "ooo" && !hasOoo && hasGf) { setPhase("gapfill"); return null; }
+  if (phase === "ooo" && !hasOoo && !hasGf) { setPhase("done"); return null; }
+
+  const totalCorrect = oooScore.correct + gfCorrect;
+  const totalQuestions = oooScore.total + gapfill.length;
+  return (
+    <StageComplete correct={totalCorrect} total={totalQuestions}
+      message={{ title: "Vocabulary reviewed!", sub: `${totalCorrect} out of ${totalQuestions} â€” those words are getting stronger.` }}
+      onContinue={() => onDone(totalCorrect, totalQuestions)} />
+  );
+}
+
+/* ---------- Stage 2: Vocabulary â€” match words to meanings ----------
+   Interaction is UNCHANGED: drag a line from a word to its meaning. What is new
+   is the finish â€” spacing, depth, motion, state feedback â€” plus a tap/keyboard
+   path to the SAME matching model, because a drag-only exercise is unusable for
+   a student with a motor impairment or a screen reader, and Leo teaches everyone.
+   A short press with no movement selects a word; tapping a meaning then matches
+   it. Keyboard users get the identical two-step via Enter/Space. */
+/* ================================================================
+   parseIPA â€” derive syllable count and stressed syllable from IPA
+   ================================================================ */
+function parseIPA(ipa) {
+  if (!ipa) return null;
+  const clean = ipa.replace(/^[/\[]|[/\]]$/g, "").trim();
+  if (!clean) return null;
+  const parts = clean.split(".");
+  if (parts.length < 1) return null;
+  let stressIdx = -1;
+  const syllables = parts.map((p, i) => {
+    if (p.includes("\u02C8")) stressIdx = i;
+    return p.replace(/[\u02C8\u02CC]/g, "").trim();
+  });
+  if (stressIdx < 0 && syllables.length === 1) stressIdx = 0;
+  return { syllables, stressIdx, count: syllables.length };
+}
+
+/* ================================================================
+   PRON CARD â€” pronunciation-focused step-through card (Â§1)
+   No meaning, no example, no POS. Stress pattern, L1 note, pairs.
+   ================================================================ */
+function PronCard({ word, ipa, index, total, pronunciation, stressLabel, onNext, onVocabTap, lastLabel, onSpoke }) {
+  const [heard, setHeard] = useState("");
+  const isLast = index === total - 1;
+  const parsed = parseIPA(ipa);
+  return (
+    <div className="word-card" key={word + "-pron-" + index}>
+      <div className="wc-progress">
+        <span className="wc-progress-text">Sound {index + 1} of {total}</span>
+        <span className="wc-dots">{Array.from({ length: total }, (_, i) => (
+          <span key={i} className={"wc-dot" + (i < index ? " wc-dot-done" : i === index ? " wc-dot-current" : "")} />
+        ))}</span>
+      </div>
+      <div className="wc-word"><VocabToken word={word} onTap={onVocabTap} /></div>
+      {ipa && <div className="wc-ipa">{ipa}</div>}
+      {parsed && parsed.count > 1 && parsed.stressIdx >= 0 && (
+        <div className="pron-stress-row">
+          {parsed.syllables.map((syl, i) => (
+            <div key={i} className="pron-stress-item">
+              <span className={i === parsed.stressIdx ? "pron-stress-dot-filled" : "pron-stress-dot-outline"} />
+              <span className={i === parsed.stressIdx ? "pron-stress-label-stressed" : "pron-stress-label"}>{syl}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {pronunciation && (pronunciation.description || pronunciation.instructions) && (
+        <div className="pron-l1-note">
+          <p style={{ margin: 0, fontSize: 15, lineHeight: 1.5, color: "var(--text-primary)" }}>
+            {pronunciation.instructions || pronunciation.description}
+          </p>
+        </div>
+      )}
+      {pronunciation && pronunciation.correct && (
+        <div className="pron-pair">
+          <div className="pron-pair-correct">
+            <span>{"\u2713"} {Array.isArray(pronunciation.correct) ? pronunciation.correct.join(" \u00b7 ") : pronunciation.correct}</span>
+            <SpeakButton text={String(Array.isArray(pronunciation.correct) ? pronunciation.correct[0] : pronunciation.correct)} className="speak-btn-sm" />
+          </div>
+          {pronunciation.incorrect && (
+            <div className="pron-pair-incorrect">
+              <span><s>{Array.isArray(pronunciation.incorrect) ? pronunciation.incorrect.join(" \u00b7 ") : pronunciation.incorrect}</s></span>
+              <SpeakButton text={String(Array.isArray(pronunciation.incorrect) ? pronunciation.incorrect[0] : pronunciation.incorrect)} className="speak-btn-sm" />
+            </div>
+          )}
+        </div>
+      )}
+      {pronunciation && pronunciation.practiceWords && pronunciation.practiceWords.length > 0 && (
+        <div className="wc-practise-row">
+          <span className="muted small">Practise: </span>
+          {pronunciation.practiceWords.map((pw, j) => (
+            <span key={j}>{TTS_OK ? <button className="link-btn small" onClick={() => speakText(pw)}>{pw}</button> : <span className="small">{pw}</span>}{j < pronunciation.practiceWords.length - 1 ? " \u00b7 " : ""}</span>
+          ))}
+        </div>
+      )}
+      <div className="wc-actions">
+        {TTS_OK && <button className="ghost-btn wc-action-btn" onClick={() => speakText(word)}><Volume2 size={16} aria-hidden="true" /> Hear it</button>}
+        <MicButton className="ghost-btn wc-action-btn" label="\uD83C\uDF99\uFE0F Say it" onText={(t) => { setHeard(t); onSpoke?.(); }} />
+      </div>
+      {heard && <p className="wc-heard">I heard: "{heard}"</p>}
+      <button className="primary-btn wide wc-next" onClick={onNext}>{isLast ? (lastLabel || "Continue") : "Next \u2192"}</button>
+    </div>
+  );
+}
+function PronCardSequence({ words, onComplete, onVocabTap, lastLabel, onSpoke }) {
+  const [idx, setIdx] = useState(0);
+  const w = words[idx];
+  if (!w) return null;
+  return <PronCard key={w.word + "-" + idx} word={w.word} ipa={w.ipa} index={idx} total={words.length}
+    pronunciation={w._pronunciation || null} stressLabel={w.stress}
+    onNext={() => { if (idx < words.length - 1) setIdx(idx + 1); else onComplete(); }}
+    onVocabTap={onVocabTap} lastLabel={lastLabel} onSpoke={onSpoke} />;
+}
+
+/* ================================================================
+   WORD CARD â€” step-through vocabulary/pronunciation card (Â§1â€“Â§11)
+   Spec: WORD_CARD_SPECIFICATION.md. One word per screen. Tap Next.
+   ================================================================ */
+function WordCard({ word, ipa, pos, meaning, example, index, total, pronunciation, onNext, onVocabTap, lastLabel }) {
+  const [heard, setHeard] = useState("");
+  const isLast = index === total - 1;
+  return (
+    <div className="word-card" key={word + "-" + index}>
+      {/* Â§4 Progress row */}
+      <div className="wc-progress">
+        <span className="wc-progress-text">Word {index + 1} of {total}</span>
+        <span className="wc-dots">
+          {Array.from({ length: total }, (_, i) => (
+            <span key={i} className={"wc-dot" + (i < index ? " wc-dot-done" : i === index ? " wc-dot-current" : "")} />
+          ))}
+        </span>
+      </div>
+      {/* Â§3 Typography */}
+      <div className="wc-word"><VocabToken word={word} onTap={onVocabTap} /></div>
+      {ipa && <div className="wc-ipa">{ipa}</div>}
+      {pos && <div className="wc-pos">{pos}</div>}
+      <div className="wc-meaning">{meaning}</div>
+      {example && <div className="wc-example">{example}</div>}
+      {/* Â§5 Action buttons */}
+      <div className="wc-actions">
+        {TTS_OK && <button className="ghost-btn wc-action-btn" onClick={() => speakText(word + ". " + (example || ""))}><Volume2 size={16} aria-hidden="true" /> Hear it</button>}
+        <MicButton className="ghost-btn wc-action-btn" label="\uD83C\uDF99\uFE0F Say it" onText={(t) => setHeard(t)} />
+      </div>
+      {heard && <p className="wc-heard">I heard: "{heard}"</p>}
+      {/* Â§6 Pronunciation block */}
+      {pronunciation && (
+        <div className="wc-pron-block">
+          {pronunciation.practiceWords && pronunciation.practiceWords.length > 0 && (

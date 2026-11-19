@@ -1,0 +1,1000 @@
+﻿        })}
+      </div>
+      {/* The moment between: told you noticed right, before repairing. */}
+      {noticed && !settled && misses === 0 && <p className="cm-beat stage-enter">That's the one.</p>}
+      {noticed && !settled && misses > 0 && (
+        <p className="cm-beat stage-enter">
+          {"Here it is \u2014 that's " + (item.hintWord || exercise.hintWord || "the one") + "."}
+        </p>
+      )}
+      {!noticed && pressed !== null && (
+        <p className="cm-hint stage-enter">
+          {/* Bug fix: this used to hardcode "look at the verb", which
+              was only ever true for Unit 1 Lesson 1's am/is/are
+              mistakes. Later lessons introduced article and possessive
+              mistakes, and the hint kept saying "verb" regardless â€”
+              actively misdirecting the student. Now reads the item's
+              or exercise's authored category; falls back to a phrase
+              that's never wrong instead of one that's specifically
+              wrong. */}
+          Not that one. Look at {item.hintWord || exercise.hintWord || "the other word"}.
+        </p>
+      )}
+      {noticed && !settled && (
+        <>
+          {options && options.length >= 2
+            ? <div className="ex-chips">
+                {options.map((o, i) => (
+                  <button key={i} className="ex-chip" onClick={() => { setRepair(o); setChecked(typedAnswerMatches(o, [item.answer])); if (typedAnswerMatches(o, [item.answer]) && misses === 0) setCorrect((c) => c + 1); }}>{o}</button>
+                ))}
+              </div>
+            : <div className="ex-actions">
+                <input className="ex-inline-input" value={repair} onChange={(e) => setRepair(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && check()} aria-label="Write the correction"
+                  {...EXERCISE_INPUT_PROPS} />
+                <button className="primary-btn" onClick={check} disabled={!repair.trim()}>Check</button>
+              </div>}
+          <ShowMeLink onShow={() => setShown(true)} shown={shown} />
+        </>
+      )}
+      {settled && (
+        <>
+          {shown
+            ? <CorrectAnswerReveal answer={item.answer} note={item.note} />
+            : <LeoFeedback ok={checked}>
+                {checked ? (item.note || "That's it \u2014 the sentence is right now.")
+                         : <>It should be <strong className="ex-answer">{item.answer}</strong>. {item.note || ""}</>}
+              </LeoFeedback>}
+          <button className="primary-btn" onClick={next}>{q.index + 1 >= q.total ? "Finish practice" : "Next \u2192"}</button>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================
+   PHASE 6 â€” TYPE 8 + SPEAKING DELTAS (Â§2b.8, Â§3e)
+
+   One build serving two stages. The continuity is deliberate and
+   total: the student practises the CONVERSATION SURFACE here with
+   scaffolding, then meets the identical surface in speaking without
+   it. Same bubbles, same input row, same mic parity.
+
+   DIRECTION NOTE. Â§2b.8 specifies Leo asking and the student
+   answering. The authored lesson's Ex9 INVERTS this: the student
+   asks, Leo answers â€” because in a 1-to-1 app Leo is the partner, and
+   that is where genuine QUESTION production comes from. Both
+   directions are the same surface with the roles swapped, so this
+   component serves both rather than shipping a second renderer with
+   no content behind it.
+   ================================================================ */
+
+/* Â§3e â€” sentence frames as persistent chips above the input.
+   At A1 the frames are scaffolding and must survive the whole
+   conversation; an adult who has stopped needing them may clear the
+   row. Dismissal is SESSION-ONLY â€” scaffolding decisions belong to
+   the syllabus, not to one impatient afternoon. */
+function FrameChips({ frames, onInsert }) {
+  const [dismissed, setDismissed] = useState(false);
+  if (!frames || !frames.length || dismissed) return null;
+  return (
+    <div className="frame-chips">
+      <div className="frame-chips-row">
+        {frames.map((f, i) => (
+          <button key={i} className="frame-chip" onClick={() => onInsert(f.frame || f)}>{f.frame || f}</button>
+        ))}
+      </div>
+      <button className="frame-chips-x" onClick={() => setDismissed(true)} aria-label="Hide the sentence frames">&times;</button>
+    </div>
+  );
+}
+
+/* Â§2b.8 â€” the bridge to conversation. Bubbles, mic parity, and the
+   model answer gated behind an attempt: production first is the
+   pedagogy, and the design enforces it by simple absence. */
+function AskLeoExercise({ exercise, bp, onDone }) {
+  const items = exercise.items || [];
+  const studentAsks = !!exercise.studentAsks;
+  const [idx, setIdx] = useState(0);
+  const [turns, setTurns] = useState([]);
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [attempted, setAttempted] = useState(false);
+  const [example, setExample] = useState(null);
+  const item = items[idx];
+
+  if (!item) {
+    /* Conversation doesn't tick per turn â€” it responds. The
+       set-complete tick still closes the whole set. */
+    return <StageComplete correct={items.length} total={items.length} onContinue={() => onDone(items.length, items.length)} />;
+  }
+
+  const send = async () => {
+    if (!input.trim() || busy) return;
+    const said = input.trim();
+    setTurns((t) => t.concat([{ role: "you", text: said }]));
+    setInput("");
+    setAttempted(true);
+    setBusy(true);
+    try {
+      const prompt = studentAsks
+        ? `${AUSTRALIAN_SPELLING}You are Leo, an ELICOS teacher in Australia. Your A1 student asked you: "${said}".\n` +
+          `${item.leoGuidance ? "Guidance: " + item.leoGuidance + "\n" : ""}` +
+          `Answer their question honestly and briefly as yourself. Then, if their question had a small error, model the correct question with the target form in **bold** â€” warmly, never as a correction notice. Max 25 words. Plain text only.`
+        : `${AUSTRALIAN_SPELLING}You are Leo, an ELICOS teacher. You asked your A1 student: "${item.stem}". They answered: "${said}".\n` +
+          `Reply warmly to WHAT THEY SAID in one or two short sentences, with the target form in **bold**. If they made an error, recast it correctly inside your reply â€” never interrupt the flow with a correction notice. Max 25 words. Plain text only.`;
+      const raw = await askClaude(prompt, { intent: "ask_leo_reply" });
+      setTurns((t) => t.concat([{ role: "leo", text: String(raw || "").trim() }]));
+    } catch {
+      /* Honest failure: Leo does not invent a reply he never computed.
+         The student's turn still counts and the path forward is named. */
+      setTurns((t) => t.concat([{ role: "leo", text: "I couldn't reply just then \u2014 but I heard you. Let's keep going.", _failed: true }]));
+    } finally { setBusy(false); }
+  };
+
+  const next = () => { setIdx(idx + 1); setTurns([]); setInput(""); setAttempted(false); setExample(null); };
+  const frames = (bp && bp.sentenceFrames && bp.sentenceFrames.speaking) || [];
+
+  return (
+    <div className="ex-item" key={idx}>
+      <ExerciseChrome index={idx} total={items.length} label={studentAsks ? "Question" : "Question"} />
+      {/* When the student asks, the prompt IS their line to produce â€”
+          shown as an instruction, not as a Leo bubble he already said. */}
+      {studentAsks
+        ? <p className="ex-instruction">Ask Leo: <strong className="ex-answer">{item.stem}</strong></p>
+        : <div className="bubble bubble-bot">
+            {item.stem}
+            <SpeakButton text={item.stem} />
+          </div>}
+
+      <div className="speak-thread">
+        {turns.map((t, i) => (
+          <div key={i} className={"speak-turn " + (t.role === "leo" ? "speak-leo" : "speak-you")}>
+            <p>{t.text}</p>
+            {t.role === "leo" && !t._failed && TTS_OK && (
+              <SpeakButton text={t.text} />
+            )}
+          </div>
+        ))}
+        {busy && <Spinner label="Leo is listeningâ€¦" />}
+      </div>
+
+      {!turns.some((t) => t.role === "leo") && (
+        <>
+          {frames.length > 0 && <FrameChips frames={frames} onInsert={(f) => setInput((v) => (v ? v + " " : "") + f.replace(/_+/g, "").trim())} />}
+          <div className="input-row">
+            <input className="text-input" value={input} placeholder={studentAsks ? "Type your question\u2026" : "Type or speak\u2026"}
+              onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()}
+              disabled={busy} {...EXERCISE_INPUT_PROPS} />
+            <MicButton onText={(t) => setInput(t)} />
+            <button className="primary-btn" onClick={send} disabled={busy || !input.trim()}>Send</button>
+          </div>
+          {/* Â§2b.8 â€” model answer AFTER attempting, never before. */}
+          {attempted && !example && !studentAsks && (
+            <button className="ex-showme" onClick={() => setExample(item.model || item.answer || null)}>Show an example</button>
+          )}
+        </>
+      )}
+      {example && <div className="bubble bubble-bot stage-enter">For example: {example}</div>}
+      {turns.some((t) => t.role === "leo") && (
+        <button className="primary-btn" onClick={next}>
+          {idx + 1 >= items.length ? "Finish practice" : "Next \u2192"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* Â§2b â€” True/false is a two-chip choice wearing different clothes.
+   Adapting it here rather than writing a fourth near-identical
+   renderer keeps one interaction language across the product. */
+function TrueFalseExercise({ exercise, onDone }) {
+  const adapted = {
+    ...exercise,
+    options: ["True", "False"],
+    items: (exercise.items || []).map((it) => ({
+      ...it,
+      options: ["True", "False"],
+      answer: it.answer === true || String(it.answer).toLowerCase() === "true" ? "True" : "False",
+    })),
+  };
+  return <ChooseFormExercise exercise={adapted} onDone={onDone} />;
+}
+
+/* Runs a list of authored exercises through their renderers in the
+   authored order, falling through to the MCQ adapter for shapes with
+   no renderer yet. Shared by the grammar and reading stages so neither
+   can silently drop authored content the other renders. */
+function AuthoredExerciseRunner({ exercises, fallbackQuestions, bp, vocab, onVocabTap, onDone, onAdvance }) {
+  const runnable = (exercises || []).filter((ex) => EXERCISE_RENDERERS[ex.exerciseType]);
+  const [step, setStep] = useState(0);
+  const [score, setScore] = useState({ correct: 0, total: 0 });
+  if (step < runnable.length) {
+    const ex = runnable[step];
+    return (
+      <div key={ex.exerciseType + step}>
+        {ex.title && <p className="ex-ex-title">{ex.title}</p>}
+        {ex.instruction && <p className="ex-instruction">{ex.instruction}</p>}
+        {renderAuthoredExercise(ex, (c, t) => {
+          setScore((s) => ({ correct: s.correct + c, total: s.total + t }));
+          setStep(step + 1);
+          if (onAdvance) onAdvance();
+        }, bp)}
+      </div>
+    );
+  }
+  /* Shapes with a renderer are excluded from the fallback, or their
+     items would be asked twice. */
+  const remaining = (fallbackQuestions || []).filter((q) => !EXERCISE_RENDERERS[q._exerciseType]);
+  if (!remaining.length) {
+    return <StageComplete correct={score.correct} total={score.total} onContinue={() => onDone(score.correct, score.total)} />;
+  }
+  return <McqQuiz questions={remaining} vocab={vocab} onVocabTap={onVocabTap} onAdvance={onAdvance}
+    onDone={(c, t) => onDone(score.correct + c, score.total + t)} />;
+}
+
+/* ================================================================
+   PHASE 10 â€” MATCH_QUESTION_ANSWER AND WRITE_THE_QUESTION
+   Plus the five structural-mismatch fixes (sort_into_groups,
+   build_the_sentence, multi-blank own_word, personalisation
+   reorder generalisation, vocab ceiling raised to 12).
+   ================================================================ */
+
+/* Â§2b â€” match_question_answer: tap a question, then tap its answer.
+   Same interaction as the existing vocabulary matcher (tap-first,
+   tap-second) at exercise scale. Pairs are shuffled once on load so
+   the correct answer is never always in the same position.
+   The chrome is the same as every other exercise type: dots, tick,
+   Show me, silent re-queue-once. */
+function MatchQuestionAnswerExercise({ exercise, onDone }) {
+  const items = exercise.items || [];
+  const q = useExerciseQueue(items);
+  const [selectedLeft, setSelectedLeft] = useState(null);
+  const [settled, setSettled] = useState(null); // null | {ok, chosen}
+  const [shown, setShown] = useState(false);
+  const [correct, setCorrect] = useState(0);
+  const item = q.current;
+
+  /* Shuffle the right-hand options once per item so position doesn't
+     signal the answer. Include all items' right sides to give a
+     realistic distractor set, not just the current item. */
+  const allRights = React.useMemo(
+    () => shuffleOptions(items.map((it, i) => ({ text: it.right, idx: i })), items.length * 7),
+    [items]
+  );
+
+  if (q.finished || !item) {
+    return <StageComplete correct={correct} total={items.length} onContinue={() => onDone(correct, items.length)} />;
+  }
+
+  const isCorrect = settled && settled.chosen === item.right;
+  const showMe = () => { if (settled) return; setShown(true); };
+  const pickRight = (text) => {
+    if (settled || shown) return;
+    const ok = text === item.right;
+    setSettled({ ok, chosen: text });
+    if (ok) setCorrect((c) => c + 1);
+  };
+  const next = () => {
+    q.advance(isCorrect);
+    setSelectedLeft(null); setSettled(null); setShown(false);
+  };
+
+  return (
+    <div className="ex-item">
+      <ExerciseChrome index={q.index} total={q.total} label="Pair" />
+      {/* The question is fixed on the left; the student picks from the
+          shuffled right-hand column. */}
+      <p className="ex-sentence">{item.left}</p>
+      <div className="mqa-rights">
+        {allRights.map((r, i) => {
+          const isChosen = settled && settled.chosen === r.text;
+          const isAnswer = settled && r.text === item.right;
+          return (
+            <button key={i}
+              className={"mqa-opt" + (settled ? (isAnswer ? " mqa-correct" : isChosen ? " mqa-chosen" : " mqa-muted") : "")}
+              onClick={() => pickRight(r.text)}
+              disabled={!!settled || shown}>
+              {r.text}
+            </button>
+          );
+        })}
+      </div>
+      {!settled && <ShowMeLink onShow={showMe} shown={shown} />}
+      {shown && <CorrectAnswerReveal answer={item.right} />}
+      {settled && (
+        <>
+          <LeoFeedback ok={isCorrect}>
+            {isCorrect ? "That's the pair." : <>The answer is <strong className="ex-answer">{item.right}</strong>.</>}
+          </LeoFeedback>
+          <button className="primary-btn" onClick={next}>
+            {q.index + 1 >= q.total ? "Finish practice" : "Next \u2192"}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* Â§2b â€” write_the_question: given an answer, write the question.
+   Typed production. The acceptance surface is the same as GapFillInput
+   (normalised, case-insensitive, punctuation-tolerant) but here the
+   student is producing a whole sentence rather than a gap-fill word,
+   so the stem shows the given ANSWER and the input is above it.
+   alsoAccept is respected â€” U1L1's Ex7 item 6 accepts two forms. */
+function WriteTheQuestionExercise({ exercise, onDone }) {
+  const items = exercise.items || [];
+  const q = useExerciseQueue(items);
+  const [input, setInput] = useState("");
+  const [checked, setChecked] = useState(null);
+  const [shown, setShown] = useState(false);
+  const [correct, setCorrect] = useState(0);
+  const item = q.current;
+
+  if (q.finished || !item) {
+    return <StageComplete correct={correct} total={items.length} onContinue={() => onDone(correct, items.length)} />;
+  }
+
+  const answers = [item.answer].concat(item.alsoAccept || []);
+  const settled = checked !== null || shown;
+  const ok = checked === true;
+
+  const check = () => {
+    if (!input.trim() || settled) return;
+    const isOk = typedAnswerMatches(input, answers);
+    setChecked(isOk ? true : false);
+    if (isOk) setCorrect((c) => c + 1);
+  };
+
+  const next = () => {
+    q.advance(ok);
+    setInput(""); setChecked(null); setShown(false);
+  };
+
+  return (
+    <div className="ex-item" key={q.index}>
+      <ExerciseChrome index={q.index} total={q.total} label="Question" />
+      <p className="ex-instruction">Write the question for this answer:</p>
+      {/* The given answer is the prompt â€” shown clearly so the student
+          can work backwards to the question. */}
+      <div className="grammar-form-box">
+        <p className="gb-keypoint-text">{item.given}</p>
+      </div>
+      {settled
+        ? <p className="ex-sentence"><strong className="ex-answer">{answers[0]}</strong></p>
+        : (
+          <>
+            <div className="input-row">
+              <input className="text-input" value={input}
+                placeholder={"Type the question\u2026"}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && check()}
+                disabled={settled} {...EXERCISE_INPUT_PROPS} />
+              <button className="primary-btn" onClick={check} disabled={!input.trim()}>Check</button>
+            </div>
+            <ShowMeLink onShow={() => setShown(true)} shown={shown} />
+          </>
+        )}
+      {shown && <CorrectAnswerReveal answer={answers[0]} note={item.alsoAccept && item.alsoAccept.length ? `Also correct: ${item.alsoAccept.join(", ")}` : null} />}
+      {checked !== null && (
+        <LeoFeedback ok={ok}>
+          {ok ? "That's the question." : <>The question is <strong className="ex-answer">{answers[0]}</strong>.</>}
+        </LeoFeedback>
+      )}
+      {settled && (
+        <button className="primary-btn" onClick={next}>
+          {q.index + 1 >= q.total ? "Finish practice" : "Next \u2192"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================
+   STRUCTURAL MISMATCH FIX 1: sort_into_groups
+   Used in U1L2 (a/an) and U2L1 (man/woman/both).
+   Tap-to-bucket: items start in a pool, tapping one moves it into
+   the currently-selected bucket. No wrong/right on individual taps â€”
+   the whole set is submitted at once.
+   ================================================================ */
+function SortIntoGroupsExercise({ exercise, onDone }) {
+  const groups = exercise.groups || [];
+  const items = exercise.items || [];
+  /* Shuffle the item pool once on load. */
+  const [pool, setPool] = useState(() => shuffleOptions(items.map((it, i) => ({ ...it, id: i })), items.length * 13));
+  const [buckets, setBuckets] = useState(() => Object.fromEntries(groups.map(g => [g, []])));
+  const [checked, setChecked] = useState(false);
+  const [correct, setCorrect] = useState(0);
+
+  const allPlaced = pool.length === 0;
+
+  const placeItem = (item, group) => {
+    setPool(p => p.filter(x => x.id !== item.id));
+    setBuckets(b => ({ ...b, [group]: b[group].concat([item]) }));
+  };
+  const returnItem = (item, group) => {
+    if (checked) return;
+    setBuckets(b => ({ ...b, [group]: b[group].filter(x => x.id !== item.id) }));
+    setPool(p => p.concat([item]));
+  };
+
+  const check = () => {
+    if (!allPlaced || checked) return;
+    let c = 0;
+    groups.forEach(g => { buckets[g].forEach(it => { if (it.group === g) c++; }); });
+    setCorrect(c);
+    setChecked(true);
+  };
+
+  if (checked) {
+    return (
+      <div className="ex-item">
+        <div className="sig-buckets">
+          {groups.map(g => (
+            <div key={g} className="sig-bucket">
+              <p className="gram-section-label">{g}</p>
+              {buckets[g].map((it, i) => (
+                <span key={i} className={"sig-word " + (it.group === g ? "sig-correct" : "sig-wrong")}>{it.word}</span>
+              ))}
+            </div>
+          ))}
+        </div>
+        <StageComplete correct={correct} total={items.length}
+          onContinue={() => onDone(correct, items.length)} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="ex-item">
+      <ExerciseChrome index={pool.length} total={items.length} label="Sorted" />
+      <p className="ex-instruction">{exercise.instruction || "Tap a word, then tap the right group."}</p>
+      {/* Pool: words waiting to be sorted. */}
+      <div className="sig-pool">
+        {pool.map((it, i) => (
+          /* Tapping a pool word opens a picker inline rather than a
+             separate UI â€” the bucket buttons appear below the word
+             and the student taps one to place it. */
+          <PoolWord key={it.id} item={it} groups={groups} onPlace={placeItem} />
+        ))}
+      </div>
+      {/* Buckets: words already placed. */}
+      <div className="sig-buckets">
+        {groups.map(g => (
+          <div key={g} className="sig-bucket sig-bucket-live">
+            <p className="gram-section-label">{g}</p>
+            {buckets[g].map((it, i) => (
+              <button key={i} className="sig-word sig-placed" onClick={() => returnItem(it, g)}>{it.word}</button>
+            ))}
+          </div>
+        ))}
+      </div>
+      {allPlaced && (
+        <div className="ex-actions stage-enter">
+          <button className="primary-btn" onClick={check}>Check</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Tap a pool word â†’ group buttons appear immediately below it. Tap a
+   group â†’ the word moves there. Keeps everything in one thumb zone. */
+function PoolWord({ item, groups, onPlace }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="sig-pool-item">
+      <button className={"sig-word" + (open ? " sig-word-open" : "")} onClick={() => setOpen(o => !o)}>
+        {item.word}
+      </button>
+      {open && (
+        <div className="sig-picker stage-enter">
+          {groups.map((g, i) => (
+            <button key={i} className="sig-group-btn" onClick={() => { onPlace(item, g); setOpen(false); }}>{g}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================
+   STRUCTURAL MISMATCH FIX 2: build_the_sentence
+   Given a bare "subject / noun" cue, the student types the full
+   sentence using 'be' + a/an (or have got, or possessives).
+   Typed production. The "/" in the cue must NOT be read by TTS as
+   "forward slash" â€” TTS is not offered here since the cue is
+   structured, not a natural sentence to hear.
+   ================================================================ */
+function BuildTheSentenceExercise({ exercise, onDone }) {
+  const items = exercise.items || [];
+  const q = useExerciseQueue(items);
+  const [input, setInput] = useState("");
+  const [checked, setChecked] = useState(null);
+  const [shown, setShown] = useState(false);
+  const [correct, setCorrect] = useState(0);
+  const item = q.current;
+
+  if (q.finished || !item) {
+    return <StageComplete correct={correct} total={items.length} onContinue={() => onDone(correct, items.length)} />;
+  }
+
+  const answers = [item.answer].concat(item.alsoAccept || []);
+  const settled = checked !== null || shown;
+
+  const check = () => {
+    if (!input.trim() || settled) return;
+    const ok = typedAnswerMatches(input, answers);
+    setChecked(ok ? true : false);
+    if (ok) setCorrect((c) => c + 1);
+  };
+
+  const next = () => {
+    q.advance(checked === true);
+    setInput(""); setChecked(null); setShown(false);
+  };
+
+  return (
+    <div className="ex-item" key={q.index}>
+      <ExerciseChrome index={q.index} total={q.total} label="Sentence" />
+      <p className="ex-instruction">{exercise.instruction || "Make a full sentence."}</p>
+      {/* The cue is a bare "subject / noun" pair â€” shown in the form
+          box to distinguish it clearly from a sentence to correct. */}
+      <div className="grammar-form-box">
+        <p className="gb-keypoint-text">{item.given}</p>
+      </div>
+      {settled
+        ? <p className="ex-sentence"><strong className="ex-answer">{answers[0]}</strong></p>
+        : (
+          <>
+            <div className="input-row">
+              <input className="text-input" value={input}
+                placeholder={"Type the sentence\u2026"}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && check()}
+                disabled={settled} {...EXERCISE_INPUT_PROPS} />
+              <button className="primary-btn" onClick={check} disabled={!input.trim()}>Check</button>
+            </div>
+            <ShowMeLink onShow={() => setShown(true)} shown={shown} />
+          </>
+        )}
+      {shown && <CorrectAnswerReveal answer={answers[0]} note={item.note} />}
+      {checked !== null && (
+        <LeoFeedback ok={checked === true}>
+          {checked ? (item.note || "That's it.") : <>The sentence is <strong className="ex-answer">{answers[0]}</strong>. {item.note || ""}</>}
+        </LeoFeedback>
+      )}
+      {settled && (
+        <button className="primary-btn" onClick={next}>
+          {q.index + 1 >= q.total ? "Finish practice" : "Next \u2192"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function GrammarSection({ bp, section, vocab, onVocabTap, onSkip, onDone, header, onExerciseChange }) {
+  const g = bp.grammar || {};
+  const hasPractice = section.questions && section.questions.length >= 3 && !section.explanationOnly;
+  const [practising, setPractising] = useState(false);
+  const [boardOpen, setBoardOpen] = useState(false);
+  /* Â§2a â€” authored lessons carry structured blocks; generated lessons do
+     not. The DATA decides the treatment, never a type flag, so every
+     generated lesson renders exactly as it does today. */
+  const blocks = bp.grammarBlocks;
+  const hasBlocks = grammarBlockList(blocks).length > 0;
+  /* Â§2a.5 â€” walked through the first time, stacked on re-visit. The
+     signal is held state: a stage already recorded as presented means
+     this student has been walked through it before. */
+  const alreadySeen = !!(section && section.presented);
+
+  if (!practising && hasBlocks) return (
+    <SectionShell header={header} title={`Grammar: ${g.point}`} blurb="One point, straight from today's situation â€” never grammar for its own sake." onSkip={onSkip}>
+      <GrammarPresentation
+        blocks={blocks}
+        alreadySeen={alreadySeen}
+        onDone={() => (hasPractice ? setPractising(true) : onDone(0, 0))}
+      />
+    </SectionShell>
+  );
+
+  if (practising && hasBlocks) return (
+    <SectionShell header={header} title={`Grammar: ${g.point}`} onSkip={onSkip}>
+      <AuthoredGrammarPractice bp={bp} section={section} vocab={vocab} onVocabTap={onVocabTap} onDone={onDone} onExerciseChange={onExerciseChange} />
+      {/* Â§2a.5 â€” reference reachable without leaving the task. */}
+      <ReviewBoardLink onOpen={() => setBoardOpen(true)} />
+      {boardOpen && <GrammarBoardSheet blocks={blocks} onClose={() => setBoardOpen(false)} />}
+    </SectionShell>
+  );
+
+  return <GrammarSectionGenerated bp={bp} section={section} vocab={vocab} onVocabTap={onVocabTap} onSkip={onSkip} onDone={onDone} practising={practising} setPractising={setPractising} />;
+}
+
+/* The GENERATED-lesson grammar treatment â€” prose Meaning/Form/Usage plus
+   gram-ref-table. Untouched by Phase 2 (spec Â§2a.1: it stays for the
+   content shape it fits). */
+function GrammarSectionGenerated({ bp, section, vocab, onVocabTap, onSkip, onDone, practising, setPractising }) {
+  const g = bp.grammar || {};
+  const hasPractice = section.questions && section.questions.length >= 3 && !section.explanationOnly;
+  if (!practising) return (
+    <SectionShell header={header} title={`Grammar: ${g.point}`} blurb="One point, straight from today's situation â€” never grammar for its own sake." onSkip={onSkip}>
+      <div className="grammar-card">
+        <p className="gram-section-label">Meaning</p>
+        <p><VocabText text={g.meaning} vocab={vocab} onTap={onVocabTap} /></p>
+        <p className="gram-section-label">The form</p>
+        <div className="grammar-form-box"><span className="gram-form">{g.form}</span></div>
+        <p className="gram-section-label">When to use it</p>
+        <p><VocabText text={g.usage} vocab={vocab} onTap={onVocabTap} /></p>
+        {(g.examples || []).map((ex, i) => (
+          <div key={i} className="grammar-example">
+            <span className="grammar-example-bar" />
+            <VocabText text={ex} vocab={vocab} onTap={onVocabTap} />
+          </div>
+        ))}
+      </div>
+      {/* Grammar reference table â€” settled tokens (Â§2.6) */}
+      {g.reference && g.reference.length > 0 && (
+        <div className="gram-ref-table" style={{ overflowX: "auto", marginTop: 12 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13.5px" }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: "left", padding: "8px 10px", borderBottom: "2px solid var(--leo-green)", color: "var(--text-primary)", fontWeight: 700 }}>Function</th>
+                <th style={{ textAlign: "left", padding: "8px 10px", borderBottom: "2px solid var(--leo-green)", color: "var(--text-primary)", fontWeight: 700 }}>Form</th>
+                <th style={{ textAlign: "left", padding: "8px 10px", borderBottom: "2px solid var(--leo-green)", color: "var(--text-primary)", fontWeight: 700 }}>Example</th>
+              </tr>
+            </thead>
+            <tbody>
+              {g.reference.map((row, i) => (
+                <tr key={i}>
+                  <td style={{ padding: "7px 10px", borderBottom: "1px solid var(--divider)", fontWeight: 600, color: "var(--text-primary)" }}>{row.function}</td>
+                  <td style={{ padding: "7px 10px", borderBottom: "1px solid var(--divider)" }}><span className="gram-form">{row.form}</span></td>
+                  <td style={{ padding: "7px 10px", borderBottom: "1px solid var(--divider)", fontStyle: "italic", opacity: 0.8 }}>{row.example}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {hasPractice
+        ? <button className="primary-btn" onClick={() => setPractising(true)}>Practise it</button>
+        : <button className="primary-btn" onClick={() => onDone(0, 0)}>Continue</button>}
+    </SectionShell>
+  );
+  return (
+    <SectionShell header={header} title={`Grammar: ${g.point}`} onSkip={onSkip}>
+      <McqQuiz questions={section.questions} vocab={vocab} onVocabTap={onVocabTap} onDone={onDone} />
+    </SectionShell>
+  );
+}
+
+/* ================================================================
+   W-01 WHITEBOARD GRAMMAR â€” BoardFrame + GrammarBoard
+   Phase 1 partial build. Renderer only; planner does not emit boards yet.
+   Every current lesson renders on the existing prose fallback (unchanged).
+   When the planner starts emitting valid boards, this surface takes over.
+   ================================================================ */
+
+/* BoardFrame â€” the v3 rounded rect + tray, same shape as WhiteboardLogo.
+   One shape, two scales, one identity. Board stroke is 2.5px --marker-black;
+   logo stroke is 2px --leo-green. */
+function BoardFrame({ children, width }) {
+  const w = width || "100%";
+  return (
+    <div className="wb-board" style={{ width: w }}>
+      <svg viewBox="-5 -5 810 602" className="wb-board-svg" role="presentation" aria-hidden="true"
+        style={{ width: "100%", height: "auto", display: "block" }}>
+        {/* v4 Â§2.1: frame and tray are discrete objects with a 12-unit gap between them. */}
+        <rect x="0" y="0" width="800" height="560" rx="30"
+          fill="var(--board-face)" stroke="var(--marker-black)" strokeWidth="2.5"
+          vectorEffect="non-scaling-stroke" />
+        {/* v4 Â§2.2: tray drawn after frame. No occlusion â€” the gap separates them. */}
+        <rect x="60" y="572" width="680" height="20" rx="10"
+          fill="var(--board-face)" stroke="var(--marker-black)" strokeWidth="2.5"
+          vectorEffect="non-scaling-stroke" />
+      </svg>
+      <div className="wb-board-content">{children}</div>
+    </div>
+  );
+}
+
+/* Hand imperfection (Â§4.3). Block-level, deterministic, subtle.
+   Each element gets Â±1.2Â° rotation and Â±1px baseline offset, derived from
+   textSeed() of its own text. Same board, same seed, same render â€” a board
+   that shimmers between sessions is a Continuity Integrity defect. */
+function _boardImperfection(text) {
+  const seed = textSeed(String(text || ""));
+  const rot = ((seed % 240) - 120) / 100; // Â±1.2Â°
+  const yOff = ((seed >> 8) % 200 - 100) / 100; // Â±1px
+  return { transform: `rotate(${rot.toFixed(2)}deg) translateY(${yOff.toFixed(1)}px)` };
+}
+
+/* Hand-drawn wavering line. 2-3 shallow curve segments approximating a
+   straight line â€” never ruler-straight, never scribble. Deterministic. */
+function _waverPath(x1, y1, x2, y2, seed) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const s = textSeed(String(seed || "") + x1);
+  const mid1x = x1 + dx * 0.33, mid2x = x1 + dx * 0.66;
+  const wobble = 2.5;
+  const w1 = ((s % 100) - 50) / 50 * wobble;
+  const w2 = (((s >> 7) % 100) - 50) / 50 * wobble;
+  return `M ${x1} ${y1} Q ${mid1x} ${y1 + dy * 0.33 + w1}, ${x1 + dx * 0.5} ${y1 + dy * 0.5} Q ${mid2x} ${y1 + dy * 0.66 + w2}, ${x2} ${y2}`;
+}
+
+/* Role â†’ CSS class mapping (Â§5.1) */
+const _ROLE_CLASS = { plain: "wb-plain", structure: "wb-structure", target: "wb-target", model: "wb-model" };
+function _roleClass(role) { return _ROLE_CLASS[role] || "wb-plain"; }
+
+/* RoleSpan â€” a span of text with a grammar role, rendered through VocabText
+   so tap-to-learn survives onto the board (Â§5.6). */
+function RoleSpan({ text, role, vocab, onVocabTap }) {
+  return <span className={_roleClass(role)}><VocabText text={text} vocab={vocab || []} onTap={onVocabTap} /></span>;
+}
+
+/* ---- Element renderers, one per Â§6.1 type ---- */
+
+function BoardTitle({ el, idx }) {
+  const imp = _boardImperfection(el.text);
+  return (
+    <div className="wb-el wb-title" style={{ ...imp, animationDelay: (idx * 130) + "ms" }}>
+      <span className="wb-title-text">{el.text}</span>
+      <svg className="wb-title-underline" height="6" aria-hidden="true">
+        <path d={_waverPath(0, 3, 200, 3, el.text)} stroke="var(--marker-blue)" strokeWidth="2.5" fill="none" />
+      </svg>
+    </div>
+  );
+}
+
+function BoardRule({ el, idx, vocab, onVocabTap }) {
+  const imp = _boardImperfection((el.pieces || []).map(p => p.text).join(" "));
+  return (
+    <div className="wb-el wb-rule" style={{ ...imp, animationDelay: (idx * 130) + "ms" }}>
+      {(el.pieces || []).map((p, i) => <RoleSpan key={i} text={p.text} role={p.role} vocab={vocab} onVocabTap={onVocabTap} />)}
+    </div>
+  );
+}
+
+function BoardFormula({ el, idx, vocab, onVocabTap }) {
+  const imp = _boardImperfection((el.boxes || []).map(b => b.text).join("+"));
+  const joiner = el.joiner || "+";
+  return (
+    <div className="wb-el wb-formula" style={{ ...imp, animationDelay: (idx * 130) + "ms" }}>
+      {(el.boxes || []).map((box, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && <span className="wb-formula-join">{joiner}</span>}
+          <span className={`wb-formula-box ${_roleClass(box.role)}`}>
+            <RoleSpan text={box.text} role={box.role} vocab={vocab} onVocabTap={onVocabTap} />
+          </span>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+function BoardSubTable({ el, idx, vocab, onVocabTap }) {
+  const imp = _boardImperfection((el.slots || []).map(s => s.label).join(" "));
+  return (
+    <div className="wb-el wb-subtable" style={{ ...imp, animationDelay: (idx * 130) + "ms" }}>
+      <div className="wb-subtable-grid" style={{ gridTemplateColumns: `repeat(${(el.slots || []).length}, 1fr)` }}>
+        {(el.slots || []).map((slot, si) => (
+          <div key={si} className={`wb-slot ${slot.target ? "wb-slot-target" : ""}`}>
+            {el.numbered && <span className="wb-slot-num">{si + 1}</span>}
+            <span className="wb-slot-label">{slot.label}</span>
+            <div className="wb-slot-items">
+              {(slot.items || []).map((item, ii) => (
+                <div key={ii} className="wb-slot-item">
+                  <RoleSpan text={item} role={slot.target ? "target" : "plain"} vocab={vocab} onVocabTap={onVocabTap} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      {el.example && (
+        <div className="wb-subtable-example wb-model">
+          <VocabText text={el.example} vocab={vocab || []} onTap={onVocabTap} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BoardExample({ el, idx, vocab, onVocabTap }) {
+  const imp = _boardImperfection((el.spans || []).map(sp => sp.text).join(" "));
+  return (
+    <div className="wb-el wb-example" style={{ ...imp, animationDelay: (idx * 130) + "ms" }}>
+      <span className="wb-example-text">
+        {(el.spans || []).map((sp, i) => <RoleSpan key={i} text={sp.text} role={sp.role} vocab={vocab} onVocabTap={onVocabTap} />)}
+      </span>
+      {el.mark === "tick" && <span className="wb-mark wb-mark-tick" aria-label="correct">âœ“</span>}
+      {el.mark === "cross" && <span className="wb-mark wb-mark-cross" aria-label="incorrect">âœ—</span>}
+    </div>
+  );
+}
+
+function BoardContrast({ el, idx, vocab, onVocabTap }) {
+  const fromText = (el.from && el.from.spans || []).map(sp => sp.text).join(" ");
+  const toText = (el.to && el.to.spans || []).map(sp => sp.text).join(" ");
+  const imp = _boardImperfection(fromText + toText);
+  return (
+    <div className="wb-el wb-contrast" style={{ ...imp, animationDelay: (idx * 130) + "ms" }}>
+      <div className="wb-contrast-from">
+        {(el.from && el.from.spans || []).map((sp, i) => <RoleSpan key={i} text={sp.text} role={sp.role} vocab={vocab} onVocabTap={onVocabTap} />)}
+      </div>
+      <svg className="wb-contrast-arrow" width="40" height="24" aria-hidden="true">
+        <path d={_waverPath(4, 12, 32, 12, fromText)} stroke="var(--marker-orange)" strokeWidth="2" fill="none" />
+        <polygon points="30,6 38,12 30,18" fill="var(--marker-orange)" />
+      </svg>
+      <div className="wb-contrast-to">
+        {(el.to && el.to.spans || []).map((sp, i) => <RoleSpan key={i} text={sp.text} role={sp.role} vocab={vocab} onVocabTap={onVocabTap} />)}
+      </div>
+    </div>
+  );
+}
+
+function BoardNote({ el, idx }) {
+  const imp = _boardImperfection(el.text);
+  return (
+    <div className="wb-el wb-note" style={{ ...imp, animationDelay: (idx * 130) + "ms" }}>
+      <svg className="wb-note-bubble" viewBox="0 0 200 50" aria-hidden="true">
+        <path d={_waverPath(10, 5, 190, 5, el.text + "top")} stroke="var(--marker-orange)" strokeWidth="1.5" fill="none" />
+        <path d={_waverPath(190, 5, 190, 40, el.text + "right")} stroke="var(--marker-orange)" strokeWidth="1.5" fill="none" />
+        <path d={_waverPath(190, 40, 10, 40, el.text + "bottom")} stroke="var(--marker-orange)" strokeWidth="1.5" fill="none" />
+        <path d={_waverPath(10, 40, 10, 5, el.text + "left")} stroke="var(--marker-orange)" strokeWidth="1.5" fill="none" />
+      </svg>
+      <span className="wb-note-text">{el.text}</span>
+    </div>
+  );
+}
+
+const _BOARD_RENDERERS = {
+  title: BoardTitle, rule: BoardRule, formula: BoardFormula,
+  subTable: BoardSubTable, example: BoardExample, contrast: BoardContrast, note: BoardNote,
+};
+
+/* GrammarBoard â€” renders one or more boards inside BoardFrame.
+   Â§7: the whole surface is a figure with role="img" semantics. The prose
+   fields (meaning, form, usage, examples) serve as the screen-reader
+   alternative â€” one source of truth, already correct. */
+function GrammarBoard({ boards, grammar, vocab, onVocabTap }) {
+  const g = grammar || {};
+  const captionId = "wb-caption-" + textSeed(g.point || "grammar");
+  // Build a connected prose caption from the existing fields â€” one paragraph,
+  // not four labelled fields. A screen reader reading "Meaning: X. Form: Y."
+  // hears an outline; a connected paragraph hears a caption. Composed from the
+  // same prose fields the fallback renders, so one source of truth.
+  const caption = [
+    g.point && `Today's grammar point is ${g.point}.`,
+    g.meaning && `It means ${g.meaning}.`,
+    g.form && `The form is: ${g.form}.`,
+    g.usage && `Use it ${g.usage}.`,
+    ...(g.examples || []).map((ex) => `For example: ${ex}.`),
+  ].filter(Boolean).join(" ");
+
+  return (
+    <div className="wb-boards" role="figure" aria-labelledby={captionId}>
+      {/* Visually hidden but present for screen readers â€” the caption the
+          figure points at. Inline style, no external sr-only class dependency. */}
+      <div id={captionId} style={{
+        position: "absolute", width: "1px", height: "1px",
+        padding: 0, margin: "-1px", overflow: "hidden",
+        clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0,
+      }}>{caption}</div>
+      {boards.map((board, bi) => (
+        <BoardFrame key={bi}>
+          <div className="wb-writing-band" aria-hidden="true">
+            {(board.elements || []).map((el, ei) => {
+              const Renderer = _BOARD_RENDERERS[el.type];
+              return Renderer ? <Renderer key={ei} el={el} idx={ei} vocab={vocab} onVocabTap={onVocabTap} /> : null;
+            })}
+          </div>
+        </BoardFrame>
+      ))}
+    </div>
+  );
+}
+
+/* ---------- Stage 7: Summary â€” praise, growth, mission, tomorrow ---------- */
+function SummarySection({ bp, section, vocab, onVocabTap, onFinish }) {
+  const s = section;
+  return (
+    <div className="summary-flow">
+      {/* Â§2.2.1 Drawn tick */}
+      <div className="sc-tick-wrap" style={{ animation: "scRise .4s ease-out both" }}>
+        <svg className="sc-tick" viewBox="0 0 52 52"><circle className="sc-tick-ring" cx="26" cy="26" r="22" fill="none" strokeWidth="2.5" /><path className="sc-tick-mark" fill="none" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" d="M15 27l7 7 15-15" /></svg>
+      </div>
+      <h3 className="summary-heading" style={{ animation: "scRise .4s ease-out both", animationDelay: "0.5s", opacity: 0 }}>That's today done</h3>
+      <p className="text-leo summary-praise" style={{ animation: "scRise .4s ease-out both", animationDelay: "0.8s", opacity: 0 }}><VocabText text={s.praise} vocab={vocab} onTap={onVocabTap} /></p>
+      <div className="card summary-built" style={{ animation: "scRise .4s ease-out both", animationDelay: "1.1s", opacity: 0 }}>
+        <p className="gram-section-label">What you built today</p>
+        <p className="muted"><VocabText text={s.summary} vocab={vocab} onTap={onVocabTap} /></p>
+      </div>
+      <div style={{ animation: "scRise .4s ease-out both", animationDelay: "1.4s", opacity: 0 }}>
+        <p className="text-leo"><strong>{"\uD83D\uDCAA"} Your strength:</strong> {s.strength}</p>
+        <p className="text-leo"><strong>{"\uD83C\uDFAF"} One thing to work on:</strong> {s.improvement}</p>
+      </div>
+      <div className="mission-box" style={{ animation: "scRise .4s ease-out both", animationDelay: "1.7s", opacity: 0 }}>
+        <span className="mission-icon">{"\uD83C\uDF0F"}</span><p><VocabText text={bp.mission} vocab={vocab} onTap={onVocabTap} /></p>
+      </div>
+      {s.tomorrowPreview && <p className="lesson-tomorrow" style={{ animation: "scRise .4s ease-out both", animationDelay: "2.0s", opacity: 0 }}><strong>Next time:</strong> {s.tomorrowPreview}</p>}
+      <button className="primary-btn wide" style={{ marginTop: "var(--space-5)", animation: "scRise .4s ease-out both", animationDelay: "2.3s", opacity: 0 }} onClick={onFinish}>Finish lesson</button>
+    </div>
+  );
+}
+
+/* ---------- Blueprint JSON shape (single source of truth) ----------
+   Every planner call that must return a blueprint â€” the first attempt,
+   the fix-retry and the post-review revision â€” restates this exact shape.
+   askClaude() is stateless, so a retry that doesn't restate the shape
+   cannot possibly succeed. */
+// CEFR productive-language constraints. RATIFIED by Lessons_ASKLEO, 26 July 2026
+// (cefr-constraints-v1.md, MD5 5afcd36a61c1b6e79cf22d25bd16d362). A1 ratified with
+// amendments; A2-C2 authored by Lessons. Governs PRODUCTIVE target language only,
+// not receptive reading/listening (i+1). C2 is authored but RESERVED â€” CEFR_ORDER
+// does not include it, so it is unreachable until the picker extends. Do not edit
+// without a Lessons ruling.
+const CEFR_CONSTRAINTS = {
+  A1: {
+    allowed: [
+      "present simple", "present continuous",
+      "to be", "have got",
+      "can/can't (ability)",
+      "imperatives",
+      "basic questions (Wh- and yes/no, present tense)",
+      "there is / there are",
+      "plurals, articles (a/an/the)",
+      "basic prepositions of place and time",
+      "possessive adjectives, object pronouns, demonstratives",
+      "basic quantifiers (some, any, a lot of, much/many)",
+      "frequency adverbs (always, usually, sometimes, never)",
+      "comparatives and superlatives of short common adjectives",
+      "like/want + noun; would like as lexicalised polite request",
+      "past simple (was/were; regular -ed; defined irregular set: went, had, did, saw, came, got, made, said, took) â€” LATE A1 ONLY, for personal past events on familiar timeframes"
+    ],
+    forbidden: [
+      "modals of obligation, advice or deduction (must, should, might, may)",
+      "perfect tenses (present perfect, past perfect, any continuous perfect)",
+      "past continuous",
+      "conditionals (any type)",
+      "passives (any form)",
+      "reported speech",
+      "relative clauses",
+      "going to future, present continuous for future",
+      "productive verb + gerund / verb + infinitive patterns"
+    ],
+    vocab: "high-frequency only, ~top 750â€“1000 word families (English Vocabulary Profile A1 tier)",
+    tasks: "short, concrete, personal, predominantly present-focused; late A1 admits simple past on familiar timeframes; task length under 6 exchanges; contexts limited to self, family, home, food, shopping, work basics, transport, health basics, weather",
+    do_examples: [
+      "'What time do you finish work?' â€” present simple, personal, concrete",
+      "'I like coffee. I don't like tea.' â€” like + noun, negative",
+      "'There's a bank on the corner.' â€” there is, basic prepositions",
+      "'She's taller than me.' â€” comparative, object pronoun",
+      "'I went to Sydney last weekend.' â€” LATE A1 past simple, personal timeframe, defined irregular"
+    ],
+    dont_examples: [
+      "'You should try the new cafÃ©.' â€” modal of advice, forbidden",
+      "'I've lived here for three years.' â€” present perfect, forbidden",
+      "'If I had more time, I'd study more.' â€” second conditional, forbidden",
+      "'The bill was paid at the counter.' â€” passive, forbidden",
+      "'He said he was tired.' â€” reported speech, forbidden"
+    ]
+  },
+  A2: {
+    allowed: [
+      "everything allowed at A1",
+      "past simple (full range: all forms, questions, negatives, high-frequency irregulars)",
+      "going to future (plans and predictions)",
+      "present continuous for future arrangements",
+      "should for advice (basic)",
+      "comparative and superlative adjectives (full range)",
+      "adverbs of manner (regular -ly)",
+      "verb + gerund (like doing, enjoy doing); verb + infinitive (want to do, need to do)",
+      "prepositions of time and place (wider range)",
+      "present perfect simple with ever/never/for/since â€” LATE A2 ONLY, for experience"
+    ],
+    forbidden: [
+      "past continuous (except as receptive input)",
+      "past perfect",
+      "present perfect continuous",
+      "conditionals other than basic first conditional (LATE A2 admits first conditional in a defined shape only: If + present simple, will + base form; single clause, present-focused consequence)",
+      "passives (any form)",
+      "reported speech (except simple lexicalised: 'He said yes')",

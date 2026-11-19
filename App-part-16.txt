@@ -1,0 +1,1000 @@
+﻿.tab-item{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:var(--space-1); background:none; border:none; cursor:pointer; padding:0; min-height:56px;
+  font-family:'Inter',-apple-system,sans-serif; color:var(--text-secondary);
+  transition:color 200ms ease;}
+.tab-item-label{font-size:12px; font-weight:500; line-height:1;}
+.tab-item-on{color:var(--leo-green);}
+.tab-item:focus-visible{outline:2px solid var(--leo-green); outline-offset:-2px; border-radius:4px;}
+
+/* ---- Ask Leo panel (ASK_LEO_HELP_PANEL_PEDAGOGY_v1, Phase 1) ---- */
+.ask-leo-btn-wrap{position:fixed; bottom:0; left:0; right:0; padding:var(--space-2) var(--space-3) calc(var(--space-2) + env(safe-area-inset-bottom, 0px)); background:var(--bg-card); border-top:1px solid var(--divider); z-index:30; display:flex; justify-content:center;}
+.ask-leo-btn{display:inline-flex; align-items:center; gap:var(--space-2); background:none; border:1.5px solid var(--leo-green); border-radius:999px; padding:10px 24px; font-family:'Inter',-apple-system,sans-serif; font-size:15px; font-weight:500; color:var(--leo-green); cursor:pointer; position:relative; overflow:visible; min-height:44px; min-width:140px; transform:scale(1); box-shadow:none; transition:transform .3s ease, box-shadow .3s ease, background-color .3s ease, border-color .3s ease, color .3s ease; letter-spacing:-.01em;}
+.ask-leo-btn:focus-visible{outline:2px solid var(--leo-green); outline-offset:3px; border-radius:999px;}
+/* WhiteboardLogo returns null below 24px (verified this session) â€”
+   Genesis's authorised fallback. background:currentColor so the mark
+   fades to --text-tertiary with the rest of the button when .spent
+   applies. */
+.ask-leo-mark{width:16px; height:16px; border-radius:50%; background:currentColor; flex-shrink:0; display:inline-block;}
+.ask-leo-btn.spent{border-color:var(--divider); color:var(--text-tertiary);}
+/* 0ms â€” fills instantly, scales up, double shadow bloom announces the moment */
+.ask-leo-btn.lit{background:#2A7C6F; color:white; border-color:#2A7C6F; box-shadow:0 0 0 10px rgba(42,124,111,.12), 0 0 0 20px rgba(42,124,111,.04);}
+/* 320ms â€” settles: fill stays, scale and shadow release */
+.ask-leo-btn.settled{background-color:var(--leo-green); color:#ffffff; border-color:var(--leo-green); transform:scale(1); box-shadow:none;}
+
+/* ---- The green flood â€” full-screen, deep gradient, not a flat colour.
+   position:absolute per spec (not fixed) â€” verify on device that the
+   nearest positioned ancestor gives full-viewport coverage. ---- */
+/* Fixed, not absolute â€” this was the actual bug (see delivery report).
+   Neither .app nor .app-body establishes a positioned ancestor, so
+   position:absolute resolved against the document's initial containing
+   block: inset:0 placed the flood at the top of the whole PAGE, not the
+   current viewport. Any student scrolled into the lesson content would
+   never see it â€” it rendered off-screen above their scroll position.
+   The lesson-receding dim (a normal in-flow element, toggled via ref)
+   worked correctly the whole time, which is exactly why only the flood
+   was reported missing. position:fixed is always viewport-relative,
+   regardless of scroll position or DOM ancestry. */
+.leo-moment{position:fixed; inset:0; z-index:10; pointer-events:none;}
+/* Depth portal canvas (Genesis, 23 Aug 2026) â€” supersedes the edge-rays/
+   pulse enhancement entirely. All rendering happens here via rAF; see
+   runPortalAnimation in AskLeoButton. */
+.leo-portal-canvas{position:fixed; inset:0; z-index:10; pointer-events:none;}
+.leo-flood{position:absolute; inset:0; background:linear-gradient(160deg, #2A5C52 0%, #1E4540 60%, #162F2C 100%); opacity:0; transition:opacity .28s ease;}
+.leo-flood.on{opacity:1;}
+.leo-identity{position:absolute; top:50%; left:50%; transform:translate(-50%,-60%); display:flex; flex-direction:column; align-items:center; gap:var(--space-2); opacity:0; transition:opacity .25s ease;}
+.leo-identity.on{opacity:1;}
+.leo-identity.off{opacity:0;}
+/* Confirmed this session: Tier 3 WhiteboardLogo (<48px) fills with
+   var(--leo-green) directly on the SVG shape â€” a hardcoded presentational
+   attribute, not currentColor. Neither of Design's two proposed fixes
+   (stroke override, or opacity on inherited currentColor) works against
+   the real implementation â€” there is no stroke and no currentColor here.
+   This filter forces genuine white rendering regardless of the shape's
+   own fill, working around the limitation directly. */
+.leo-identity-mark{filter:brightness(0) invert(1); opacity:.65;}
+.leo-identity-name{font-size:11px; font-weight:700; letter-spacing:.22em; color:rgba(255,255,255,.45);}
+
+/* ---- Lesson recedes behind the flood ---- */
+/* Shrinks and centres the current task in the flood, rather than fading
+   it away â€” the student keeps sight of what they were doing. JS applies
+   the FLIP technique when this class is added/removed (see AskLeoButton's
+   handleTap/handleDismissStart) â€” position/top/left cannot be smoothly
+   transitioned by CSS alone, so without that JS work this would be an
+   instant snap, not a move. z-index 11 sits above .leo-moment's 10, so
+   the shrunk content renders on top of the green, with green visible
+   around it. */
+.lesson-receding{transform:scale(.82); opacity:.12; filter:blur(2px) brightness(.5); transition:transform .6s cubic-bezier(.4,0,.2,1), opacity .5s ease, filter .5s ease;}
+
+.al-overlay{position:fixed; inset:0; background:rgba(26,26,26,.45); z-index:40; animation:alOverlayIn .35s ease-out forwards;}
+@keyframes alOverlayIn{from{opacity:0;} to{opacity:1;}}
+/* Mounts at 320ms (see AskLeoButton). 200ms CSS delay before the visual
+   movement starts (520ms elapsed since tap), 420ms duration (completes
+   at 940ms). */
+.al-panel{position:fixed; left:0; right:0; bottom:0; max-height:62vh; min-height:320px; background:var(--bg-card); border-radius:24px 24px 0 0; z-index:41; display:flex; flex-direction:column; overflow:hidden; animation:alPanelOpen .42s cubic-bezier(.22,1,.36,1) 200ms both;}
+@keyframes alPanelOpen{from{transform:translateY(20px) scale(.97); opacity:0;} to{transform:translateY(0) scale(1); opacity:1;}}
+.al-panel.dismissing{animation:alPanelDismiss .28s ease-in forwards;}
+@keyframes alPanelDismiss{from{transform:translateY(0) scale(1); opacity:1;} to{transform:translateY(24px) scale(.97); opacity:0;}}
+
+/* panel-top warm tint â€” not a system token, local to al-panel-top */
+.al-panel-top{background:#F0FAF8; min-height:80px; padding:0 var(--space-4) var(--space-3); flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:var(--space-1);}
+.al-handle{width:36px; height:4px; background:rgba(42,124,111,.20); border-radius:2px; margin:12px auto 0; flex-shrink:0;}
+.al-who{display:flex; align-items:center; gap:var(--space-1); margin-top:var(--space-1);}
+/* At 16px WhiteboardLogo returns null (confirmed this session) â€” plain
+   circle fallback, exactly as ruled. */
+.al-who-mark{width:8px; height:8px; border-radius:50%; background:#2A7C6F; flex-shrink:0; display:inline-block;}
+.al-who-name{font-size:10px; font-weight:700; letter-spacing:.07em; color:#2A7C6F;}
+.al-scroll{flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:var(--space-4) var(--space-4) var(--space-5); overscroll-behavior:contain;}
+.al-separator{height:1px; background:var(--divider); margin:var(--space-4) 0 var(--space-3);}
+.al-check-q{font-size:16px; font-weight:500; line-height:1.6; color:var(--text-primary); margin-bottom:var(--space-3); animation:scRise .35s ease-out 140ms both;}
+.al-typing{display:flex; gap:4px; align-items:center; padding:var(--space-2) 0;}
+.al-typing-dot{width:6px; height:6px; border-radius:50%; background:var(--text-tertiary); animation:alDotPulse 1.2s ease-in-out infinite;}
+.al-typing-dot:nth-child(2){animation-delay:.2s;}
+.al-typing-dot:nth-child(3){animation-delay:.4s;}
+@keyframes alDotPulse{0%,80%,100%{opacity:.3; transform:scale(.85);} 40%{opacity:1; transform:scale(1);}}
+/* Scoped to the explanation specifically â€” .text-leo is shared across many
+   unrelated surfaces throughout the app and must not carry an animation
+   that would replay on every other use of that class. Used for the
+   hand-raise answer's own entrance (a separate, later moment); the main
+   explanation's initial arrival uses .al-expl instead, see below. */
+.al-explanation-enter{animation:scRise .4s ease-out both;}
+.al-confirm{font-size:16px; font-weight:400; line-height:1.6; color:var(--leo-green); margin-bottom:var(--space-4); animation:scRise .4s ease-out both;}
+.al-back{width:100%; margin-top:var(--space-3); font-size:15px;}
+
+/* ---- Staggered panel content arrival â€” scRise 0.35s ease-out, six delays ---- */
+.al-expl{animation:scRise .35s ease-out 0ms both;}
+.al-sep-el{animation:scRise .35s ease-out 80ms both;}
+.al-inp-row{animation:scRise .35s ease-out 200ms both;}
+.al-check-btn-el{animation:scRise .35s ease-out 260ms both;}
+.al-raise{animation:scRise .35s ease-out 320ms both;}
+
+/* Typed text renders in Leo green â€” the student is speaking in Leo's world */
+.al-inp{color:#2A7C6F; caret-color:#2A7C6F; font-weight:500;}
+
+/* Hand-raise â€” secondary, quieter than everything above it (Â§B.4) */
+.al-hand-raise{margin-top:var(--space-4); border-top:1px solid var(--divider); padding-top:var(--space-4);}
+.al-hand-raise-label{font-size:13px; font-weight:400; color:var(--text-secondary); margin-bottom:var(--space-2); display:block;}
+.al-hand-raise-input{width:100%; font-family:'Inter',-apple-system,sans-serif; font-size:14px; font-weight:500; color:#2A7C6F; caret-color:#2A7C6F; background:var(--bg-warm); border:none; border-radius:8px; padding:10px 12px; resize:none; outline:none; line-height:1.5; min-height:38px; max-height:80px; overflow-y:auto; transition:background .2s ease;}
+.al-hand-raise-input:focus{background:var(--leo-green-light); outline:none;}
+.al-hand-raise-input::placeholder{color:var(--text-tertiary); font-style:italic;}
+.al-hand-raise-row{display:flex; align-items:center; gap:var(--space-2); margin-top:var(--space-2);}
+.al-hand-raise-send{background:none; border:1px solid var(--divider); border-radius:8px; padding:7px 14px; font-family:'Inter',-apple-system,sans-serif; font-size:13px; font-weight:500; color:var(--text-secondary); cursor:pointer; transition:border-color .15s ease, color .15s ease;}
+.al-hand-raise-send:not(:disabled):hover{border-color:var(--leo-green); color:var(--leo-green);}
+.al-hand-raise-send:disabled{opacity:.4; cursor:default;}
+.al-hand-raise-return{display:block; background:none; border:none; font-family:'Inter',-apple-system,sans-serif; font-size:13px; font-weight:400; color:var(--leo-green); cursor:pointer; padding:0; margin-top:var(--space-3); text-decoration:underline; text-decoration-color:rgba(42,124,111,.35); text-underline-offset:2px;}
+@media (prefers-reduced-motion: reduce){
+  .ask-leo-btn.lit{transition:none;}
+  .ask-leo-btn.settled{transition:none;}
+  .leo-moment{display:none;}
+  /* Depth portal (Genesis, 23 Aug 2026) â€” no canvas animation starts at all
+     under reduced motion (see runPortalAnimation's own early return); the
+     .leo-portal-canvas element still mounts but never draws. .leo-moment's
+     display:none above already covers the flood/identity fallback too, in
+     the unlikely event fallback logic were ever reached here (it isn't,
+     since the frame-rate measurement itself never runs). */
+  .lesson-receding{transform:none; transition:none;}
+  .al-overlay{animation:none;}
+  .al-panel{animation:none; transform:none; opacity:1;}
+  .al-panel.dismissing{animation:none; display:none;}
+  .al-typing-dot{animation:none; opacity:.5;}
+  .al-confirm{animation:none;}
+  .al-explanation-enter{animation:none;}
+  .al-check-q{animation:none;}
+  .al-expl{animation:none;}
+  .al-sep-el{animation:none;}
+  .al-inp-row{animation:none;}
+  .al-check-btn-el{animation:none;}
+  .al-raise{animation:none;}
+}
+
+/* ---- Settings screen (SETTINGS_SCREEN_SPECIFICATION_v1 Â§8) ---- */
+.progress-header{display:flex; justify-content:flex-end; margin-bottom:var(--space-3);}
+.settings-entry-link{background:none; border:none; padding:0; cursor:pointer; font-family:'Inter',sans-serif; font-size:14px; font-weight:400; color:var(--text-secondary);}
+.settings-page{max-width:520px; margin:0 auto; padding:var(--space-4) var(--space-3) var(--space-7); animation:scRise .4s ease-out both;}
+@media (prefers-reduced-motion: reduce){.settings-page{animation:none;}}
+.settings-card{background:var(--bg-card); border-radius:12px; padding:20px; margin-bottom:var(--space-5);}
+.settings-label{font-size:14px; font-weight:400; color:var(--text-secondary); line-height:1.5; margin-bottom:var(--space-2); display:block;}
+.settings-divider{height:1px; background:var(--divider); margin:0 0 var(--space-3); border:none;}
+.settings-name-input{width:100%; font-family:'Inter',-apple-system,sans-serif; font-size:17px; font-weight:400; color:var(--text-primary); background:transparent; border:none; outline:none; padding:0; line-height:1.5;}
+.settings-name-input::placeholder{color:var(--text-tertiary);}
+.settings-name-input:focus{outline:none;}
+.settings-name-input:focus-visible{outline:2px solid var(--leo-green); outline-offset:2px; border-radius:4px;}
+.settings-name-ack{font-size:14px; font-weight:400; color:var(--text-secondary); margin-top:var(--space-2); animation:scRise .4s ease-out both;}
+@media (prefers-reduced-motion: reduce){.settings-name-ack{animation:none;}}
+.settings-chips{display:flex; flex-wrap:wrap; gap:var(--space-2);}
+.settings-supporting{font-size:14px; font-weight:400; color:var(--text-tertiary); margin-top:var(--space-3); line-height:1.5;}
+.settings-actions{margin-top:var(--space-5); display:flex; flex-direction:column; gap:var(--space-3);}
+/* Spec text says "same as every ghost button" for Sign out's colour, but
+   this codebase's .ghost-btn default is --leo-green, not --text-primary.
+   The spec's explicit value (--text-primary â€” neutral, not brand-coloured,
+   not error-red) is followed here via a targeted override rather than
+   changing the shared .ghost-btn class, which would affect every ghost
+   button in the app. */
+.settings-sign-out{color:var(--text-primary);}
+.settings-start-over{color:var(--text-tertiary);}
+.settings-sheet-overlay{position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:50; display:flex; align-items:flex-end;}
+.settings-sheet{width:100%; max-width:520px; margin:0 auto; background:var(--bg-card); border-radius:20px 20px 0 0; padding:var(--space-4) var(--space-3) calc(var(--space-4) + env(safe-area-inset-bottom, 0px)); display:flex; flex-direction:column; gap:var(--space-3); animation:scRise .3s ease-out both;}
+@media (prefers-reduced-motion: reduce){.settings-sheet{animation:none;}}
+.settings-sheet-title{font-size:17px; font-weight:600; color:var(--text-primary); margin-bottom:var(--space-1);}
+.settings-sheet-body{font-size:16px; font-weight:400; line-height:1.6; color:var(--text-primary);}
+.seg-control{display:flex; gap:var(--space-2); margin:0 0 var(--space-4);}
+.seg-item{flex:1; min-height:44px; border:none; background:transparent; border-radius:10px;
+  font-family:'Inter',-apple-system,sans-serif; font-size:15px; font-weight:400;
+  color:var(--text-secondary); cursor:pointer; transition:color 200ms ease, background-color 200ms ease;}
+.seg-item-on{background:var(--leo-green-light); color:var(--leo-green); font-weight:500;}
+.seg-item:focus-visible{outline:2px solid var(--leo-green); outline-offset:2px;}
+.today-done-btn{display:inline-flex; align-items:center; gap:var(--space-1); background:none;
+  border:none; padding:var(--space-1) var(--space-2); margin:calc(var(--space-1) * -1) calc(var(--space-2) * -1);
+  border-radius:8px; cursor:pointer; font-family:'Inter',-apple-system,sans-serif;
+  font-size:14px; font-weight:500; color:var(--leo-green); min-height:44px;}
+.today-done-btn:focus-visible{outline:2px solid var(--leo-green); outline-offset:2px;}
+@media (prefers-reduced-motion: reduce){.tab-item,.seg-item{transition:none;}}
+
+/* ---- Warm-up free response â€” indicator now the shared drawn rule (Â§3) ---- */
+.wu-skip-line{margin-top:var(--space-3);}
+
+/* ---- Australia section (A3) â€” reference voice, settled tokens only ---- */
+.aus-wrap{max-width:760px; margin:0 auto;}
+.aus-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--space-3);}
+.aus-card{display:flex; align-items:center; gap:var(--space-3); width:100%; text-align:left;
+  background:var(--bg-card); border:none; border-radius:12px; padding:20px;
+  cursor:pointer; font-family:'Inter',-apple-system,sans-serif; min-height:48px;}
+.aus-card:focus-visible{outline:2px solid var(--leo-green); outline-offset:2px;}
+.aus-card-icon{color:var(--text-secondary); flex-shrink:0;}
+.aus-card-text{flex:1; display:flex; flex-direction:column; gap:var(--space-1);}
+.aus-card-title{font-size:17px; font-weight:600; color:var(--text-primary); line-height:1.4;}
+.aus-card-sum{font-size:14px; font-weight:400; color:var(--text-secondary); line-height:1.5;}
+.aus-card-chev{color:var(--text-tertiary); flex-shrink:0;}
+.aus-detail{background:var(--bg-card); border:none; border-radius:12px; padding:20px; margin-top:var(--space-3);}
+.aus-detail-title{display:flex; align-items:center; gap:var(--space-2); font-family:'Inter',-apple-system,sans-serif;
+  font-size:22px; font-weight:600; line-height:1.3; color:var(--text-primary); margin:0 0 var(--space-3);}
+.aus-detail-icon{color:var(--text-secondary); flex-shrink:0;}
+.aus-intro{font-size:16px; font-weight:400; line-height:1.65; color:var(--text-primary);}
+.aus-points{list-style:none; margin:var(--space-4) 0 0; padding:0; display:flex; flex-direction:column; gap:var(--space-3);}
+.aus-points li{font-size:16px; font-weight:400; line-height:1.65; color:var(--text-primary);}
+.aus-source{margin-top:var(--space-4);}
+.aus-search{margin-top:var(--space-5);}
+.aus-search-label{display:block; font-size:14px; font-weight:400; color:var(--text-secondary); margin-bottom:var(--space-2);}
+.aus-search-row{display:flex; gap:var(--space-2);}
+.aus-input{flex:1; border:1px solid var(--divider); border-radius:10px; padding:12px 14px;
+  font-family:'Inter',-apple-system,sans-serif; font-size:16px; font-weight:400;
+  color:var(--text-primary); background:var(--bg-card); min-height:48px;}
+.aus-input:focus{outline:2px solid var(--leo-green); outline-offset:-1px;}
+.aus-answer{background:var(--bg-card); border-radius:12px; padding:20px; margin-top:var(--space-3);
+  font-size:16px; font-weight:400; line-height:1.65; color:var(--text-primary);}
+.doorway{margin:var(--space-3) 0 var(--space-2);}
+.doorway-line{font-size:16px; font-weight:500; line-height:1.6; color:var(--text-primary); margin-bottom:var(--space-3);}
+
+/* ---- Home screen (A2) â€” settled tokens only ---- */
+.home-screen{max-width:520px; margin:0 auto; padding:var(--space-4) var(--space-3) var(--space-5); text-align:left;}
+/* Full-width within home-screen's own 520px content box (negative margins
+   cancel home-screen's horizontal padding) â€” not a viewport-edge breakout.
+   Every other screen in this app uses the same 520px max-width pattern;
+   reading "full-width" as spanning that content box, not the true browser
+   viewport, keeps this consistent with the rest of the system. */
+.home-warm-zone{background:var(--bg-warm); margin:0 calc(-1 * var(--space-3)) var(--space-6); padding:var(--space-5) var(--space-4) var(--space-4);}
+.home-prep-line{font-size:16px; font-weight:400; color:var(--text-secondary); margin:0 0 var(--space-3);}
+.greet-time{font-size:22px; font-weight:400; line-height:1.25; color:var(--text-secondary); margin:0;}
+.greet-name{font-size:28px; font-weight:600; line-height:1.2; color:var(--text-primary); margin:0;}
+/* Genesis amendment (11 Aug 2026): --text-tertiary, not --text-secondary as
+   originally specced â€” three distinct hierarchy steps (name primary, time
+   greeting secondary, date/time tertiary), not two. */
+.greet-date{font-size:14px; font-weight:400; color:var(--text-tertiary); margin-top:var(--space-1);}
+.greet-clock{margin-left:var(--space-2); color:var(--text-tertiary);}
+.greet-cont{font-size:16px; font-weight:500; line-height:1.6; color:var(--leo-green); border-left:3px solid var(--leo-green-light); padding-left:var(--space-3); margin-top:var(--space-3); display:block;}
+.today-card{background:var(--bg-card); border-radius:12px; padding:20px; display:flex; flex-direction:column; /* no gap â€” dividers handle spacing */}
+.today-card-done{background:var(--leo-green-light); border-left:3px solid var(--leo-green); border-radius:0 12px 12px 0; padding:20px 20px 20px calc(20px - 3px);}
+.tc-row{display:flex; align-items:center; gap:var(--space-3); width:100%; min-height:52px;
+  background:none; border:none; border-bottom:1px solid var(--divider); padding:var(--space-2) 0; text-align:left; cursor:pointer;
+  font-family:'Inter',-apple-system,sans-serif; color:var(--text-primary);}
+.tc-row:last-of-type{border-bottom:none;}
+.tc-row:disabled{cursor:default;}
+.tc-row:focus-visible{outline:2px solid var(--leo-green); outline-offset:2px; border-radius:4px;}
+.tc-icon{color:var(--leo-green); flex-shrink:0;}
+.tc-row-done .tc-icon{color:var(--color-success);}
+.tc-row-gated .tc-icon{color:var(--text-tertiary);}
+.tc-label{flex:1; font-size:16px; font-weight:400;}
+.tc-row-done .tc-label{color:var(--text-secondary);}
+.tc-done{display:inline-flex; align-items:center; gap:var(--space-1); font-size:14px; font-weight:400; color:var(--color-success);}
+.tc-gate{font-size:14px; font-weight:400; color:var(--text-tertiary);}
+.tc-cta{margin-top:var(--space-3);}
+.tc-alldone{font-size:17px; font-weight:500; line-height:1.6; color:var(--text-primary); margin:0;}
+.noticed-card{display:block; width:100%; text-align:left; background:var(--bg-card);
+  border:none; border-radius:12px; padding:20px; margin-top:var(--space-5);
+  font-family:'Inter',-apple-system,sans-serif; font-size:16px; font-weight:400; line-height:1.6;
+  color:var(--text-primary); cursor:pointer;}
+.noticed-card:focus-visible{outline:2px solid var(--leo-green); outline-offset:2px;}
+.home-skyline{margin-top:var(--space-7); opacity:.45;}
+.home-skyline .sky-img{width:100%; max-width:none;}
+/* Whiteboard logo */
+.wb-splash{display:flex; align-items:center; justify-content:center; min-height:100dvh; background:var(--bg-warm);}
+/* Addendum Â§4.1: hold 200ms after 800ms completion = 1000ms, then fade 200ms. Total 1200ms. */
+.wb-logo-phase{animation:wbFadeOut 200ms ease 1000ms forwards;}
+.wb-logo-svg{display:block;}
+.brand-mark{display:flex; justify-content:center; margin:0 auto var(--space-4);}
+.brand-mark-sm{display:flex; justify-content:center; margin:0 auto var(--space-3);}
+/* Home-screen-only logo treatment. Deliberately separate from .brand-mark-sm
+   (shared with SignUp/SignIn/CheckEmail, which correctly stay centred at
+   132px) -- the redesign's left-aligned, smaller mark applies only here. */
+.home-brand-mark{display:flex; justify-content:flex-start; margin-bottom:var(--space-4);}
+/* Logo frame â€” Tier 1 only. 2px stroke (addendum Â§3.3), thinner than the board's 2.5px. */
+.wb-frame{fill:none; stroke:var(--leo-green); stroke-width:2;}
+.wb-frame-draw{stroke-dasharray:2669; stroke-dashoffset:2669; animation:wbStroke 800ms ease-out forwards;}
+/* Logo tray â€” same stroke treatment as the frame. Starts at 500ms (addendum Â§4.1 phase 2a). */
+.wb-tray{fill:none; stroke:var(--leo-green); stroke-width:2;}
+.wb-tray-draw{stroke-dasharray:1383; stroke-dashoffset:1383; animation:wbStroke 300ms ease-out 500ms forwards;}
+.wb-letter-static{fill:var(--leo-green);}
+/* Wordmark fades in as one unit at 500ms, concurrent with tray (addendum Â§4.1 phase 2b). No per-letter stagger. */
+.wb-letter-anim{fill:var(--leo-green); fill-opacity:0; animation:wbFill 300ms ease-out 500ms forwards;}
+.wb-mono{font-family:'Inter',sans-serif; font-weight:700; font-size:24px; fill:var(--bg-warm, #FFFFFF);}
+@keyframes wbStroke{to{stroke-dashoffset:0;}}
+@keyframes wbFill{to{fill-opacity:1;}}
+@keyframes wbFadeOut{to{opacity:0;}}
+@media (prefers-reduced-motion: reduce){
+  /* Â§4.4 â€” the fade is retained. An opacity transition on a still image is
+     not what a reduced-motion user asks to be spared; removing it cuts hard. */
+  .wb-logo-phase{animation:wbFadeOut 200ms ease 600ms forwards;}
+  .wb-frame-draw{animation:none; stroke-dashoffset:0;}
+  .wb-tray-draw{animation:none; stroke-dashoffset:0;}
+  .wb-letter-anim{animation:none; fill-opacity:1;}
+}
+
+/* P2 Motion */
+@keyframes fadeSlideIn{from{opacity:0; transform:translateX(16px);} to{opacity:1; transform:translateX(0);}}
+.screen-enter{animation:fadeSlideIn 250ms ease-out;}
+@keyframes fadeIn{from{opacity:0;} to{opacity:1;}}
+.card-stagger{animation:fadeIn 200ms ease-out both;}
+.progress-fill{transition:width 400ms ease-out;}
+button:active{transform:scale(.97); transition:transform 100ms ease-out;}
+.sky-img{width:100%; max-width:470px; display:block; margin:8px auto 0;}
+/* The skyline is drawn across, not faded in. The artwork is a raster line
+   drawing, so there are no paths to stroke â€” a left-to-right wipe is the
+   honest equivalent: the line appears the way a hand lays it down. Â§8 rule 1
+   in the only form this asset allows. Still once ever, per spec A3.5. */
+.sky-anim{animation:skyDraw 1800ms ease-out .3s both;}
+@keyframes skyDraw{from{clip-path:inset(0 100% 0 0);} to{clip-path:inset(0 0 0 0);}}
+/* ---- MOTION Â§3: the drawn rule. Stroke only, one colour, one weight, no
+   fill, no loop. It draws once in 600ms ease-out and rests as a finished rule.
+   --euca matches the completion tick; Part C Pass 5 remaps both together. ---- */
+.wait-block{display:flex; flex-direction:column; align-items:center; gap:var(--space-3); padding:var(--space-6) 20px; text-align:center;}
+.wait-inline{display:flex; align-items:center; gap:10px; padding:8px 0;}
+.drawn-rule{display:block; overflow:visible;}
+.drawn-rule-line{stroke:var(--leo-green); stroke-linecap:round; fill:none; animation:drawRule 600ms ease-out forwards;}
+@keyframes drawRule{to{stroke-dashoffset:0;}}
+.drawn-tick{display:inline-block; vertical-align:-2px; flex-shrink:0;}
+.drawn-tick-mark{fill:none; stroke:currentColor; stroke-width:2.6; stroke-linecap:round;
+  stroke-linejoin:round; stroke-dasharray:21; stroke-dashoffset:21;
+  animation:drawTick 350ms ease-out forwards;}
+@keyframes drawTick{to{stroke-dashoffset:0;}}
+.wait-label{font-size:16px; font-weight:500; color:var(--text-primary); opacity:.75; max-width:28ch; line-height:1.6; margin:0; animation:scRise 400ms 200ms both ease-out;}
+/* Genesis fix: .wait-label is shared with WaitIndicator's escalation ladder
+   (section retries, chat typing, vocab lookups), which must keep its
+   existing look. Both usages combine wait-label with text-leo identically,
+   so a plain .wait-label.text-leo compound rule would restyle both â€” not
+   an isolated fix. This third class scopes the new typography to only
+   PlanningWaitCycle's own line. */
+.plan-wait-label{font-size:15px; font-weight:400; color:var(--leo-green);}
+.wait-inline .wait-label{font-size:14px; opacity:1; color:var(--leo-green);}
+/* Â§5 â€” reduced motion shows the finished artefact, never the absence of one.
+   The escalation ladder still changes on schedule: that is information. */
+@media (prefers-reduced-motion: reduce){
+  .sky-anim{animation:none; clip-path:none;}
+  .drawn-rule-line{animation:none; stroke-dashoffset:0 !important;}
+  .wait-label{animation:none;}
+  .drawn-tick-mark{animation:none; stroke-dashoffset:0;}
+  .leo-accent::before{animation:none; transform:scaleY(1);}
+}
+.lesson-head{margin-bottom:6px;}
+.lesson-reco-head{display:flex; align-items:center; gap:12px; margin-bottom:6px;}
+.reco-kicker{font-size:12.5px; text-transform:uppercase; letter-spacing:.02em; color:var(--leo-green); opacity:.7; font-weight:700;}
+.reco-scenario{margin:2px 0 0;}
+.reco-alts{display:flex; align-items:center; justify-content:center; gap:10px; margin-top:12px;}
+.reco-dot{opacity:.4;}
+.lesson-greeting{font-size:17px; color:var(--text-primary); margin:0;}
+.lesson-why{margin-top:4px;}
+.lesson-goal{background:var(--leo-green-light); border-radius:10px; padding:12px 14px; margin-top:10px; font-weight:500; color:var(--text-primary); border-left:3px solid var(--leo-green);}
+.lesson-tomorrow{margin-top:12px; color:var(--text-primary); opacity:.85;}
+.purpose-line{font-size:13px; color:var(--text-primary); background:var(--leo-green-light); border-radius:8px; padding:6px 10px; margin:2px 0 8px;}
+.vocab-token{display:inline; border-bottom:2px dotted var(--leo-green); color:var(--text-primary); cursor:pointer; font-weight:600; transition:background .15s; border-radius:2px; padding:0 1px;}
+.vocab-token:hover,.vocab-token:focus-visible{background:rgba(55,98,75,.10); outline:none;}
+.vocab-overlay{position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1000; display:flex; align-items:flex-end;}
+.vocab-sheet{background:var(--bg-warm); border-radius:20px 20px 0 0; width:100%; max-height:82vh; display:flex; flex-direction:column; animation:sheetUp .22s cubic-bezier(.25,.8,.25,1); position:relative;}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.vocab-sheet-handle{width:40px; height:4px; background:var(--divider); border-radius:2px; margin:12px auto 4px; flex-shrink:0;}
+.vocab-sheet-scroll{overflow-y:auto; padding:8px 22px 32px; flex:1; -webkit-overflow-scrolling:touch;}
+.vocab-close{position:absolute; top:14px; right:16px; background:none; border:none; font-size:18px; color:var(--text-primary); opacity:.55; cursor:pointer; padding:6px; line-height:1;}
+.vocab-header{margin-bottom:14px;}
+.vocab-word{font-family:'Inter',sans-serif; font-size:28px; font-weight:700; color:var(--text-primary); margin:0 0 6px;}
+.vocab-meta{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+.vocab-ipa{font-family:'Inter',sans-serif; font-size:15px; color:var(--text-primary); opacity:.7; font-style:italic;}
+.vocab-chip{font-size:12px; font-weight:700; background:var(--leo-green-light); color:var(--text-primary); border-radius:20px; padding:3px 10px; text-transform:uppercase; letter-spacing:.5px;}
+.vocab-chip-cefr{background:var(--color-warning); color:#fff;}
+.vocab-def{font-size:16px; line-height:1.55; color:var(--text-primary); margin:0 0 18px; font-family:'Inter',sans-serif;}
+.vocab-section{margin-bottom:18px;}
+.vocab-section-title{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--leo-green); margin:0 0 8px;}
+.vocab-example{font-size:15px; line-height:1.5; color:var(--text-primary); margin:0 0 6px; padding-left:10px;}
+.vocab-example-today{border-left-color:var(--leo-green); background:rgba(55,98,75,.06); border-radius:0 6px 6px 0; padding:6px 10px;}
+.vocab-today-tag{display:block; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--leo-green); margin-bottom:2px;}
+.vocab-related{display:flex; flex-wrap:wrap; gap:8px;}
+.vocab-related-chip{font-size:14px; font-weight:500; background:#fff; border:1px solid var(--divider); border-radius:20px; padding:5px 12px; color:var(--text-primary); font-family:'Inter',sans-serif;}
+.vocab-save-btn{width:100%; padding:14px; background:var(--leo-green); color:#fff; border:none; border-radius:12px; font-family:'Inter',sans-serif; font-size:14px; font-weight:500; cursor:pointer; margin-top:10px;}
+.vocab-save-btn-saved{background:var(--leo-green-light); color:var(--leo-green); cursor:default;}
+.stage-head{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+.skip-btn{background:none; border:none; color:var(--text-primary); opacity:.55; font-family:'Inter'; font-size:13px; cursor:pointer; padding:6px 8px;}
+.skip-btn:hover{opacity:.85; text-decoration:underline;}
+.input-row{display:flex; gap:8px; align-items:center;}
+.input-row .text-input{flex:1;}
+.mic-btn{background:#fff; border:1.5px solid var(--leo-green); color:var(--leo-green); border-radius:10px; padding:9px 12px; font-family:'Inter'; font-size:14px; font-weight:400; cursor:pointer; white-space:nowrap;}
+.mic-on{background:var(--color-warning); border-color:var(--color-warning); color:#fff;}
+.match-grid{display:grid; grid-template-columns:1fr 1.35fr; gap:14px 18px; margin:14px 0 16px; min-height:220px;}
+.match-col{display:flex; flex-direction:column; gap:12px;}
+.match-word,.match-meaning{position:relative; text-align:left; background:var(--bg-card); border:1px solid var(--divider); border-radius:14px; padding:13px 15px; font-family:'Inter'; font-size:15px; font-weight:400; color:var(--text-primary); user-select:none; -webkit-user-select:none; min-height:52px; display:flex; align-items:center; transition:border-color .18s ease, background .18s ease, transform .12s ease;}
+.match-word{font-family:'Inter',sans-serif; font-weight:500; font-size:16px; color:var(--text-primary); border-right:3px solid var(--leo-green); padding-right:12px; cursor:grab; letter-spacing:.1px;}
+.match-word::after{content:""; display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--leo-green); margin-left:auto; flex-shrink:0; opacity:.45; transition:opacity .18s ease, transform .18s ease;}
+.match-meaning{padding-left:12px; line-height:1.45; cursor:pointer;}
+/* hover â€” a clear invitation, never a jolt */
+.match-word:not(:disabled):hover{border-color:var(--leo-green); transform:translateY(-1px);}
+.match-word:not(:disabled):hover::after{opacity:1; transform:scale(1.15);}
+.match-meaning:not(:disabled):hover{border-left-color:var(--leo-green); background:var(--leo-green-light);}
+/* pressed */
+.match-word:not(:disabled):active,.match-meaning:not(:disabled):active{transform:translateY(0) scale(.985);}
+/* keyboard focus must always be visible */
+.match-word:focus-visible,.match-meaning:focus-visible{outline:3px solid var(--color-warning); outline-offset:2px;}
+/* selected (tap / keyboard path) */
+.match-selected{border-color:var(--color-warning) !important; background:rgba(232,169,29,.12);}
+.match-selected::after{opacity:1; background:var(--color-warning);}
+/* live drop targets, once a word is selected */
+.match-target{border-left-color:var(--color-warning); background:rgba(232,169,29,.05); animation:targetPulse 1.6s ease-in-out infinite;}
+@keyframes targetPulse{0%,100%{border-left-color:var(--divider);} 50%{border-left-color:var(--color-warning);}}
+.match-dragging{border-color:var(--color-warning); background:rgba(232,169,29,.15); cursor:grabbing; transform:scale(1.03);}
+/* matched â€” settled, quiet, unmistakably done */
+.match-done{border-color:var(--leo-green); background:var(--leo-green-light); color:var(--text-primary); opacity:.72; cursor:default;}
+.match-done.match-word::after{background:var(--leo-green); opacity:1;}
+.match-done.match-meaning{border-left-color:var(--leo-green);}
+.match-pop{animation:matchPop .45s cubic-bezier(.34,1.56,.64,1);}
+@keyframes matchPop{0%{transform:scale(1);} 40%{transform:scale(1.06);} 100%{transform:scale(1);}}
+/* progress */
+.match-progress{display:flex; align-items:center; gap:10px; margin-bottom:2px;}
+.match-progress-bar{flex:1; height:6px; border-radius:99px; background:var(--divider); overflow:hidden;}
+.match-progress-bar span{display:block; height:100%; border-radius:99px; background:var(--leo-green); transition:width .45s cubic-bezier(.4,0,.2,1);}
+@media (max-width:380px){
+  .match-grid{grid-template-columns:1fr 1.2fr; gap:10px 12px;}
+  .match-word{font-size:15px; padding:12px; min-height:56px;}
+  .match-meaning{font-size:13.5px; padding:11px 12px; min-height:56px;}
+}
+@media (prefers-reduced-motion: reduce){
+  .match-word,.match-meaning{transition:none;}
+  .match-pop,.match-target{animation:none;}
+}
+
+/* ---- Completion feedback (every scored stage) ---- */
+.stage-complete{display:flex; flex-direction:column; align-items:center; text-align:center; padding:18px 10px 6px; gap:4px;}
+.sc-tick{margin-bottom:4px;}
+.sc-tick-ring{stroke:var(--leo-green); stroke-dasharray:145; stroke-dashoffset:145; animation:scRing .5s ease-out forwards;}
+.sc-tick-mark{stroke:var(--leo-green); stroke-dasharray:40; stroke-dashoffset:40; animation:scMark .35s .38s ease-out forwards;}
+@keyframes scRing{to{stroke-dashoffset:0;}}
+@keyframes scMark{to{stroke-dashoffset:0;}}
+.sc-title{font-family:'Fraunces',serif; font-size:23px; font-weight:650; color:var(--text-primary); margin:2px 0 0; animation:scRise .4s .35s both ease-out;}
+.sc-sub{font-size:14.5px; opacity:.75; margin:0 0 12px; max-width:34ch; animation:scRise .4s .45s both ease-out;}
+@keyframes scRise{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+/* .sc-bar / scCountdown removed with the auto-advance (Phase 7, Â§1.1). */
+@media (prefers-reduced-motion: reduce){
+  .sc-tick-ring,.sc-tick-mark{animation:none; stroke-dashoffset:0;}
+  .sc-title,.sc-sub{animation:none;}
+}
+
+/* ---- Warm-up activities ---- */
+.wu-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:2px 0 12px;}
+.wu-badge{display:inline-block; background:var(--leo-green-light); color:var(--text-primary); border-radius:99px; padding:4px 11px; font-size:12px; font-weight:700; letter-spacing:.2px;}
+.wu-text{white-space:pre-line; background:var(--leo-green-light); border-left:3px solid var(--leo-green); border-radius:0 10px 10px 0; padding:11px 13px; margin:0 0 12px; font-size:14.5px; line-height:1.55;}
+.wu-build{min-height:56px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:11px; border-radius:12px; background:rgba(233,239,231,.45); margin-bottom:10px;}
+.wu-build-lines{flex-direction:column; align-items:stretch;}
+.wu-build-empty{font-size:13.5px; opacity:.5;}
+.wu-pool{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;}
+.wu-pool.wu-build-lines{flex-direction:column;}
+.wu-chip{background:var(--bg-card); border:1px solid var(--divider); border-radius:10px; padding:9px 13px; font-family:'Inter'; font-size:14px; font-weight:500; color:var(--text-primary); cursor:pointer; text-align:left; min-height:42px; transition:border-color .15s, background .15s, transform .1s;}
+.wu-chip:not(:disabled):hover{border-color:var(--leo-green); background:var(--leo-green-light);}
+.wu-chip:not(:disabled):active{transform:scale(.96);}
+.wu-chip:focus-visible{outline:3px solid var(--color-warning); outline-offset:2px;}
+.wu-chip-built{border-color:var(--leo-green); background:var(--leo-green-light); color:var(--leo-green); font-weight:500;}
+@media (prefers-reduced-motion: reduce){.wu-chip{transition:none;}}
+
+/* ---- Quiz progress ---- */
+.quiz-progress{height:4px; border-radius:99px; background:var(--divider); overflow:hidden; margin-bottom:10px;}
+.quiz-progress span{display:block; height:100%; background:var(--leo-green); border-radius:99px; transition:width .4s cubic-bezier(.4,0,.2,1);}
+
+.mcq-opts{display:flex; flex-direction:column; gap:8px; margin:10px 0;}
+.mcq-opt{text-align:left; background:var(--bg-card); border:1px solid var(--divider); border-radius:10px; padding:14px 16px; font-size:15px; cursor:pointer; color:var(--text-primary); min-height:56px; display:flex; align-items:center; transition:background .3s ease, border-color .3s ease;}
+/* Â§2c.2 â€” no error-red in exercise space. The correct option greens
+   (the teacher's colour, teaching); the student's wrong choice simply
+   de-emphasises; unchosen options fade. Nothing is struck through and
+   nothing is marked wrong in red. */
+.mcq-right{border-color:var(--leo-green); background:var(--leo-green-light); font-weight:700; color:var(--leo-green);}
+.mcq-chosen{opacity:.4;}
+.mcq-muted{opacity:.4;}
+.speak-thread{display:flex; flex-direction:column; gap:10px; margin-bottom:12px; max-height:44vh; overflow-y:auto;}
+.speak-turn{display:flex; gap:8px; align-items:flex-start;}
+.speak-turn p{margin:0; padding:9px 12px; border-radius:12px; font-size:15px; line-height:1.5;}
+.speak-leo p{background:var(--leo-green-light); color:var(--text-primary);}
+.speak-you{justify-content:flex-end;}
+.speak-you p{background:#fff; border:1px solid var(--divider);}
+.gapfill-item{margin-bottom:14px;}
+.gapfill-item .input-row{margin-top:6px;}
+.frames-panel{margin-bottom:10px;}
+.frames-list{background:var(--leo-green-light); border-radius:10px; padding:12px 14px; margin-top:6px;}
+.frame-item{margin-bottom:8px; padding-bottom:8px; border-bottom:1px dashed var(--divider);}
+.frame-item:last-child{margin-bottom:0; padding-bottom:0; border-bottom:none;}
+.frame-text{font-weight:600; color:var(--text-primary); font-size:14.5px; margin:0;}
+.frame-example{margin:2px 0 0;}
+.pron-practice{margin-top:6px;}
+.pron-row{border-bottom:1px solid var(--divider); padding:8px 0;}
+.pron-word{font-family:'Inter',sans-serif; font-size:17px; color:var(--text-primary); font-weight:600;}
+.pron-try{margin:12px 0;}
+.passage{background:#fff; border:1px solid var(--divider); border-radius:12px; padding:14px; font-size:15px; line-height:1.65; white-space:pre-line;}
+.listen-box{margin-bottom:10px;}
+.gram-form{font-family:'Inter',sans-serif; font-size:14px; font-weight:400; background:var(--leo-green-light); border-radius:8px; padding:2px 8px; color:var(--text-primary);}
+.grammar-card{display:flex; flex-direction:column; gap:var(--space-3);}
+/* ===== Phase 2 â€” authored grammar presentation (Â§2a) ===== */
+.gb-block{margin-bottom:var(--space-5);}
+/* Â§2a.2 subjects */
+.gb-subject-rows{display:flex; flex-direction:column; gap:var(--space-2);}
+.gb-subject-row{display:flex; align-items:center; gap:12px; min-height:44px;}
+.gb-subject-icon{color:var(--leo-green); flex-shrink:0;}
+.gb-subject-word{font-size:17px; font-weight:600; color:var(--text-primary); min-width:3ch;}
+.gb-subject-gloss{font-size:15px; color:var(--text-secondary);}
+/* Â§2a.3 the paradigm table â€” the artefact. Screenshot-clean. */
+.gb-paradigm{background:var(--leo-green-light); border-radius:10px; padding:16px 20px;}
+.gb-para-heads,.gb-para-row{display:grid; grid-template-columns:1fr 1fr 44px; align-items:center; gap:8px;}
+.gb-para-head{font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--text-tertiary); line-height:1.35;}
+.gb-para-row{min-height:48px; border-top:1px solid var(--divider);}
+.gb-para-heads + .gb-para-row{border-top:none;}
+.gb-para-full{font-size:15px; font-weight:400; color:var(--text-primary);}
+/* The largest, greenest thing in the box â€” the eye lands on what the
+   mouth should say. The hierarchy IS the teaching. */
+.gb-para-short{font-size:18px; font-weight:600; color:var(--leo-green);}
+.gb-para-sound{display:flex; justify-content:flex-end;}
+/* Â§2a.4 patterns â€” orange chips point AT the language; green IS it. */
+.gb-pattern-row{display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:var(--space-3);}
+.gb-pattern-sentence{font-size:16px; color:var(--text-primary);}
+.gb-pattern-target{color:var(--leo-green); font-weight:600;}
+.gb-pattern-chip{font-size:12px; font-weight:600; color:var(--marker-orange); background:rgba(168,96,13,0.08); border-radius:6px; padding:2px 8px; white-space:nowrap;}
+/* supporting blocks */
+.gb-wc-row{display:flex; gap:10px; margin-bottom:var(--space-2); align-items:baseline;}
+.gb-wc-term{font-size:15px; font-weight:600; color:var(--text-primary); min-width:9ch;}
+.gb-wc-def{font-size:15px; color:var(--text-secondary);}
+.gb-wc-eg{color:var(--text-primary); font-style:italic;}
+.gb-keypoint-text{margin:0; font-size:15px; color:var(--text-primary); line-height:1.6;}
+.gb-keypoint-pairs{display:flex; flex-wrap:wrap; gap:12px; margin-top:8px;}
+.gb-keypoint-pair{font-size:15px; color:var(--text-secondary);}
+.gb-rule-line{font-size:15px; color:var(--text-secondary); margin:0 0 var(--space-3);}
+.gb-transform{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:var(--space-2); font-size:16px;}
+.gb-transform-from{color:var(--text-secondary);}
+.gb-transform-arrow{color:var(--text-tertiary);}
+.gb-transform-to{color:var(--leo-green); font-weight:600;}
+/* Â§2a.5 â€” reference reachable, never advertised (Â§4.6: sits low). */
+.gb-review-link{display:block; margin:var(--space-4) auto 0; background:none; border:none; font-size:13px; color:var(--text-secondary); text-decoration:underline; cursor:pointer; padding:12px 16px; min-height:44px;}
+.gb-review-link:hover{color:var(--leo-green);}
+@media(prefers-reduced-motion:reduce){.gb-block{animation:none;}}
+
+/* ===== Phase 3 â€” tap exercise types (Â§2b.1, Â§2b.6) ===== */
+.ex-item{padding-bottom:var(--space-4);}
+.ex-ex-title{font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--text-tertiary); margin:0 0 var(--space-3);}
+.ex-sentence{font-size:17px; font-weight:400; color:var(--text-primary); text-align:center; line-height:1.8; margin:var(--space-4) 0;}
+/* The gap: an underline the student can see the size of. */
+.ex-gap{display:inline-block; width:8ch; border-bottom:2px solid var(--text-tertiary); vertical-align:baseline;}
+/* Chips: the tap IS the decision â€” no confirm step. */
+.ex-chips{display:flex; flex-wrap:wrap; gap:var(--space-3); justify-content:center; margin-top:var(--space-4);}
+.ex-chip{min-height:44px; font-size:16px; font-weight:500; color:var(--text-primary); background:var(--bg-card); border:1.5px solid var(--divider); border-radius:10px; padding:10px 20px; cursor:pointer;}
+.ex-chip:hover{border-color:var(--leo-green);}
+/* Â§2c.2 â€” the student's wrong choice de-emphasises. No red, no strike. */
+.ex-chip-muted{opacity:.4; cursor:default;}
+/* Â§2b.6 â€” the evidence list. The rule is proven by the student's own
+   answers, not asserted by Leo. */
+.ev-list{display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4); margin-top:var(--space-5); padding-top:var(--space-4); border-top:1px solid var(--divider);}
+.ev-col{min-width:0;}
+.ev-line{font-size:14px; font-weight:400; color:var(--text-secondary); margin:0 0 var(--space-2); line-height:1.5;}
+.ev-target{color:var(--text-primary); font-weight:500;}
+
+/* ===== Phase 4 â€” typed exercise types (Â§2b.2, Â§2b.4, Â§2b.7) ===== */
+/* Â§2a.4's rule at work: orange points AT what changes. */
+.ex-marked{border-bottom:2px solid var(--marker-orange); padding-bottom:1px;}
+/* Inline input: a sentence with a blank, not a form field. */
+.ex-inline-input{width:7ch; font-size:17px; font-family:inherit; color:var(--text-primary); text-align:center; background:none; border:none; border-bottom:2px solid var(--divider); padding:2px 4px; outline:none;}
+.ex-inline-input:focus{border-bottom-color:var(--leo-green);}
+/* The hint is a whisper under the gap â€” never a placeholder, so it
+   survives the student starting to type. */
+.ex-hint{font-size:13px; font-style:italic; color:var(--text-tertiary); text-align:center; margin:-8px 0 var(--space-4);}
+.ex-actions{display:flex; justify-content:center; margin-top:var(--space-4);}
+
+/* ===== Phase 5 â€” types 3 and 5 (Â§2b.3, Â§2b.5) ===== */
+.ex-instruction{font-size:15px; color:var(--text-secondary); text-align:center; margin:0 0 var(--space-3);}
+/* Â§2b.3 assembly line â€” looks increasingly like a sentence. */
+.wo-line{display:flex; flex-wrap:wrap; align-items:center; gap:2px; min-height:56px; background:var(--bg-card); border:1.5px dashed var(--divider); border-radius:10px; padding:8px 12px;}
+.wo-line-ok{border-style:solid; border-color:var(--leo-green);}
+.wo-placeholder{font-size:14px; font-style:italic; color:var(--text-tertiary);}
+/* Assembled words are WORDS, not tiles â€” natural sentence spacing. */
+.wo-word{background:none; border:none; font-size:17px; font-weight:500; color:var(--text-primary); padding:4px 3px; cursor:pointer; font-family:inherit;}
+.wo-word:disabled{cursor:default;}
+.wo-back{margin-left:auto; min-width:44px; min-height:44px; background:none; border:none; color:var(--text-tertiary); font-size:18px; cursor:pointer;}
+.wo-pool{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:var(--space-4);}
+.wo-tile{min-height:44px; font-size:16px; font-weight:500; color:var(--text-primary); background:var(--leo-green-light); border:none; border-radius:10px; padding:10px 16px; cursor:pointer; font-family:inherit;}
+/* Â§2b.5 â€” a sentence lightly cut apart. Not buttons, not tiles. */
+.cm-sentence{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin:var(--space-4) 0;}
+.cm-word{font-size:17px; font-weight:400; color:var(--text-primary); background:transparent; border:1.5px solid var(--divider); border-radius:8px; padding:8px 12px; min-height:44px; cursor:pointer; font-family:inherit;}
+.cm-word:disabled{cursor:default;}
+/* Orange marks LOCATION â€” exactly as a teacher circles a word. */
+.cm-word-marked{border-color:var(--marker-orange); border-width:2px; color:var(--marker-orange);}
+/* The payoff frame: orange mark â†’ green repair, on the same object. */
+.cm-word-healed{border-color:transparent; color:var(--leo-green); font-weight:600;}
+.cm-word-pressed{border-color:var(--text-tertiary);}
+.cm-beat{font-size:15px; color:var(--leo-green); text-align:center; margin:var(--space-3) 0;}
+.cm-hint{font-size:15px; color:var(--text-secondary); text-align:center; margin:var(--space-3) 0;}
+@media(prefers-reduced-motion:reduce){.cm-beat,.wo-line{animation:none;}}
+
+/* ===== Phase 6 â€” conversation surface (Â§2b.8, Â§3e) ===== */
+/* Frames persist above the input; the row scrolls rather than wraps,
+   so the input never gets pushed off the thumb's reach (Â§4.6). */
+.frame-chips{display:flex; align-items:center; gap:8px; margin-bottom:var(--space-2);}
+.frame-chips-row{display:flex; gap:8px; overflow-x:auto; flex:1; padding-bottom:2px; scrollbar-width:none;}
+.frame-chips-row::-webkit-scrollbar{display:none;}
+.frame-chip{flex-shrink:0; min-height:36px; font-size:14px; font-weight:500; color:var(--text-primary); background:var(--leo-green-light); border:none; border-radius:8px; padding:8px 12px; cursor:pointer; white-space:nowrap; font-family:inherit;}
+/* 36px chip inside a 44px hit area (Â§4.5). */
+.frame-chips-x{flex-shrink:0; min-width:44px; min-height:44px; background:none; border:none; color:var(--text-tertiary); font-size:20px; cursor:pointer; line-height:1;}
+
+/* ===== Phase 7 â€” the arc (Â§1.3, Â§1.5) ===== */
+.stage-header{margin-bottom:var(--space-4);}
+.sh-row{display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); margin-top:var(--space-3);}
+/* The eyebrow does the naming, which frees the title to teach. */
+.sh-eyebrow{font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--text-tertiary);}
+/* Â§4.3 â€” ghost text, never a button. Prominence would be an invitation. */
+.sh-skip{background:none; border:none; font-size:13px; font-weight:400; color:var(--text-tertiary); cursor:pointer; min-height:44px; min-width:44px; padding:0 4px;}
+.sh-title{font-family:'Inter',sans-serif; font-size:22px; font-weight:600; color:var(--text-primary); margin:var(--space-1) 0 0;}
+.sh-purpose{font-size:15px; font-weight:400; color:var(--text-secondary); margin:var(--space-1) 0 0; line-height:1.5;}
+/* Â§1.5 â€” a continuity moment, never an error state. */
+.resume-card{display:flex; flex-direction:column; align-items:center; text-align:center; gap:var(--space-4); padding:var(--space-6) var(--space-4);}
+.resume-line{font-size:16px; line-height:1.6; margin:0; max-width:34ch;}
+
+/* ===== Phase 8 â€” images, aims (Â§3b, Â§3a) ===== */
+/* Framed by shape, not chrome. The placeholder holds the final size
+   from the start so the layout never jumps, and it is a flat block â€”
+   nothing in this product loops while waiting. */
+.li-frame{position:relative; width:100%; aspect-ratio:3/2; border-radius:12px; overflow:hidden; background:var(--leo-green-light); margin:var(--space-4) 0;}
+.li-frame-empty{display:flex; align-items:center; justify-content:center; padding:var(--space-4); text-align:center;}
+.li-caption{font-size:14px; color:var(--text-secondary);}
+.li-img{width:100%; height:100%; object-fit:cover; object-position:center; opacity:0; transition:opacity .3s ease-out;}
+.li-img-in{opacity:1;}
+@media(prefers-reduced-motion:reduce){.li-img{transition:none;} .li-img-in{opacity:1;}}
+/* Â§3a â€” the quiet list beside Leo's voice. */
+.aims-card{background:var(--leo-green-light); border-radius:10px; padding:14px 16px; margin-top:var(--space-3);}
+.aims-row{font-size:15px; font-weight:400; color:var(--text-primary); margin:0 0 var(--space-2); line-height:1.5;}
+.aims-row:last-child{margin-bottom:0;}
+
+/* ===== Phase 9 â€” speaker, pair card, listening (Â§4.1, Â§3d, Â§3g) ===== */
+/* Â§4.1 â€” 20px glyph inside a 44px target. Dimmed while playing;
+   no persistent played-state, because hearing again is always
+   equally invited. */
+.speak-btn{display:inline-flex; align-items:center; justify-content:center; min-width:44px; min-height:44px; background:none; border:none; color:var(--leo-green); cursor:pointer; padding:0; flex-shrink:0;}
+.speak-btn-on{opacity:.6;}
+.speak-btn-sm{min-width:36px; min-height:36px;}
+/* Â§3d â€” the pair card. Orange marks the syllable that GAINED stress. */
+.pp-card{background:var(--bg-card); border:1px solid var(--divider); border-radius:12px; padding:var(--space-5) var(--space-4); margin:var(--space-4) 0;}
+.pp-rows{display:flex; align-items:center; justify-content:center; gap:var(--space-4); flex-wrap:wrap;}
+.pp-word{display:flex; flex-direction:column; align-items:center; gap:6px;}
+.pp-dots{display:flex; gap:6px;}
+.pp-dot{width:10px; height:10px; border-radius:50%; border:1.5px solid var(--text-tertiary); box-sizing:border-box;}
+.pp-dot-on{background:var(--leo-green); border-color:var(--leo-green);}
+.pp-dot-moved{background:var(--marker-orange); border-color:var(--marker-orange);}
+.pp-syls{display:flex; gap:4px; align-items:baseline;}
+.pp-syl{font-size:17px; color:var(--text-secondary);}
+.pp-syl-on{font-weight:700; color:var(--leo-green);}
+.pp-syl-moved{font-weight:700; color:var(--marker-orange);}
+.pp-ipa{font-size:14px; color:var(--text-tertiary); margin:0;}
+.pp-arrow{font-size:20px; color:var(--text-tertiary);}
+.pp-note{font-size:15px; color:var(--text-secondary); text-align:center; margin:var(--space-4) 0 0;}
+/* Â§3g â€” one control. No scrubber, no count. */
+.lp-card{display:flex; flex-direction:column; align-items:center; gap:8px; background:var(--bg-card); border:1px solid var(--divider); border-radius:12px; padding:var(--space-6) var(--space-4); margin:var(--space-4) 0;}
+.lp-play{width:56px; height:56px; border-radius:50%; background:var(--leo-green); border:none; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center;}
+.lp-glyph{font-size:20px; line-height:1;}
+.lp-label{font-size:14px; font-weight:500; color:var(--text-secondary); margin:0;}
+/* The permission line IS the display of unlimited replays. */
+.lp-permission{font-size:13px; font-weight:400; color:var(--text-tertiary); margin:0;}
+
+/* Bug fix â€” the plain word, above the breakdown a student otherwise
+   can't decode. */
+.pp-word-plain{font-size:17px; font-weight:600; color:var(--text-primary); margin:0;}
+
+/* Bug fix â€” happy/sad (and similar small paired prompts) now use the
+   same LessonImage treatment as every other image, sized to sit two
+   up rather than one full-width frame each. */
+.turn-images{display:flex; gap:var(--space-3); justify-content:center; margin:var(--space-3) 0;}
+.turn-image-slot{flex:1; max-width:160px;}
+.turn-image-slot .li-frame{margin:0;}
+
+.vocab-sheet-close{display:block; width:fit-content; margin:0 auto var(--space-3); background:none; border:none; font-size:14px; font-weight:500; color:var(--leo-green); cursor:pointer; padding:12px 16px; min-height:44px;}
+
+.continue-banner{background:var(--leo-green-light); border-left:3px solid var(--leo-green); border-radius:0 12px 12px 0; padding:var(--space-3) var(--space-3) var(--space-3) calc(var(--space-3) - 3px); margin-bottom:var(--space-4); display:flex; align-items:center; gap:var(--space-3);}
+.continue-banner-text{font-size:16px; font-weight:400; color:var(--text-primary); flex:1; line-height:1.5;}
+.continue-banner-actions{display:flex; gap:var(--space-3);}
+.continue-banner-actions .primary-btn{flex:1;}
+.continue-banner-actions .ghost-btn{flex-shrink:0;}
+
+/* ===== Phase 10 + structural fix CSS ===== */
+/* match_question_answer */
+.mqa-rights{display:flex; flex-direction:column; gap:var(--space-3); margin-top:var(--space-4);}
+.mqa-opt{min-height:44px; font-size:15px; font-weight:400; color:var(--text-primary); background:var(--bg-card); border:1.5px solid var(--divider); border-radius:10px; padding:10px 16px; cursor:pointer; text-align:left; font-family:inherit;}
+.mqa-opt:hover{border-color:var(--leo-green);}
+.mqa-correct{border-color:var(--leo-green); background:var(--leo-green-light); font-weight:600; color:var(--leo-green);}
+.mqa-chosen{opacity:.4;}
+.mqa-muted{opacity:.4;}
+/* sort_into_groups */
+.sig-pool{display:flex; flex-wrap:wrap; gap:8px; margin:var(--space-4) 0;}
+.sig-pool-item{position:relative;}
+.sig-word{font-size:15px; font-weight:500; color:var(--text-primary); background:var(--leo-green-light); border:none; border-radius:8px; padding:8px 14px; min-height:44px; cursor:pointer; font-family:inherit;}
+.sig-word-open{background:var(--leo-green); color:#fff;}
+.sig-picker{position:absolute; top:100%; left:0; z-index:10; display:flex; flex-direction:column; gap:4px; background:var(--bg-card); border:1.5px solid var(--leo-green); border-radius:8px; padding:6px; min-width:max-content; margin-top:4px;}
+.sig-group-btn{font-size:13px; font-weight:600; color:var(--leo-green); background:none; border:none; cursor:pointer; padding:6px 10px; border-radius:6px; text-align:left;}
+.sig-group-btn:hover{background:var(--leo-green-light);}
+.sig-buckets{display:flex; gap:var(--space-4); flex-wrap:wrap; margin-top:var(--space-4); padding-top:var(--space-4); border-top:1px solid var(--divider);}
+.sig-bucket{flex:1; min-width:80px;}
+.sig-bucket-live .gram-section-label{color:var(--leo-green);}
+.sig-placed{background:var(--bg-card); border:1.5px solid var(--divider); font-size:14px; margin-bottom:4px; display:block; width:100%;}
+.sig-correct{background:var(--leo-green-light); color:var(--leo-green); font-weight:600; border-radius:6px; padding:4px 8px; font-size:14px; display:inline-block; margin:2px;}
+.sig-wrong{background:var(--bg-card); color:var(--text-secondary); border-radius:6px; padding:4px 8px; font-size:14px; display:inline-block; margin:2px;}
+
+.grammar-form-box{background:var(--leo-green-light); border-radius:10px; padding:12px 16px; margin:4px 0; line-height:1.6;}
+.grammar-form-box .gram-form{background:none; padding:0;}
+.grammar-example{display:flex; align-items:baseline; gap:10px; padding:6px 0; font-style:italic; color:var(--text-secondary);}
+.grammar-example-bar{display:inline-block; width:3px; min-height:18px; background:var(--leo-green); border-radius:2px; flex-shrink:0;}
+
+/* â•â•â• WORD CARD (WORD_CARD_SPECIFICATION Â§2â€“Â§8) â•â•â• */
+.word-card{animation:scRise .4s ease-out both; text-align:center;}
+.wc-progress{display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-6);}
+.wc-progress-text{font-size:14px; color:var(--text-secondary);}
+.wc-dots{display:flex; gap:6px; align-items:center;}
+.wc-dot{width:8px; height:8px; border-radius:50%; border:1.5px solid var(--text-tertiary); background:transparent; box-sizing:border-box;}
+.wc-dot-done{background:var(--leo-green); border-color:var(--leo-green);}
+.wc-dot-current{background:var(--leo-green); border-color:var(--leo-green);}
+.wc-word{font-size:28px; font-weight:700; color:var(--text-primary); margin-bottom:var(--space-1);}
+.wc-ipa{font-size:16px; font-style:italic; color:var(--text-secondary); margin-bottom:var(--space-2);}
+.wc-pos{font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--leo-green); margin-bottom:var(--space-4);}
+.wc-meaning{font-size:17px; color:var(--text-primary); line-height:1.5; margin-bottom:var(--space-2);}
+.wc-example{font-size:15px; font-style:italic; color:var(--text-secondary); line-height:1.5; max-width:30ch; margin:0 auto var(--space-5) auto;}
+.wc-actions{display:flex; gap:12px; justify-content:center; margin-bottom:var(--space-2);}
+.wc-action-btn{flex:1; max-width:160px;}
+.wc-heard{font-size:14px; color:var(--text-secondary); text-align:center; margin-bottom:var(--space-4);}
+.wc-pron-block{background:var(--leo-green-light); border-radius:10px; padding:16px; text-align:left; margin-bottom:var(--space-5);}
+.wc-pron-tip{font-size:15px; color:var(--text-primary); line-height:1.5; margin:0 0 var(--space-2) 0;}
+.wc-pron-correct{font-size:15px; font-weight:500; color:var(--leo-green); margin:0 0 var(--space-1) 0;}
+.wc-pron-incorrect{font-size:15px; color:var(--text-secondary); opacity:0.5; margin:0;}
+.wc-practise-row{margin-bottom:var(--space-2);}
+.wc-next{margin-top:var(--space-5);}
+
+/* â•â•â• PRON CARD CSS (THREE_DESIGN_BRIEFS Â§1) â•â•â• */
+.pron-stress-row{display:flex; gap:12px; justify-content:center; align-items:flex-end; margin:var(--space-4) 0;}
+.pron-stress-item{display:flex; flex-direction:column; align-items:center; gap:4px;}
+.pron-stress-dot-filled{width:14px; height:14px; border-radius:50%; background:var(--leo-green);}
+.pron-stress-dot-outline{width:10px; height:10px; border-radius:50%; border:1.5px solid var(--text-tertiary); box-sizing:border-box;}
+.pron-stress-label-stressed{font-size:13px; font-weight:600; color:var(--leo-green);}
+.pron-stress-label{font-size:13px; font-weight:400; color:var(--text-secondary);}
+.pron-l1-note{background:#FFF7E6; border-left:3px solid var(--color-warning); border-radius:0 10px 10px 0; padding:12px 14px; margin:var(--space-4) 0;}
+.pron-pair{margin:var(--space-3) 0;}
+.pron-pair-correct{display:flex; align-items:center; gap:8px; font-size:16px; font-weight:500; color:var(--leo-green); margin-bottom:var(--space-1);}
+.pron-pair-incorrect{display:flex; align-items:center; gap:8px; font-size:16px; font-weight:400; color:var(--text-secondary); opacity:0.5;}
+
+/* â•â•â• SUMMARY FLOW CSS (THREE_DESIGN_BRIEFS Â§2) â•â•â• */
+.summary-flow{text-align:center; padding:var(--space-4) 0;}
+.summary-heading{font-family:'Inter',sans-serif; font-size:22px; font-weight:600; color:var(--text-primary); margin:var(--space-3) 0;}
+.summary-praise{text-align:left; margin:var(--space-4) 0;}
+.summary-built{text-align:left; margin:var(--space-4) 0;}
+.sc-tick-wrap{display:flex; justify-content:center;}
+.sc-tick{width:52px; height:52px;}
+@media(prefers-reduced-motion:reduce){.summary-flow [style*="animationDelay"]{animation:none !important; opacity:1 !important;}}
+@media(prefers-reduced-motion:reduce){.word-card{animation:none; opacity:1; transform:translateY(0);}}
+
+/* â•â•â• VISUAL REDESIGN CSS (FULL_VISUAL_REDESIGN_SPECIFICATION) â•â•â• */
+/* Â§2.1 Planning stagger */
+.plan-reveal{text-align:center; padding:var(--space-6) var(--space-4);}
+.plan-line{font-size:15px; color:var(--text-secondary); line-height:1.6; margin:var(--space-2) 0; animation:scRise .4s ease-out both; opacity:0;}
+.plan-d1{animation-delay:0s;} .plan-d2{animation-delay:1.2s;} .plan-d3{animation-delay:2.4s;}
+.plan-d4{animation-delay:3.6s;} .plan-d5{animation-delay:4.8s;} .plan-d6{animation-delay:6s;}
+@media(prefers-reduced-motion:reduce){.plan-line{animation:none; opacity:1;}}
+
+/* Â§2.6 Grammar section labels */
+.gram-section-label{font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--leo-green); margin:0 0 var(--space-1) 0;}
+.grammar-card{display:flex; flex-direction:column; gap:var(--space-4);}
+.grammar-form-box{background:var(--leo-green-light); border-radius:10px; padding:12px 16px; line-height:1.6;}
+.grammar-form-box .gram-form{background:none; padding:0;}
+
+/* Â§2.7 Speaking bubbles */
+.bubble-bot{background:var(--leo-green-light) !important; font-family:'Inter',sans-serif !important;}
+
+/* Â§2.9 Stage transitions â€” content enters with scRise */
+.stage-enter{animation:scRise .4s ease-out both;}
+.stage-enter-delayed{animation:scRise .4s ease-out both; animation-delay:0.2s; opacity:0;}
+@media(prefers-reduced-motion:reduce){.stage-enter,.stage-enter-delayed{animation:none; opacity:1;}}
+
+/* Â§5 Step indicator dots */
+.step-dots{display:flex; gap:5px; justify-content:center; margin-bottom:var(--space-3);}
+.step-dot{width:6px; height:6px; border-radius:50%; border:1px solid var(--text-tertiary); background:transparent; box-sizing:border-box;}
+.step-dot-done{background:var(--leo-green); border-color:var(--leo-green);}
+.step-dot-current{background:var(--leo-green); border-color:var(--leo-green);}
+
+/* ================================================================
+   W-01 WHITEBOARD GRAMMAR â€” board surface CSS
+   Kalam on the board face ONLY. Everything outside the frame stays Inter.
+   No Fraunces, no .fade-in, no legacy tokens on the board surface (Â§12.11).
+   ================================================================ */
+.wb-boards{display:flex; flex-direction:column; gap:var(--space-4); margin:12px 0;}
+.wb-board{position:relative; width:100%; border-radius:0;}
+.wb-board-svg{display:block; width:100%;}
+/* .wb-board-frame deleted â€” board stroke is now inline on the <rect> per v3 Â§2 */
+.wb-board-content{position:absolute; top:6.6%; left:5.6%; right:5.6%; bottom:12%; overflow:hidden;
+  display:flex; flex-direction:column; gap:6px; justify-content:flex-start;}
+/* The writing band: top 7% to 55% of the board = the content region.
+   Bottom 45% (illustration reserve + pointer) stays clear per Â§3.2. */
+
+/* ---- Element base ---- */
+.wb-el{font-family:'Kalam',cursive; color:var(--marker-black); animation:scRise .4s ease-out both;}
+
+/* ---- Title (Â§5.3) ---- */
+.wb-title{margin-bottom:4px;}
+.wb-title-text{font-size:21px; font-weight:700; color:var(--marker-black); display:inline;}
+.wb-title-underline{width:min(200px, 60%); display:block; margin-top:1px;}
+
+/* ---- Rule ---- */
+.wb-rule{font-size:16px; line-height:1.5; display:flex; flex-wrap:wrap; gap:4px; align-items:baseline;}
+
+/* ---- Formula (Â§5.5) ---- */
+.wb-formula{display:flex; flex-wrap:wrap; gap:4px; align-items:center; font-size:16px;}
+.wb-formula-box{border:1.5px solid var(--marker-black); border-radius:4px; padding:2px 8px; display:inline-block;}
+.wb-formula-join{font-size:18px; color:var(--marker-black); padding:0 2px;}
+
+/* ---- SubstitutionTable (Â§5.4) ---- */
+.wb-subtable{margin:4px 0;}
+.wb-subtable-grid{display:grid; gap:2px 8px; align-items:start; font-size:16px;}
+.wb-slot{display:flex; flex-direction:column; align-items:center; min-width:0;}
+.wb-slot-num{font-size:12px; color:var(--marker-blue); font-weight:700;}
+.wb-slot-label{font-size:12px; color:var(--marker-blue); font-weight:700; text-transform:uppercase; margin-bottom:2px;}
+.wb-slot-items{display:flex; flex-direction:column; align-items:center; gap:1px; border-top:2px solid var(--marker-black); padding-top:3px; width:100%;}
+.wb-slot-item{text-align:center; padding:1px 4px; font-size:15px;}
+.wb-slot-target{border:2px solid var(--marker-red); border-radius:4px; padding:2px;}
+.wb-subtable-example{margin-top:6px; font-size:15px; color:var(--marker-green); font-style:italic;}
+
+/* ---- Example (Â§5.6) ---- */
+.wb-example{display:flex; align-items:baseline; gap:8px; font-size:16px; line-height:1.5;}
+.wb-example-text{display:inline;}
+.wb-mark{font-size:22px; font-weight:700; line-height:1;}
+.wb-mark-tick{color:var(--marker-green);}
+.wb-mark-cross{color:var(--marker-red);}
+
+/* ---- Contrast (Â§5.6) ---- */
+.wb-contrast{display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:16px;}
+.wb-contrast-from,.wb-contrast-to{display:inline-flex; gap:3px; flex-wrap:wrap;}
+
+/* ---- Note (Â§5.7) ---- */
+.wb-note{position:relative; padding:6px 10px; font-size:14px; font-weight:700; color:var(--marker-orange); max-width:70%;}
+.wb-note-bubble{position:absolute; inset:0; width:100%; height:100%; pointer-events:none;}
+.wb-note-text{position:relative; z-index:1;}
+
+/* ---- Role colours (Â§5.1) ---- */
+.wb-plain{color:var(--marker-black);}
+.wb-structure{color:var(--marker-blue);}
+.wb-target{color:var(--marker-red); font-weight:700;}
+.wb-model{color:var(--marker-green);}
+
+/* ---- Reduced motion (Â§8.3): board elements render in final state ---- */
+@media (prefers-reduced-motion: reduce){
+  .wb-el{animation:none; opacity:1; transform:translateY(0);}
+}
+.review-form{margin-top:12px; padding-top:var(--space-3);}
+.ghost-btn.wide,.primary-btn.wide{width:100%;}
+.mission-box{display:flex; gap:12px; align-items:flex-start; background:#FFF7E6; border:1.5px solid var(--color-warning); border-radius:12px; padding:13px 15px;}
+.mission-icon{font-size:22px; line-height:1;}
+.rev-options{display:flex; flex-direction:column; gap:9px; margin-top:6px;}
+.rev-option{text-align:left; background:#fff; border:1px solid var(--divider); border-radius:12px; padding:12px 15px; font-family:'Inter'; font-size:15px; font-weight:400; color:var(--text-primary); cursor:pointer;}
+.rev-option:hover:not(:disabled){border-color:var(--leo-green);}
+.rev-option:focus-visible{outline:3px solid var(--color-warning); outline-offset:2px;}
+.rev-right{border-color:#28A05A; background:#EAF6EE; color:#1B7A42; font-weight:700;}
+.rev-wrong{border-color:#D64040; background:#FBEAEA; color:#B22B2B; font-weight:700;}
+.rev-dim{opacity:.5;}
+.bot-avatar-leo{width:34px; height:34px; border-radius:10px; background:var(--leo-green); color:var(--bg-warm); font-family:'Inter',sans-serif; font-weight:700; font-size:18px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.today-cta{margin-top:12px;}
+.today-all-done{text-align:center; font-weight:700; color:var(--text-primary); margin-top:12px; font-size:14.5px;}
+.leo-feedback-head{display:flex; align-items:center; gap:7px; margin-bottom:6px; color:var(--text-primary);}
+
+.home-greeting{margin-top:6px; font-size:14.5px; color:var(--text-primary); display:flex; align-items:center; justify-content:center; gap:10px;}
+.home-phrase{font-family:'Inter',sans-serif; font-size:16px; font-weight:400; color:var(--text-primary); margin-top:14px;}
+.app-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:20px 10px; margin-top:28px;}
+@media (min-width:480px){.app-grid{grid-template-columns:repeat(4,1fr); max-width:440px; margin-left:auto; margin-right:auto;}}
+.app-icon-btn{background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:7px; font-family:'Inter'; font-size:14px; padding:0;}
+.app-icon-btn:focus-visible .app-icon{outline:3px solid var(--color-warning); outline-offset:3px;}
+.app-icon{width:62px; height:62px; border-radius:16px; display:flex; align-items:center; justify-content:center; color:#fff; transition:transform .12s ease;}
+.app-icon-btn:active .app-icon{transform:scale(.92);}
+.app-icon-label{font-size:12px; color:var(--text-primary); opacity:.8;}
+
+/* ---- Full-page Australian pencil hero ---- */
+.oz-page{max-width:680px; margin:0 auto;}
+.hero-oz2{position:relative; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:20px 12px 64px; background:var(--bg-warm); overflow:hidden;}
+.oz-title-top{text-align:center; margin-bottom:2px;}
+.oz-title{font-size:46px;}
+.oz-hello{font-family:'Inter'; font-size:16px; color:var(--text-primary); opacity:.8; margin-top:2px;}
+.oz-canvas{flex:1; width:100%; min-height:0; display:flex; align-items:center; justify-content:center;}
+.oz-sketch2{width:100%; height:100%; max-width:600px; display:block;}
+.oz-sketch2 .oz-fill{fill:var(--text-primary); stroke:none; opacity:.92;}
+.sketch-anim .oz-fill{opacity:0; animation:ozFill .6s ease forwards;}
+@keyframes ozFill{from{opacity:0;} to{opacity:.92;}}
+.scroll-cue{position:absolute; bottom:18px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:1px; background:rgba(255,255,255,.85); border-radius:16px; padding:8px 18px; color:var(--leo-green); font-family:'Inter'; font-weight:400; font-size:12px; cursor:pointer; z-index:4; animation:cueBounce 1.7s ease-in-out infinite;}
+.scroll-cue:focus-visible{outline:3px solid var(--color-warning); outline-offset:2px;}
+@keyframes cueBounce{0%,100%{transform:translateX(-50%) translateY(0);} 50%{transform:translateX(-50%) translateY(6px);}}
+.apps-section{max-width:520px; margin:0 auto; padding:26px 22px 60px; text-align:center;}
+@media (prefers-reduced-motion: reduce){.oz-fill{opacity:.92 !important; animation:none !important;}}
+
+/* ---- App header (inside a feature) ---- */
+.app-header{display:flex; justify-content:space-between; align-items:center; padding:14px 18px 8px; max-width:760px; margin:0 auto;}
+.back-btn{display:inline-flex; align-items:center; gap:2px; background:none; border:none; color:var(--leo-green); font-family:'Inter'; font-weight:500; font-size:14px; cursor:pointer; padding:4px 6px 4px 0;}
+.back-btn:focus-visible{outline:2px solid var(--color-warning); outline-offset:2px; border-radius:6px;}
+.app-header-title{font-family:'Inter',-apple-system,sans-serif; font-size:17px; font-weight:600; letter-spacing:-0.01em; color:var(--leo-green);}
+@media (prefers-reduced-motion: reduce){
+  .sky-anim{animation:none;}
+}
+.main{max-width:760px; margin:0 auto; padding:10px 18px 60px;}
+.section-title{margin:8px 0 14px;}
+.card{background:var(--bg-card); padding:20px; border-radius:12px; border:none; margin-bottom:12px;}
+/* P2 Leo's Visual Presence */
+.leo-accent{position:relative; padding-left:var(--space-3);}
+/* Leo's rule is drawn down, not printed. Same gesture as the tick: one mark,
+   made by one hand, ease-out, once, then still. A 3px line growing from its
+   top edge is a draw â€” stroke-dashoffset would need an SVG for what a
+   transform does identically here. */
+.leo-accent::before{content:""; position:absolute; left:0; top:0; bottom:0; width:3px;
+  background:var(--leo-green); transform:scaleY(0); transform-origin:top;
+  animation:drawAccent 450ms ease-out forwards;}
+@keyframes drawAccent{to{transform:scaleY(1);}}
+.leo-card{background:var(--leo-green-light); padding:20px; border-radius:12px; border:none; border-left:3px solid var(--leo-green);}
+
+.muted{color:var(--text-primary); opacity:.62;} .small{font-size:13.5px;} .center{text-align:center; margin-top:20px;}
+/* ---- Progress tab (redesigned â€” stat-grid, skills/error bar charts, and
+   their only-remaining-consumer utility classes .euca/.wattle all deleted.
+   .stat-grid/.stat/.stat-num/.stat-label were explicitly named for deletion.
+   .bar-row/.bar-track/.bar-fill/.bar-label/.bar-count and .euca/.wattle were
+   not explicitly named, but this build removed their only remaining JSX
+   usage â€” confirmed via direct search before deleting, not assumed. ---- */
+.progress-page{max-width:520px; margin:0 auto; padding:var(--space-3) var(--space-3) var(--space-7);}
+/* Leo's observation / opening card */
+.prog-noticed-card{background:var(--leo-green-light); border-left:3px solid var(--leo-green); border-radius:0 12px 12px 0; padding:var(--space-4) var(--space-4) var(--space-4) calc(var(--space-4) - 3px); margin-bottom:var(--space-5);}
+.prog-noticed-text{font-size:18px; font-weight:500; line-height:1.65; color:var(--text-primary); margin:0;}
+/* Supporting facts â€” no card container, sit directly on --bg-warm */
+.prog-facts{margin-bottom:var(--space-5);}
+.prog-fact{font-size:15px; font-weight:400; line-height:1.6; color:var(--text-secondary); margin:0 0 var(--space-1);}
+.prog-fact:last-child{margin-bottom:0;}
+/* Journey timeline â€” no card container */
+.prog-timeline{margin-bottom:var(--space-5);}
+.prog-tl-row{display:flex; align-items:baseline; gap:var(--space-2); padding:var(--space-2) 0; border-bottom:1px solid var(--divider);}
+.prog-tl-row:first-child{border-top:1px solid var(--divider);}
+.prog-tl-date{font-size:14px; font-weight:400; color:var(--text-tertiary); flex-shrink:0; min-width:44px;}
+.prog-tl-sep{font-size:14px; color:var(--text-tertiary); flex-shrink:0; user-select:none;}
+.prog-tl-title{font-size:16px; font-weight:400; color:var(--text-primary); flex:1; line-height:1.4;}
+.prog-tl-more{font-size:14px; font-weight:400; color:var(--text-tertiary); padding:var(--space-2) 0 0; line-height:1.5;}
+/* Level Check action */
+.prog-level-check-btn{margin-top:var(--space-4); margin-bottom:var(--space-2); color:var(--text-secondary);}
+/* Deleted from v1 â€” must not exist: .prog-noticed, .prog-facts-card,
+   .prog-lesson-shelf, .prog-lesson-row, .prog-lesson-date,
+   .prog-lesson-title, .prog-shelf-more */
+/* ---- Diary book ---- */
+.diary-nav{display:flex; justify-content:space-between; align-items:center; margin:2px 0 12px; gap:8px;}
+.date-wrap{text-align:center;}
+.date-hand{font-family:'Inter',sans-serif; font-size:14px; font-weight:400; color:var(--text-secondary); line-height:1.1; display:block;}
+.today-badge{display:inline-block; background:var(--color-warning); font-size:11.5px; font-weight:700; border-radius:6px; padding:2px 9px; color:#3D2E00; margin-top:3px;}
+.page-arrow{background:#fff; border:1px solid var(--divider); border-radius:12px; width:46px; height:46px; display:flex; align-items:center; justify-content:center; color:var(--leo-green); cursor:pointer; flex-shrink:0;}
+.page-arrow:disabled{opacity:.3; cursor:default;}
+.page-arrow:focus-visible{outline:3px solid var(--color-warning); outline-offset:2px;}
+.diary-page2{background:#fff; border-radius:16px; margin-bottom:14px; overflow:hidden;}
+.diary-section{padding:16px 18px 18px; border-bottom:1.5px dashed var(--divider);}
+.diary-section:last-child{border-bottom:none;}
+.diary-label{font-family:'Inter',sans-serif; font-weight:400; font-size:12px; color:var(--text-primary); margin-bottom:2px;}
+.diary-help{font-size:13.5px; color:var(--text-primary); opacity:.6; margin-bottom:12px;}
+.input-label{display:block; font-size:13.5px; font-weight:700; color:var(--text-primary); margin:12px 0 6px;}
+.big-input{width:100%; border:1.5px solid #C6D2C5; border-radius:12px; padding:12px 14px; font-family:'Inter'; font-size:16px; font-weight:400; color:var(--text-primary); background:#fff; resize:vertical;}
+.big-input::placeholder{color:#8A968D;}
+.big-input:focus{outline:3px solid rgba(55,98,75,.3); border-color:var(--leo-green);}
+.ruled-input{background:#fff; line-height:28px; padding-top:5px; padding-bottom:8px; min-height:130px;}
+.task-text{flex:1; word-break:break-word;}
+.skills-grid{display:flex; flex-wrap:wrap; gap:9px; margin-bottom:6px;}
+.skill-chip{display:inline-flex; align-items:center; gap:6px; background:#fff; color:var(--text-primary); border-radius:12px; padding:10px 14px; min-height:46px; font-family:'Inter'; font-size:14px; font-weight:500; cursor:pointer;}
+.skill-chip:focus-visible{outline:3px solid var(--color-warning); outline-offset:2px;}
+.skill-on{background:var(--leo-green); border-color:var(--leo-green); color:#fff;}
+.save-row{display:flex; align-items:center; gap:10px; margin-top:10px; flex-wrap:wrap;}
+.save-page-bar{margin:4px 0 10px;}
+.center-flash{display:block; text-align:center; margin-top:8px;}
+.saved-flash{color:#1B7A42; font-weight:700; font-size:14px; min-width:60px;}
+.sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;}
+.page-left{animation:pageLeft .35s ease;}
+.page-right{animation:pageRight .35s ease;}
+@keyframes pageLeft{from{transform:translateX(46px); opacity:0;} to{transform:none; opacity:1;}}
+@keyframes pageRight{from{transform:translateX(-46px); opacity:0;} to{transform:none; opacity:1;}}
+.swipe-hint{font-size:12px; opacity:.45; text-align:center; margin:-6px 0 14px;}
+.resource-card{display:block; background:#fff; border-radius:10px; padding:10px 13px; margin-top:8px; text-decoration:none; color:var(--text-primary);}
+.resource-card:hover{border-color:var(--leo-green);}
+.resource-title{display:flex; align-items:center; gap:6px; font-weight:700; color:var(--text-primary); margin-bottom:2px;}
+@media (prefers-reduced-motion: reduce){.page-left,.page-right{animation:none;}}
+.tag-row{display:flex; flex-wrap:wrap; gap:7px; margin-bottom:10px;}
+.chip{background:#fff; border-radius:999px; padding:5px 13px; font-size:14px; font-weight:500; font-family:'Inter'; cursor:pointer; color:var(--text-primary);}
+.chip-on{background:var(--leo-green); color:#fff; border-color:var(--leo-green);}
+.chip:focus-visible,.primary-btn:focus-visible,.ghost-btn:focus-visible{outline:2px solid var(--color-warning); outline-offset:2px;}
+.primary-btn{display:inline-flex; align-items:center; gap:7px; background:var(--leo-green); color:#fff; border:none; border-radius:10px; padding:12px 20px; font-weight:600; font-size:15px; cursor:pointer; min-height:48px;}
+.primary-btn:disabled{opacity:.45; cursor:default;}
+.primary-btn.wide{width:100%; justify-content:center; margin-top:18px; padding:12px;}
+.ghost-btn{display:inline-flex; align-items:center; gap:6px; background:transparent; color:var(--leo-green); border-radius:10px; padding:10px 16px; font-weight:500; font-size:14px; cursor:pointer; min-height:48px;}
+.link-btn{background:none; border:none; color:var(--leo-green); font-weight:500; cursor:pointer; font-family:'Inter'; font-size:14px; text-decoration:underline;}
+.link-btn:focus-visible{outline:2px solid var(--color-warning); outline-offset:2px; border-radius:4px;}
+.icon-btn{background:none; border:none; color:var(--text-primary); opacity:.4; cursor:pointer; margin-left:auto;}
+.icon-btn:hover{opacity:.9; color:var(--color-error);}
+.feedback{background:var(--leo-green-light); border-radius:10px; padding:12px 14px; margin-top:10px;}
+.reform{font-style:italic; color:var(--text-primary); margin:4px 0 8px;}
+.tip{margin-top:6px;}
+.text-input{width:100%; border-radius:10px; padding:10px 13px; font-family:'Inter'; font-size:15px; margin-bottom:10px; background:#fff; color:var(--text-primary);}
+.text-input:focus{outline:2px solid var(--leo-green); border-color:var(--leo-green);}
+.search-row{display:flex; gap:8px; margin-bottom:14px;}
+.search-row .text-input{margin-bottom:0;}
+.q-sentence{font-family:'Inter',sans-serif; font-size:17px; font-weight:600; color:var(--text-primary); margin-bottom:8px;}
+.dict-word{font-size:22px;}
+.ipa{font-family:'Inter'; font-weight:400; font-size:15px; color:var(--leo-green); margin-left:6px;}
